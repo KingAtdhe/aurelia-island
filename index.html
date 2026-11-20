@@ -354,7 +354,8 @@ function fitCar(obj, noseNegZ) {            // a loaded model: scale to 4.6 m, n
   const box = new T3.Box3().setFromObject(obj), sz = box.getSize(new T3.Vector3());
   if (noseNegZ) obj.rotation.y = Math.PI; else if (sz.x > sz.z) { obj.rotation.y = -Math.PI / 2; }
   const holder = new T3.Group(); holder.add(obj);
-  let b2 = new T3.Box3().setFromObject(holder), s2 = b2.getSize(new T3.Vector3()); holder.scale.setScalar(4.6 / s2.z);
+  let b2 = new T3.Box3().setFromObject(holder), s2 = b2.getSize(new T3.Vector3()); let saleCar = 0; obj.traverse(o => { if (/^(Front|Rear)_(Left|Right)$/.test(o.name)) saleCar++; });
+  holder.scale.setScalar(saleCar === 4 ? 1 : 4.6 / s2.z);           // sale-pack cars are modelled at real size (metres): keep it
   b2 = new T3.Box3().setFromObject(holder); const c = b2.getCenter(new T3.Vector3()); holder.position.set(-c.x, -b2.min.y, -c.z);
   const g = new T3.Group(); g.add(holder); wheels = [];
   const named = []; obj.traverse(o => { if (/^(Front|Rear)_(Left|Right)$/.test(o.name)) named.push(o); });
