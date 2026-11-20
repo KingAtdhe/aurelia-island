@@ -449,7 +449,7 @@ function bump() { if (bumpT <= 0) { bumpT = 0.8; shake = 0.35; } }
 function resetCar() { if (race && race.state === 'count') return; placeCar(car.safe || nearestRoadPoint(car.x, car.z)); }
 
 /* ---------------------------------------------------------------- camera */
-const camPos = new T3.Vector3(), look = new T3.Vector3(); let camMode = 0, shake = 0, camYaw = 0; const CAMS = [[5.9, 2.05], [9.5, 3.6], [0.2, 1.25]];
+const camPos = new T3.Vector3(), look = new T3.Vector3(); let camMode = 0, shake = 0, camYaw = 0; const camRq = {}, camRq2 = {}; const CAMS = [[5.9, 2.05], [9.5, 3.6], [0.2, 1.25]];
 function nextCam() { camMode = (camMode + 1) % CAMS.length; }
 function updateCamera(dt) {
   const fx = Math.sin(car.h), fz = Math.cos(car.h), sp = car.speed, [dist, hgt] = CAMS[camMode];
@@ -460,6 +460,9 @@ function updateCamera(dt) {
     let da = ch - camYaw; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI; camYaw += da * (1 - Math.exp(-dt * 4.2));      // swing around the car smoothly
     const cs = Math.sin(camYaw), cc = Math.cos(camYaw), ty = car.y + hgt + Math.min(sp, 60) * 0.004;
     camPos.x = car.x - cs * d; camPos.z = car.z - cc * d; camPos.y = lerp(camPos.y, ty, 1 - Math.exp(-dt * 6));
+    { const q = roadQuery(camPos.x, camPos.z, car.y, camRq), lim = q.ok ? q.road.hw + 0.4 : 0;          // keep the camera inside the road corridor: no looking out from inside cut walls and hillsides
+      const qc = q.ok ? roadQuery(car.x, car.z, car.y, camRq2) : null, onRoad = qc && qc.ok && qc.road === q.road && Math.abs(qc.d) < q.road.hw;
+      if (onRoad && Math.abs(q.y - car.y) < 6 && Math.abs(q.d) > lim) { const over = q.d - Math.sign(q.d) * lim; camPos.x -= q.tz * over; camPos.z += q.tx * over; } }
     const gy = ground(camPos.x, camPos.z, car.y + 1, g0).y; if (camPos.y < gy + 1.3) camPos.y = gy + 1.3;
     look.set(car.x + cs * 3.2, car.y + 1.15, car.z + cc * 3.2);
   }
@@ -734,6 +737,9 @@ function setupFlora(g, data) {
 let _cg = null; const carGlass = () => _cg || (_cg = new T3.MeshStandardMaterial({ name: 'CarGlass', color: 0x0b1118, roughness: 0.05, metalness: 0.2, envMapIntensity: 1.6 }));
 const _m4 = new T3.Matrix4(), _q = new T3.Quaternion(), _p = new T3.Vector3(), _s = new T3.Vector3(), _yAx = new T3.Vector3(0, 1, 0), _col = new T3.Color();
 const MERGEM = new Map();
+const QN = a => !a.normalized ? 1 : a.array instanceof Int8Array ? 127 : a.array instanceof Uint8Array ? 255 : a.array instanceof Int16Array ? 32767 : a.array instanceof Uint16Array ? 65535 : 1;   // packed (quantized) attributes: integers that stand for -1..1 / 0..1
+const rd1 = (a, k, c) => { const q = QN(a), x = c === 0 ? a.getX(k) : c === 1 ? a.getY(k) : a.getZ(k); return q === 1 ? x : Math.max(x / q, -1); };
+const rd = (a, k, v) => v.set(rd1(a, k, 0), rd1(a, k, 1), rd1(a, k, 2));
 function mergedMat(m) { let mm = MERGEM.get(m); if (!mm) { mm = m.clone(); mm.vertexColors = true; if (/^Leaves/.test(m.name)) { noFlip(mm, false); mm.customProgramCacheKey = () => 'merged-leaves'; } else { mm.onBeforeCompile = m.onBeforeCompile; if (m.customProgramCacheKey) mm.customProgramCacheKey = m.customProgramCacheKey; } MERGEM.set(m, mm); } return mm; }
 function mergedGroup(c, grp, lod) {          // far buildings and props: every instance baked into one mesh per material (a dozen draws per block instead of hundreds)
   const G = new T3.Group(), data = FLO.data, B = new Map(), _n3 = new T3.Matrix3(), v = new T3.Vector3();
@@ -745,7 +751,7 @@ function mergedGroup(c, grp, lod) {          // far buildings and props: every i
       const ix = g.index ? g.index.array : null, nv = P.count;
       for (const i of idx) { _q.setFromAxisAngle(_yAx, a[i + 4]); _p.set(a[i], a[i + 1], a[i + 2]); _s.setScalar(a[i + 3]); _m4.compose(_p, _q, _s).multiply(pm.matrixWorld); _n3.getNormalMatrix(_m4);
         const cr = tint ? Math.min(1.25, a[i + 5] * 1.1) : 1, cg = tint ? Math.min(1.25, a[i + 6] * 1.1) : 1, cb = tint ? Math.min(1.25, a[i + 7] * 1.1) : 1;
-        for (let k = 0; k < nv; k++) { v.fromBufferAttribute(P, k).applyMatrix4(_m4); b.P.push(v.x, v.y, v.z); v.fromBufferAttribute(N, k).applyMatrix3(_n3).normalize(); b.N.push(v.x, v.y, v.z); if (U) b.U.push(U.getX(k), U.getY(k)); b.C.push(cr, cg, cb); }
+        for (let k = 0; k < nv; k++) { rd(P, k, v).applyMatrix4(_m4); b.P.push(v.x, v.y, v.z); rd(N, k, v).applyMatrix3(_n3).normalize(); b.N.push(v.x, v.y, v.z); if (U) b.U.push(rd1(U, k, 0), rd1(U, k, 1)); b.C.push(cr, cg, cb); }
         if (ix) for (let k = 0; k < ix.length; k++) b.I.push(ix[k] + b.n); else for (let k = 0; k < nv; k++) b.I.push(k + b.n);
         b.n += nv; FLO.n++; } } }
   for (const b of B.values()) { const geo = new T3.BufferGeometry(); geo.setAttribute('position', new T3.Float32BufferAttribute(b.P, 3)); geo.setAttribute('normal', new T3.Float32BufferAttribute(b.N, 3));
@@ -903,7 +909,7 @@ Promise.all([fetch('data/world.json').then(r => r.json()), getBin('data/height')
     loadEl.textContent = 'Car: ' + carName + '. Pick a mode.'; ['modes', 'opts', 'help'].forEach(id => $(id).hidden = false);
     W.regions.forEach(r => { const b = document.createElement('button'); b.type = 'button'; b.textContent = r.name; b.addEventListener('click', () => { if (race) { race = null; mode = 'free'; $('race').hidden = true; beacon.visible = false; car.frozen = false; } placeCar(nearestRoadPoint(r.x, r.z)); toggleMap(); }); $('travel').appendChild(b); });
     loadGLB('islandd').then(g => { setupMap(g, true); return loadGLB('florak'); }).then(g => { addKit(g); setupLife(); window.__detail = 1; }).catch(e => { console.warn('detail not loaded', e); window.__detail = 1; });
-    window.__game = { FLO, scene, camera, car, roads, W, ground, startMode, inp, placeCar, roadPoint, renderer, get race() { return race; } };
+    window.__game = { FLO, scene, camera, car, roads, W, ground, startMode, inp, placeCar, roadPoint, renderer, roadQuery, physics, obGrid, OG, get race() { return race; } };
     requestAnimationFrame(frame); });
 }).catch(e => fail('Could not load the island: ' + (e && e.message ? e.message : e)));
 
