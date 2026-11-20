@@ -34,7 +34,8 @@
   .menu { display: grid; gap: 10px; width: min(360px, 92vw); }
   .menu button { padding: 14px; font-size: 17px; background: #1d6f8f; text-align: left; } .menu button small { display: block; font-weight: 500; opacity: .85; font-size: 12px; }
   .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-  #mapWrap { position: relative; width: min(94vw, 150vh); } #bigMap { width: 100%; border-radius: 12px; display: block; background: #1c5d78; }
+  #mapWrap { position: relative; width: min(94vw, calc((100vh - 96px) * 1.4286)); }
+  #mapOv { gap: 8px; padding: 8px; justify-content: flex-start; } #mapClose { position: absolute; top: 8px; right: 8px; z-index: 2; } #travel button { padding: 6px 10px; font-size: 12px; } #bigMap { width: 100%; border-radius: 12px; display: block; background: #1c5d78; }
   #load { font-size: 15px; }
   #note { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font-size: 11px; opacity: .7; pointer-events: none; white-space: nowrap; }
 </style>
@@ -94,7 +95,7 @@ let renderer;
 try { renderer = new T3.WebGLRenderer({ canvas: $('c'), antialias: true, powerPreference: 'high-performance' }); }
 catch (e) { fail('This device or browser has 3D graphics turned off.'); return; }
 renderer.outputEncoding = T3.sRGBEncoding;
-const scene = new T3.Scene(); let envTex = null;
+const scene = new T3.Scene(); let envTex = null; const CARM = [];
 const SKY = new T3.Color(0x9fc6e6);
 scene.background = SKY; scene.fog = new T3.Fog(0xb9d6ea, 500, 3000);
 const camera = new T3.PerspectiveCamera(64, 1, 0.4, 3400);
@@ -271,6 +272,23 @@ function prepWorld() {
       let a = segGrid.get(k); if (!a) segGrid.set(k, a = []); a.push(ri, i);
     }
   });
+  // side walls the map builder put up, found with its own rules: rock-cut retaining walls on the passes (isle_roads_build.touge) and guard rails
+  // on the drop side of main roads (isle_build: ground falls more than 4.5 m within 24 m). The car cannot drive through either.
+  const runs = (m, n, closed, dil, minLen) => { const d = new Uint8Array(n); for (let i = 0; i < n; i++) if (m[i]) for (let k = -dil; k <= dil; k++) { const q = closed ? (i + k + n) % n : i + k; if (q >= 0 && q < n) d[q] = 1; }
+    for (let i = 0; i < n;) { if (!d[i]) { i++; continue; } let j = i; while (j < n && d[j]) j++; if (j - i < minLen) d.fill(0, i, j); i = j; } return d; };
+  for (const r of roads) { const pass = /^(Summit Pass|Skyline Road|Eagle Descent|Serpentine)$/.test(r.name), main = r.type === 'hwy' || r.type === 'road'; if (!pass && !main) continue;
+    const n = r.n, p = r.p, cut = [new Uint8Array(n), new Uint8Array(n)], drop = [new Uint8Array(n), new Uint8Array(n)];
+    for (let i = 0; i < n; i++) { if (r.wall[i]) continue; const j = Math.min(n - 1, i + 1), k = Math.max(0, i - 1);
+      let tx = p[j * 3] - p[k * 3], tz = p[j * 3 + 2] - p[k * 3 + 2]; const L = Math.hypot(tx, tz) || 1; tx /= L; tz /= L; const y = p[i * 3 + 1];
+      let nearOther = false; { const gx = Math.floor(p[i * 3] / SG), gz = Math.floor(p[i * 3 + 2] / SG);       // not at junctions with other roads
+        for (let ax = gx - 1; ax <= gx + 1 && !nearOther; ax++) for (let az = gz - 1; az <= gz + 1 && !nearOther; az++) { const a = segGrid.get(ax + ',' + az); if (!a) continue;
+          for (let q = 0; q < a.length; q += 2) { const o = roads[a[q]]; if (o === r) continue; const m = a[q + 1]; if (Math.hypot(o.p[m * 3] - p[i * 3], o.p[m * 3 + 2] - p[i * 3 + 2]) < r.hw + o.hw + 22) { nearOther = true; break; } } } }
+      if (nearOther) continue;
+      for (const [si, s] of [[0, 1], [1, -1]]) { const at = d => hAt(p[i * 3] + tz * s * (r.hw + d), p[i * 3 + 2] - tx * s * (r.hw + d));
+        if (pass && (r.closed || (i > 2 && i < n - 3)) && at(31) - y > 4 && at(18) > y - 0.5) cut[si][i] = 1;
+        if (main && y - at(24) > 4.5) drop[si][i] = 1; } }
+    r.lim = [0, 1].map(si => { const c = runs(cut[si], n, r.closed, 2, 5), g = runs(drop[si], n, r.closed, 3, 1), L = new Float32Array(n);
+      for (let i = 0; i < n; i++) L[i] = c[i] ? r.hw + 0.25 : g[i] ? r.hw + 1.6 : 0; return L; }); }
   const put = (o, kind) => { const rad = kind === 'c' ? o[2] : Math.hypot(o[2], o[3]);
     for (let gx = Math.floor((o[0] - rad) / OG); gx <= Math.floor((o[0] + rad) / OG); gx++) for (let gz = Math.floor((o[1] - rad) / OG); gz <= Math.floor((o[1] + rad) / OG); gz++) {
       const k = gx + ',' + gz; let a = obGrid.get(k); if (!a) obGrid.set(k, a = { o: [], c: [], p: [] }); a[kind].push(o); } };
@@ -362,7 +380,7 @@ function fitCar(obj, noseNegZ) {            // a loaded model: scale to 4.6 m, n
   if (named.length === 4) {                 // sale-pack cars: wheels on their axles, front ones inside steering pivots
     for (const o of named) { const bb = new T3.Box3().setFromObject(o), s = bb.getSize(new T3.Vector3()); const st = o.parent && /^Steer_/.test(o.parent.name) ? o.parent : null;
       wheels.push({ steer: st, spin: o, r: Math.max(s.y, 0.2) / 2 * holder.scale.x, model: true, sign: noseNegZ ? -1 : 1 }); }
-    obj.traverse(o => { if (o.isMesh && o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(m => { m.envMapIntensity = /glass|window/i.test(m.name) ? 1.6 : 1.25; }); } });
+    obj.traverse(o => { if (o.isMesh && o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(m => { m.envMapIntensity = /glass|window/i.test(m.name) ? 1.6 : 1.25; m.userData.envI = m.envMapIntensity; CARM.push(m); }); } }); carEnv();
     return g; }
   obj.traverse(o => { if (/wheel/i.test(o.name) && o.children.length + (o.isMesh ? 1 : 0) > 0 && !/wheels$/i.test(o.name) && !(o.parent && /wheel/i.test(o.parent.name) && !/wheels$/i.test(o.parent.name))) {
     const bb = new T3.Box3().setFromObject(o), s = bb.getSize(new T3.Vector3()); wheels.push({ steer: null, spin: o, r: Math.max(s.y, 0.2) / 2, model: true }); } });
@@ -418,16 +436,19 @@ function physics(dt) {
   if (G.rq && G.rq.ok) { const r = G.rq.road; if ((r.wall[G.rq.i] || r.wall[(G.rq.i + 1) % r.n]) && Math.abs(car.y - G.rq.y) < 3) {
     const q = roadQuery(nx, nz, car.y, rqTmp); if (q.ok && q.road === r) { const lim = r.hw - 1.1; if (Math.abs(q.d) > lim) { const px = q.tz, pz = -q.tx, over = q.d - Math.sign(q.d) * lim;
       nx -= px * over; nz -= pz * over; const vn = car.vx * px + car.vz * pz; car.vx -= px * vn * 1.2; car.vz -= pz * vn * 1.2; car.vx *= 0.985; car.vz *= 0.985; } } } }
-  // buildings and other solid things
-  const cell = obGrid.get(Math.floor(nx / OG) + ',' + Math.floor(nz / OG)); const R = 1.25;
-  if (cell) {
-    for (const o of cell.o) { const dx = nx - o[0], dz = nz - o[1], c = Math.cos(o[4]), s = Math.sin(o[4]), lx = dx * c - dz * s, ly = -dx * s - dz * c;
-      const px = o[2] + R - Math.abs(lx), py = o[3] + R - Math.abs(ly); if (px > 0 && py > 0) { let ax, az, pen;
-        if (px < py) { ax = c * Math.sign(lx); az = -s * Math.sign(lx); pen = px; } else { ax = -s * Math.sign(ly); az = -c * Math.sign(ly); pen = py; }
-        nx += ax * pen; nz += az * pen; const vn = car.vx * ax + car.vz * az; if (vn < 0) { car.vx -= ax * vn * 1.3; car.vz -= az * vn * 1.3; if (vn < -6) { car.vx *= 0.6; car.vz *= 0.6; bump(); } } } }
-    for (const o of cell.c) { const dx = nx - o[0], dz = nz - o[1], d = Math.hypot(dx, dz), pen = o[2] + R - d; if (pen > 0 && d > 0.01) { const ax = dx / d, az = dz / d; nx += ax * pen; nz += az * pen;
-      const vn = car.vx * ax + car.vz * az; if (vn < 0) { car.vx -= ax * vn * 1.3; car.vz -= az * vn * 1.3; if (vn < -6) { car.vx *= 0.6; car.vz *= 0.6; bump(); } } } }
-  }
+  if (G.rq && G.rq.ok && G.rq.road.lim) { const r = G.rq.road, q = roadQuery(nx, nz, car.y, rqTmp);          // retaining walls and guard rails along the road sides
+    if (q.ok && q.road === r && Math.abs(car.y - q.y) < 4) { const si = q.d > 0 ? 0 : 1, lim = Math.max(r.lim[si][q.i], r.lim[si][(q.i + 1) % r.n]);
+      if (lim > 0 && Math.abs(q.d) > lim && Math.abs(q.d) < lim + 3) { const px = q.tz, pz = -q.tx, sg = Math.sign(q.d), over = q.d - sg * lim; nx -= px * over; nz -= pz * over; const vn = (car.vx * px + car.vz * pz) * sg;
+        if (vn > 0) { car.vx -= px * sg * vn * 1.25; car.vz -= pz * sg * vn * 1.25; if (vn > 6) bump(); } car.vx *= 0.99; car.vz *= 0.99; } } }
+  // buildings, props and trees: three circles along the car (nose, middle, tail) so the bodywork does not sink into things
+  { const R = 1.0, hl = 1.75, cfx = Math.sin(car.h), cfz = Math.cos(car.h);
+    for (const off of [hl, 0, -hl]) { let sx = nx + cfx * off, sz = nz + cfz * off; const cell = obGrid.get(Math.floor(sx / OG) + ',' + Math.floor(sz / OG)); if (!cell) continue;
+      const push = (ax, az, pen) => { nx += ax * pen; nz += az * pen; sx += ax * pen; sz += az * pen; const vn = car.vx * ax + car.vz * az;
+        if (vn < 0) { car.vx -= ax * vn * 1.3; car.vz -= az * vn * 1.3; if (vn < -6) { car.vx *= 0.6; car.vz *= 0.6; bump(); } } };
+      for (const o of cell.o) { const dx = sx - o[0], dz = sz - o[1], c = Math.cos(o[4]), s = Math.sin(o[4]), lx = dx * c - dz * s, ly = -dx * s - dz * c;
+        const px = o[2] + R - Math.abs(lx), py = o[3] + R - Math.abs(ly); if (px > 0 && py > 0) { if (px < py) push(c * Math.sign(lx), -s * Math.sign(lx), px); else push(-s * Math.sign(ly), -c * Math.sign(ly), py); } }
+      for (const o of cell.c) { const dx = sx - o[0], dz = sz - o[1], d = Math.hypot(dx, dz), pen = o[2] + R - d; if (pen > 0 && d > 0.01) push(dx / d, dz / d, pen); }
+      if (cell.k) for (const o of cell.k) if (!o.dead && Math.hypot(sx - o[0], sz - o[1]) < o[2] + R) knock(o); } }
   car.x = nx; car.z = nz;
   const Gn = ground(car.x, car.z, car.y + 1);
   if (!car.air) { const dy = Gn.y - car.y;
@@ -449,11 +470,11 @@ function bump() { if (bumpT <= 0) { bumpT = 0.8; shake = 0.35; } }
 function resetCar() { if (race && race.state === 'count') return; placeCar(car.safe || nearestRoadPoint(car.x, car.z)); }
 
 /* ---------------------------------------------------------------- camera */
-const camPos = new T3.Vector3(), look = new T3.Vector3(); let camMode = 0, shake = 0, camYaw = 0; const camRq = {}, camRq2 = {}; const CAMS = [[5.9, 2.05], [9.5, 3.6], [0.2, 1.25]];
+const camPos = new T3.Vector3(), look = new T3.Vector3(); let camMode = 0, shake = 0, camYaw = 0; const camRq = {}, camRq2 = {}; const CAMS = [[5.9, 2.05], [9.5, 3.6], [2.75, 0.62]];
 function nextCam() { camMode = (camMode + 1) % CAMS.length; }
 function updateCamera(dt) {
   const fx = Math.sin(car.h), fz = Math.cos(car.h), sp = car.speed, [dist, hgt] = CAMS[camMode];
-  if (camMode === 2) { camPos.set(car.x + fx * 0.3, car.y + hgt, car.z + fz * 0.3); look.set(car.x + fx * 20, car.y + 1.0 + Math.sin(car.pitch) * 20, car.z + fz * 20); }
+  if (camMode === 2) { camPos.set(car.x + fx * dist, car.y + hgt + Math.sin(car.pitch) * dist, car.z + fz * dist); look.set(car.x + fx * 30, car.y + hgt * 0.9 + Math.sin(car.pitch) * 30, car.z + fz * 30); }     // bumper camera, just ahead of the nose
   else {
     const vh = sp > 3 ? Math.atan2(car.vx, car.vz) : car.h; let dh = vh - car.h; while (dh > Math.PI) dh -= 2 * Math.PI; while (dh < -Math.PI) dh += 2 * Math.PI;
     const ch = car.h + clamp(dh, -0.6, 0.6) * 0.45 * (car.vf < -1 ? 0 : 1), d = dist + Math.min(sp, 60) * 0.022;
@@ -466,6 +487,7 @@ function updateCamera(dt) {
     const gy = ground(camPos.x, camPos.z, car.y + 1, g0).y; if (camPos.y < gy + 1.3) camPos.y = gy + 1.3;
     look.set(car.x + cs * 3.2, car.y + 1.15, car.z + cc * 3.2);
   }
+  headPool.material.opacity = camMode === 2 ? 0 : (headPool.userData.op ?? (headPool.userData.op = headPool.material.opacity));
   camera.position.copy(camPos); if (shake > 0) { shake -= dt; camera.position.y += Math.sin(shake * 90) * shake * 0.5; }
   { const v = clamp((sp * 3.6 - 140) / 120, 0, 1); if (v > 0 && camMode !== 2) { const t = performance.now() * 0.001; camera.position.x += Math.sin(t * 31) * 0.025 * v; camera.position.y += Math.sin(t * 43 + 1.3) * 0.03 * v; } }   // a light rumble at high speed
   camera.lookAt(look); const fov = 60 + Math.min(16, sp * 0.2); if (Math.abs(camera.fov - fov) > 0.2) { camera.fov = fov; camera.updateProjectionMatrix(); }
@@ -573,7 +595,9 @@ function getBin(base) {            // binary assets ship as base64 inside .json 
     return chain.then(() => out.buffer); }); }
 const SHADE = { tex: { value: null }, on: { value: 0 } };
 getJ('data/shade.json').then(j => { const im = new Image(); im.onload = () => { const t = new T3.Texture(im); t.needsUpdate = true; t.minFilter = T3.LinearFilter; t.generateMipmaps = false; SHADE.tex.value = t; SHADE.on.value = 1; }; im.src = 'data:image/png;base64,' + j.png; }).catch(() => {});
-const FAC = [], GLZ = [], HSIGN = [], ROADM = [], PUDDLE = []; let wetMode = store.get('wet', 0); let tod = store.get('tod', 1), night = tod === 2, lampGlow = null, sea = null, seaN = null;
+const FAC = [], GLZ = [], HSIGN = [], ROADM = [], PUDDLE = [];
+function carEnv() { if (night && !ENV.dusk) ENV.dusk = buildEnv(true); const e = night ? ENV.dusk : envTex; for (const m of CARM) { m.envMap = e || null; m.envMapIntensity = (m.userData.envI || 1) * (night ? 0.22 : 1); m.needsUpdate = true; } }   // the car keeps a dim sky reflection at night so the paint still reads
+let wetMode = store.get('wet', 0); let tod = store.get('tod', 1), night = tod === 2, lampGlow = null, sea = null, seaN = null;
 function makeSea() {       // animated sea with a wave normal map made in a canvas
   const n = 256, cv = document.createElement('canvas'); cv.width = cv.height = n; const g = cv.getContext('2d'), id = g.createImageData(n, n), h = new Float32Array(n * n);
   for (let k = 0; k < 26; k++) { const fx = (1 + (k * 7) % 6) * (k % 2 ? 1 : -1), fy = 1 + (k * 5) % 7, ph = k * 1.7, a = 1 / (Math.abs(fx) + fy);
@@ -653,7 +677,7 @@ function applyTime() {
   SKYU.uNight.value = night ? 1 : 0; scene.fog.color.set(night ? 0x0d1522 : dusk ? 0xd8a98a : 0xbccbd6); clouds.material.opacity = night ? 0.12 : 0.95; clouds.material.color.set(dusk ? 0xffbf96 : 0xffffff);
   hemi.intensity = night ? 0.16 : dusk ? 0.44 : 0.34; hemi.color.set(night ? 0xdfeeff : dusk ? 0x7f9ad8 : 0xb6d0f5); hemi.groundColor.set(night ? 0x6b7a55 : dusk ? 0x8a6448 : 0x8c7552); bounce.intensity = night ? 0.03 : dusk ? 0.2 : 0.2;
   sun.intensity = night ? 0.28 : dusk ? 3.6 : 2.85; sun.color.set(night ? 0x9db4e8 : dusk ? 0xffa462 : 0xffd9a8); renderer.toneMappingExposure = night ? 1.0 : dusk ? 0.86 : 0.78; document.body.classList.toggle('night', night);
-  scene.environment = night ? null : envTex; if (lampGlow) lampGlow.visible = night; if (typeof applyWet === 'function') applyWet(); headL.intensity = night ? 3.2 : 0; headPool.visible = night;
+  scene.environment = night ? null : envTex; if (lampGlow) lampGlow.visible = night; if (typeof applyWet === 'function') applyWet(); if (typeof carEnv === 'function') carEnv(); headL.intensity = night ? 3.2 : 0; headPool.visible = night;
   for (const m of FAC) m.emissiveIntensity = night ? (/Glass/.test(m.name) ? 0.55 : 0.9) : 0;
   for (const m of GLZ) m.emissiveIntensity = night ? 1.5 : 0; NIGHTU.value = night ? 1 : 0; for (const m of HSIGN) m.emissiveIntensity = night ? 0.75 : 0;
   if (sea) sea.material.color.set(night ? 0x0c2a3a : 0x1b6f8c);
@@ -695,8 +719,36 @@ function floraAssign(data, only) {
         if (!s) { s = { x: (Math.floor(a[i] / SS) + 0.5) * SS, z: (Math.floor(a[i + 2] / SS) + 0.5) * SS, r: SS * 0.71, it: { bld: {}, solid: {} }, g: {}, sup: true }; FLO.sup.set(ks, s); }
         (s.it[grp][sp] = s.it[grp][sp] || []).push(i); s.y0 = Math.min(s.y0 ?? a[i + 1], a[i + 1]); s.y1 = Math.max(s.y1 ?? a[i + 1], a[i + 1]); c.sk = ks; } } }
 }
+const POLE = /lamp|signal|power_pole|tg_light|tg_mirror|windpump/, KNOCK = /^prop_(cones|beach_set|rk_post|rk_cone|rk_chevron|rk_worksign|rk_arrowboard|reflector|bin|trashbags|newsbox|scooter|bikerack|bench|planter|sign_|board_|mailbox|cafe)/,
+  SOFT = /^(grass|flowers|bush|fern|oleander|prop_walker|prop_rk_trench|prop_rk_island|prop_vineyard|prop_scree|prop_walls_fences|prop_rk_barrier)|^prop_shop_|hay_field|jetty|breakwater|tunnel|portal|bridge|gantry|arch|overpass|flyover|canopy/, COLL = new Set();
+function putOb(kind, o, rad) { for (let gx = Math.floor((o[0] - rad) / OG); gx <= Math.floor((o[0] + rad) / OG); gx++) for (let gz = Math.floor((o[1] - rad) / OG); gz <= Math.floor((o[1] + rad) / OG); gz++) {
+  const k = gx + ',' + gz; let a = obGrid.get(k); if (!a) obGrid.set(k, a = { o: [], c: [], p: [] }); (a[kind] || (a[kind] = [])).push(o); } }
+function floraColliders() {          // every lamp, sign, tree trunk and rock gets a collider from its real size; light street furniture can be knocked away
+  const D = FLO.data, _b = new T3.Box3(), _bb = new T3.Box3();
+  for (const sp in D.instances) { if (COLL.has(sp) || !FLO.lib[sp] || SOFT.test(sp)) continue; COLL.add(sp);
+    const L = FLO.lib[sp], prims = L[0] || L[1], a = D.instances[sp], spec = D.species[sp] || {}; if (!prims) continue;
+    _b.makeEmpty(); for (const pm of prims) { if (!pm.geometry.boundingBox) pm.geometry.computeBoundingBox(); _bb.copy(pm.geometry.boundingBox).applyMatrix4(pm.matrixWorld); _b.union(_bb); }
+    const w = _b.max.x - _b.min.x, d = _b.max.z - _b.min.z, ht = _b.max.y - _b.min.y, cx0 = (_b.max.x + _b.min.x) / 2, cz0 = (_b.max.z + _b.min.z) / 2; if (!(ht > 0.3)) continue;
+    const tree = spec.card >= 0 || /^(oak|pine|spruce|palm|birch|plane|cypress|fruit|olive|cedar)/.test(sp), knock = KNOCK.test(sp);
+    for (let i = 0; i < a.length; i += 8) { const s = a[i + 3]; if (!(s > 0)) continue; const x = a[i], z = a[i + 2], ya = a[i + 4], c = Math.cos(ya), sn = Math.sin(ya);
+      const ox = x + (cx0 * c + cz0 * sn) * s, oz = z + (-cx0 * sn + cz0 * c) * s;            // centre of the footprint (models are not always centred on their origin)
+      if (tree) { const r = clamp(0.045 * ht * s, 0.18, 0.6), o = [x, z, r]; o.sp = sp; putOb('c', o, r + 2); continue; }
+      if (POLE.test(sp)) { const o = [x, z, 0.22]; o.sp = sp; putOb('c', o, 2.3); continue; }          // posts and poles: only the pole itself, not the arm over the street
+      if (knock) { const gy = ground(x, z, a[i + 1] + 3).y; if (a[i + 1] < gy - 0.5) a[i + 1] = gy;          // buried posts come back up to the ground
+        const r = clamp(Math.max(w, d) * s * 0.45, 0.2, 1.2); putOb('k', Object.assign([ox, oz, r, sp, i]), r + 2); continue; }
+      if (Math.max(w, d) * s < 1.6) { const r = Math.max(0.15, Math.max(w, d) * s * 0.42), o = [ox, oz, r]; o.sp = sp; putOb('c', o, r + 2); }
+      else { const q = roadQuery(ox, oz, a[i + 1], {}); if (q.ok && Math.abs(q.d) < q.road.hw) continue;            // never a solid box across a carriageway
+        const o = [ox, oz, w * s / 2, d * s / 2, ya]; o.sp = sp; putOb('o', o, Math.hypot(o[2], o[3]) + 2); } } }
+}
+function knock(o) {                  // a cone, post, bin or sign flies off: hide it and rebuild the drawing of its patch
+  o.dead = true; const a = FLO.data.instances[o[3]]; a[o[4] + 3] = 0; car.vx *= 0.94; car.vz *= 0.94; shake = Math.max(shake, 0.12); if (typeof audioBump === 'function') audioBump();
+  const S = FLO.size, c = FLO.cells.get(Math.floor(a[o[4]] / S) + '_' + Math.floor(a[o[4] + 2] / S)), sc = c && c.sk ? FLO.sup.get(c.sk) : null;
+  const grp = c ? Object.keys(c.it).find(g => c.it[g][o[3]]) : null; if (!grp) return;           // only the drawing that holds this prop is rebuilt
+  for (const t of [c, sc]) if (t && t.it[grp] && t.it[grp][o[3]]) for (const k of Object.keys(t.g)) if (k.startsWith(grp)) { scene.remove(t.g[k]); FLO.want.delete(t.g[k]); delete t.g[k]; }
+  floraTick = 0;
+}
 function addKit(g) {               // street furniture and buildings arrive after the start: add them to the cells and rebuild the affected groups
-  const before = new Set(Object.keys(FLO.lib)); floraLib(g); const only = new Set(Object.keys(FLO.lib).filter(k => !before.has(k))); floraAssign(FLO.data, only);
+  const before = new Set(Object.keys(FLO.lib)); floraLib(g); const only = new Set(Object.keys(FLO.lib).filter(k => !before.has(k))); floraAssign(FLO.data, only); floraColliders();
   for (const c of [...FLO.cells.values(), ...FLO.sup.values()]) for (const k of Object.keys(c.g)) if (/^(solid|bld|tiny)/.test(k)) { scene.remove(c.g[k]); FLO.want.delete(c.g[k]); delete c.g[k]; }
   floraTick = 0;
 }
@@ -732,7 +784,7 @@ function setupFlora(g, data) {
       for (const sp in c.it.tree) { const a = data.instances[sp], spec = data.species[sp], cl = spec.card; for (const i of c.it.tree[sp]) { const x = a[i], z = a[i + 2], r = a[i + 3] * spec.height * ASP[cl] * 0.62, y = a[i + 1] - 0.1;
         B.P.push(x - r, y, z + r, x + r, y, z + r, x + r, y, z - r, x - r, y, z - r); B.U.push(0, 0, 1, 0, 1, 1, 0, 1); B.I.push(B.n, B.n + 1, B.n + 2, B.n, B.n + 2, B.n + 3); B.n += 4; } } }
     for (const B of BB.values()) { if (!B.n) continue; const geo = new T3.BufferGeometry(); geo.setAttribute('position', new T3.Float32BufferAttribute(B.P, 3)); geo.setAttribute('uv', new T3.Float32BufferAttribute(B.U, 2)); geo.setIndex(B.I); const ms = new T3.Mesh(geo, mat); ms.renderOrder = 1; scene.add(ms); } }
-  FLO.ready = true;
+  FLO.ready = true; floraColliders();
 }
 let _cg = null; const carGlass = () => _cg || (_cg = new T3.MeshStandardMaterial({ name: 'CarGlass', color: 0x0b1118, roughness: 0.05, metalness: 0.2, envMapIntensity: 1.6 }));
 const _m4 = new T3.Matrix4(), _q = new T3.Quaternion(), _p = new T3.Vector3(), _s = new T3.Vector3(), _yAx = new T3.Vector3(0, 1, 0), _col = new T3.Color();
@@ -909,7 +961,7 @@ Promise.all([fetch('data/world.json').then(r => r.json()), getBin('data/height')
     loadEl.textContent = 'Car: ' + carName + '. Pick a mode.'; ['modes', 'opts', 'help'].forEach(id => $(id).hidden = false);
     W.regions.forEach(r => { const b = document.createElement('button'); b.type = 'button'; b.textContent = r.name; b.addEventListener('click', () => { if (race) { race = null; mode = 'free'; $('race').hidden = true; beacon.visible = false; car.frozen = false; } placeCar(nearestRoadPoint(r.x, r.z)); toggleMap(); }); $('travel').appendChild(b); });
     loadGLB('islandd').then(g => { setupMap(g, true); return loadGLB('florak'); }).then(g => { addKit(g); setupLife(); window.__detail = 1; }).catch(e => { console.warn('detail not loaded', e); window.__detail = 1; });
-    window.__game = { FLO, scene, camera, car, roads, W, ground, startMode, inp, placeCar, roadPoint, renderer, roadQuery, physics, obGrid, OG, get race() { return race; } };
+    window.__game = { FLO, scene, camera, car, roads, W, ground, startMode, inp, placeCar, roadPoint, renderer, roadQuery, physics, obGrid, OG, hAt, LIFE, updateLife, get race() { return race; } };
     requestAnimationFrame(frame); });
 }).catch(e => fail('Could not load the island: ' + (e && e.message ? e.message : e)));
 
@@ -985,10 +1037,13 @@ function updateLife(dt) {
         const ph = (LIFE.t + q.j.off) % 30, green = ax === 0 ? ph < 12.5 : (ph >= 15 && ph < 27.5); if (!green) tgt = Math.min(tgt, Math.max(0, (d - 10.5) * 0.9)); } }
       if (c.ox !== undefined) { const fx_ = c.hx, fz_ = c.hz, dx = car.x - c.ox, dz = car.z - c.oz, ah = dx * fx_ + dz * fz_, sd = Math.abs(dx * fz_ - dz * fx_); if (ah > 0 && ah < 18 && sd < 2.2) tgt = Math.min(tgt, Math.max(0, (ah - 6) * 0.8)); }
       for (const o of LIFE.cars) { if (o === c || o.r !== r || o.dir !== c.dir) continue; let g = (o.s - c.s) * c.dir; if (r.closed) g = ((g % n) + n) % n; g *= r.step; if (g > 0 && g < 22) tgt = Math.min(tgt, Math.max(0, (g - 7.5) * 0.9)); }   // queue behind the car ahead
+      if (c.hx !== undefined) for (let oi = 0; oi < LIFE.cars.length; oi++) { const o = LIFE.cars[oi]; if (o === c || o.r === c.r || o.sx === undefined) continue;   // cross traffic in the junction: give way
+        const dx = o.sx - c.sx, dz = o.sz - c.sz; if (dx * dx + dz * dz > 144) continue; const ah = dx * c.hx + dz * c.hz, sd = Math.abs(dx * c.hz - dz * c.hx);
+        if (ah > 1 && ah < 10 && sd < 2.6 && (o.cur > 0.5 || oi < c.gi)) tgt = Math.min(tgt, Math.max(0, (ah - 4.5) * 0.8)); }
       c.cur += clamp(tgt - c.cur, -9 * dt, 3.5 * dt); }
     { const s0 = c.s; c.s += c.dir * c.cur * dt / r.step;
       if (r.jn && r.jn.length) for (const q of r.jn) if ((q.i - s0) * (q.i - c.s) <= 0 && q.j !== c.lastJ) { c.lastJ = q.j;      // crossing a junction: sometimes turn onto the other street
-        const opts = (q.j.rs || []).filter(o => o.r !== r && o.i > 3 && o.i < o.r.n - 4); if (opts.length && Math.random() < 0.45) { const o = opts[(Math.random() * opts.length) | 0];
+        const opts = (q.j.rs || []).filter(o => o.r !== r && o.i > 3 && o.i < o.r.n - 4 && !LIFE.cars.some(x => x !== c && x.r === o.r && Math.abs(x.s - o.i) * o.r.step < 14));   /* only turn into a clear street */ if (opts.length && Math.random() < 0.45) { const o = opts[(Math.random() * opts.length) | 0];
           c.r = o.r; c.s = o.i; c.dir = o.i < 6 ? 1 : o.i > o.r.n - 7 ? -1 : (Math.random() < 0.5 ? 1 : -1); c.lane = o.r.w / 4; c.lastJ = q.j; }
         break; } }
     if (c.r !== r) continue;
