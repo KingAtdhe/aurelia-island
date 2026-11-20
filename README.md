@@ -1,5 +1,7 @@
 # Aurelia Island
 
+**Android APK (full game, offline):** https://github.com/KingAtdhe/aurelia-island/releases/latest/download/aurelia-island.apk — every push to `main` builds a new one (`.github/workflows/apk.yml`, wrapper in `android/`).
+
 An open-world driving game in the browser: a 12 km island with a city, harbour, countryside, mountain passes, desert and a racing circuit, driven in the **Vortex**. Built with three.js; every model and texture is made in Blender.
 
 This repository is the full-texture version of the game: the map, terrain and car ship with their textures at full resolution.
