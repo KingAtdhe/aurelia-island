@@ -1,0 +1,27 @@
+plugins { id 'com.android.application' }
+
+def run = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
+
+android {
+    namespace 'eu.aurelia.island'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'eu.aurelia.island'
+        minSdk 24
+        targetSdk 35
+        versionCode run
+        versionName "1.0.${run}"
+    }
+    // Fixed key so each new APK installs over the previous one (sideloaded builds).
+    signingConfigs {
+        rel { storeFile file('../aurelia.keystore'); storePassword 'aurelia-island'; keyAlias 'aurelia'; keyPassword 'aurelia-island' }
+    }
+    buildTypes {
+        release { minifyEnabled false; signingConfig signingConfigs.rel }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    androidResources { noCompress 'bin', 'png' }      // map data is already dense: store it, load it fast
+    lint { checkReleaseBuilds false; abortOnError false }
+}
+
+dependencies { implementation 'androidx.webkit:webkit:1.12.1' }
