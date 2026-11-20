@@ -1,0 +1,3 @@
+pg.evaluate("localStorage.setItem('aurelia_qual','1')"); pg.reload(); pg.wait_for_function('window.__game !== undefined', timeout=400000); pg.wait_for_function('window.__detail === 1', timeout=500000)
+pg.click('button[data-mode="free"]'); time.sleep(3)
+print('RES', pg.evaluate("()=>{const L=__life; const r0=new Map(L.cars.map(c=>[c,c.r])); let jumps=0; const pv=new Map(); for(let i=0;i<1200;i++){ L.step(0.05); for(const c of L.cars){const p=pv.get(c); if(p&&Math.hypot(p[0]-c.sx,p[1]-c.sz)>3) jumps++; pv.set(c,[c.sx,c.sz]);} } let ov=0; for(const a of L.cars) for(const b of L.cars) if(a!==b&&Math.hypot(a.sx-b.sx,a.sz-b.sz)<2.5) ov++; return [L.cars.filter(c=>c.r!==r0.get(c)).length, jumps, ov/2, L.cars.filter(c=>c.cur<0.3).length]}"))

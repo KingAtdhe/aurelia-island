@@ -1,0 +1,6 @@
+pg.click('button[data-mode="free"]'); time.sleep(1.5); print('start', st()); shot('free0')
+pg.keyboard.down('ArrowUp'); time.sleep(6); print('after 6s gas', st()); shot('free1')
+time.sleep(8); print('after 14s', st()); shot('free2')
+pg.keyboard.down('ArrowLeft'); time.sleep(1.2); pg.keyboard.up('ArrowLeft'); print('after left', st())
+time.sleep(5); pg.keyboard.up('ArrowUp'); print('end', st()); shot('free3')
+print(pg.evaluate('JSON.stringify(__game.renderer.info.render)'))

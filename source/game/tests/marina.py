@@ -1,0 +1,5 @@
+pg.evaluate("localStorage.setItem('aurelia_qual','1')"); pg.reload(); pg.wait_for_function('window.__game !== undefined', timeout=400000); pg.wait_for_function('window.__detail === 1', timeout=500000)
+pg.click('button[data-mode="free"]'); time.sleep(25)
+pg.evaluate("document.querySelectorAll('#help,#toast,.ctl,#modes,#opts').forEach(e=>e.style.display='none')")
+pg.evaluate("()=>{__game.placeCar({x:186,y:1.35,z:440,h:0})}"); time.sleep(6); shot('mar_a')
+print(pg.evaluate('''()=>{const out={};__game.scene.traverse(o=>{if(o.isInstancedMesh||o.isMesh){const p=new THREE.Vector3();o.getWorldPosition(p);if(Math.abs(p.x-186)<120&&Math.abs(p.z-470)<120){const k=(o.name||o.material.name||'?').slice(0,30);out[k]=(out[k]||0)+1}}});return JSON.stringify(out).slice(0,1500)}'''))

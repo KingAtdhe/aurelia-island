@@ -1,0 +1,1 @@
+print(pg.evaluate('''()=>{const F=__game.FLO;const o={};for(const sp of ['oak','spruce','rock','bush']){o[sp]=F.lib[sp][0].map(p=>[p.name,p.parent&&p.parent.name,Array.from(p.matrixWorld.elements).map(v=>+v.toFixed(2)).join(' ')])}return JSON.stringify(o)}'''))

@@ -1,0 +1,7 @@
+pg.evaluate("localStorage.setItem('aurelia_qual','1');localStorage.setItem('aurelia_night','true')"); pg.reload(); pg.wait_for_function('window.__game !== undefined', timeout=400000); pg.wait_for_function('window.__detail === 1', timeout=500000)
+pg.click('button[data-mode="free"]'); time.sleep(2)
+pg.evaluate("document.querySelectorAll('#help,#toast,.ctl,#modes,#opts').forEach(e=>e.style.display='none')")
+pg.evaluate('''()=>{const L=__life; L.cars.forEach(c=>c.v=0); const c=L.cars.find(c=>c.r.type==='street')||L.cars[0]; const i=Math.max(3,Math.min(c.r.n-4,Math.floor(c.s)+c.dir*6)); const p=__game.roadPoint(c.r,i); __game.placeCar(p); window.__tc=c;}'''); time.sleep(2)
+pg.evaluate('''()=>{const c=__tc,p=__game.roadPoint(c.r,Math.floor(c.s)); __game.car.h=Math.atan2(p.x-__game.car.x,p.z-__game.car.z);}'''); time.sleep(4); shot('H_front')
+pg.evaluate('''()=>{const c=__tc,i=Math.max(3,Math.min(c.r.n-4,Math.floor(c.s)-c.dir*6)),p=__game.roadPoint(c.r,i); __game.placeCar(p);}'''); time.sleep(2)
+pg.evaluate('''()=>{const c=__tc,p=__game.roadPoint(c.r,Math.floor(c.s)); __game.car.h=Math.atan2(p.x-__game.car.x,p.z-__game.car.z);}'''); time.sleep(4); shot('H_back')

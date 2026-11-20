@@ -1,0 +1,7 @@
+pg.wait_for_function('window.__detail === 1', timeout=300000)
+pg.click('button[data-mode="free"]'); time.sleep(2)
+print(pg.evaluate("JSON.stringify({ready: __life.ready, cars: __life.cars.length, walkers: __life.walkers.length})"))
+pg.evaluate('''()=>{const g=__game;g.placeCar({x:120,y:14.2,z:-11.4,h:Math.PI/2});}'''); time.sleep(3)
+pg.evaluate('''()=>{window.__camHold=1}''')
+shot('L_street')
+w = pg.evaluate("(()=>{const w=__life.walkers[0];return [w.w, w.t]})()"); print(w)

@@ -1,0 +1,8 @@
+pg.evaluate("localStorage.setItem('aurelia_qual','1')"); pg.reload(); pg.wait_for_function('window.__game !== undefined', timeout=400000); pg.wait_for_function('window.__detail === 1', timeout=500000)
+pg.click('button[data-mode="free"]'); time.sleep(3)
+pg.evaluate("document.querySelectorAll('#help,#toast,.ctl,#modes,#opts').forEach(e=>e.style.display='none')")
+print('RES', pg.evaluate("()=>[__life.carMesh.map(a=>a.length).join(','), __life.carFar.map(a=>a.length).join(',')]"))
+pg.evaluate("()=>{for(let i=0;i<200;i++) __life.step(0.05)}")
+pg.evaluate('''()=>{const L=__life; const c=L.cars.filter(c=>c.r.type==='street')[0]; L.cars.forEach(c=>c.v=0); const i=Math.max(3,Math.min(c.r.n-4,Math.floor(c.s)-c.dir*3)); __game.placeCar(__game.roadPoint(c.r,i)); window.__tc=c;}'''); time.sleep(2)
+pg.evaluate('''()=>{const c=__tc; __game.car.h=Math.atan2(c.sx-__game.car.x,c.sz-__game.car.z)+0.5;}'''); time.sleep(4); shot('TC1')
+pg.evaluate('''()=>{const R=__game.roads.find(r=>r.name==='Street E-20');let b=0,bd=1e9;for(let i=0;i<R.n;i++){const p=__game.roadPoint(R,i),d=Math.hypot(p.x-300,p.z+20);if(d<bd){bd=d;b=i}}__game.placeCar(__game.roadPoint(R,b));}'''); time.sleep(5); shot('TC2')

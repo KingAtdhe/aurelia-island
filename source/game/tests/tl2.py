@@ -1,0 +1,6 @@
+pg.evaluate("localStorage.setItem('aurelia_qual','1')"); pg.reload(); pg.wait_for_function('window.__game !== undefined', timeout=400000); pg.wait_for_function('window.__detail === 1', timeout=500000)
+pg.click('button[data-mode="free"]'); time.sleep(3)
+print('RES', pg.evaluate("()=>{const L=__life; for(let i=0;i<600;i++) L.step(0.05); let ov=0; for(const a of L.cars) for(const b of L.cars) if(a!==b&&a.r===b.r&&a.dir===b.dir&&Math.hypot(a.ox-b.ox,a.oz-b.oz)<4) ov++; return [ov, L.cars.filter(c=>c.cur<0.3).length]}"))
+pg.evaluate("document.querySelectorAll('#help,#toast,.ctl,#modes,#opts').forEach(e=>e.style.display='none')")
+pg.evaluate('''()=>{const L=__life; const c=L.cars.filter(c=>c.r.type==='street'&&c.cur<0.3)[0]; if(!c) return; const i=Math.max(3,Math.min(c.r.n-4,Math.floor(c.s)-c.dir*5)); __game.placeCar(__game.roadPoint(c.r,i)); window.__tc=c;}'''); time.sleep(2)
+pg.evaluate('''()=>{const c=__tc; if(!c) return; __game.car.h=Math.atan2(c.ox-__game.car.x,c.oz-__game.car.z);}'''); time.sleep(4); shot('TL')

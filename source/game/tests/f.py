@@ -1,0 +1,10 @@
+pg.click('button[data-mode="free"]'); time.sleep(1.5)
+print('meshes', pg.evaluate('(()=>{let n=0,sea=0;__game.renderer.info;return 0})()'))
+def at(name, i):
+    pg.evaluate('''([n,i])=>{const R=__game.roads.find(r=>r.name===n);__game.placeCar(__game.roadPoint(R,i));}''', [name, i]); time.sleep(2.4)
+at('Serpentine', 60); shot('f_serp'); print('serp', st()); at('Beach Flyover', 28); shot('f_fly'); print('fly', st())
+tn = pg.evaluate('__game.W.tunnels'); print(tn)
+ring = [t for t in tn if t[0] == 0][0]; pg.evaluate('([i])=>__game.placeCar(__game.roadPoint(__game.roads[0],i))', [ring[1] - 16]); time.sleep(2.4); shot('f_tunnel')
+at('Ring', 1866); shot('f_under'); print('under flyover', st())
+at('Pine Trail', 34); shot('f_stream')
+pg.click('#bMenu'); time.sleep(.3); pg.click('#oTime'); time.sleep(.3); pg.click('button[data-mode="free"]'); time.sleep(1); at('Street E-20', 44); shot('f_night'); print(pg.evaluate('JSON.stringify(__game.renderer.info.render)'))

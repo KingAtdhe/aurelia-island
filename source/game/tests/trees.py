@@ -1,0 +1,10 @@
+pg.evaluate("localStorage.setItem('aurelia_qual','1')"); pg.reload(); pg.wait_for_function('window.__game !== undefined', timeout=400000); pg.wait_for_function('window.__detail === 1', timeout=500000)
+pg.click('button[data-mode="free"]'); time.sleep(3)
+pg.evaluate("document.querySelectorAll('#help,#toast,.ctl,#modes,#opts').forEach(e=>e.style.display='none')")
+def along(name, frac, tag, h=0, wait=9):
+    pg.evaluate('''([n,f])=>{const R=__game.roads.find(r=>r.name===n);__game.placeCar(__game.roadPoint(R,Math.floor(R.n*f)))}''', [name, frac]); time.sleep(1)
+    if h: pg.evaluate("h=>{__game.car.h+=h}", h)
+    time.sleep(wait); shot(tag)
+along('Pine Trail', 0.4, 'tr_forest'); along('Summit Pass', 0.5, 'tr_mountain'); along('Orchard Lane', 0.5, 'tr_farm', 0.3)
+along('Peninsula Road', 0.5, 'tr_coast'); along('Street E-160', 0.3, 'tr_city', 0.5); along('Dune Road', 0.5, 'tr_desert')
+print(pg.evaluate('JSON.stringify(__game.renderer.info.render)'))

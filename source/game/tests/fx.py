@@ -1,0 +1,7 @@
+pg.evaluate("localStorage.setItem('aurelia_qual','1')"); pg.reload(); pg.wait_for_function('window.__game !== undefined', timeout=400000); pg.wait_for_function('window.__detail === 1', timeout=500000)
+pg.click('button[data-mode="free"]'); time.sleep(2)
+pg.evaluate("document.querySelectorAll('#help,#toast,.ctl,#modes,#opts').forEach(e=>e.style.display='none')")
+pg.evaluate('''()=>{const R=__game.roads.find(r=>r.name==='Ring');const p=__game.roadPoint(R,40);__game.placeCar(p);}'''); time.sleep(3)
+pg.evaluate("()=>{__game.car.h=Math.atan2(-0.55,0.62);}"); time.sleep(3); shot('F_sun')
+pg.evaluate('''()=>{const R=__game.roads.find(r=>r.name==='Street E-20');let b=0,bd=1e9;for(let i=0;i<R.n;i++){const p=__game.roadPoint(R,i),d=Math.hypot(p.x-300,p.z+20);if(d<bd){bd=d;b=i}}__game.placeCar(__game.roadPoint(R,b));}'''); time.sleep(4)
+pg.evaluate("()=>{__game.inp.up=true}"); time.sleep(5); shot('F_fast'); pg.evaluate("()=>{__game.inp.up=false}")

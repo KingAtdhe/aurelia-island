@@ -1,0 +1,10 @@
+pg.evaluate("localStorage.setItem('aurelia_qual','1');localStorage.setItem('aurelia_night','true')"); pg.reload(); pg.wait_for_function('window.__game !== undefined', timeout=400000); pg.wait_for_function('window.__detail === 1', timeout=500000)
+pg.click('button[data-mode="free"]'); time.sleep(3)
+pg.evaluate("document.querySelectorAll('#help,#toast,.ctl,#modes,#opts').forEach(e=>e.style.display='none')")
+def near(name, x, y, tag, h=0, wait=8):
+    pg.evaluate('''([n,x,z])=>{const R=__game.roads.find(r=>r.name===n);let b=0,bd=1e9;for(let i=0;i<R.n;i++){const p=__game.roadPoint(R,i),d=Math.hypot(p.x-x,p.z-z);if(d<bd){bd=d;b=i}}__game.placeCar(__game.roadPoint(R,b))}''', [name, x, -y]); time.sleep(1)
+    if h: pg.evaluate("h=>{__game.car.h+=h}", h)
+    time.sleep(wait); shot(tag)
+near('Street E120', -400, 120, 'hq_night1', 0.45); near('Street E-160', -240, -160, 'hq_night2', -0.5)
+near('Street E-160', -380, -160, 'hq_side1', 1.2); near('Street E120', -250, 120, 'hq_side2', -1.1)
+print(pg.evaluate('JSON.stringify(__game.renderer.info.render)'))

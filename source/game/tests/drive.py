@@ -1,0 +1,5 @@
+pg.evaluate("localStorage.setItem('aurelia_qual','2')"); pg.reload(); pg.wait_for_function('window.__game !== undefined', timeout=400000); pg.wait_for_function('window.__detail === 1', timeout=500000)
+pg.click('button[data-mode="free"]'); time.sleep(20)
+pg.evaluate("document.querySelectorAll('#help,#toast').forEach(e=>e.style.display='none')")
+pg.evaluate('''()=>{const R=__game.roads.find(r=>r.name==='Summit Pass');__game.placeCar(__game.roadPoint(R,100))}'''); time.sleep(6)
+pg.evaluate("__game.inp.gas=1"); time.sleep(4); shot('drv_1'); pg.evaluate("__game.inp.left=1"); time.sleep(1.2); shot('drv_2'); pg.evaluate("__game.inp.left=0;__game.inp.gas=0")

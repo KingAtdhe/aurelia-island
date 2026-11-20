@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Aurelia Island</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b1520; color: #fff; font: 14px/1.3 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
+  #stage { position: fixed; inset: 0; }
+  canvas#c { width: 100%; height: 100%; display: block; filter: contrast(1.1) saturate(1.14) brightness(1.04); }
+  body.night canvas#c { filter: contrast(1.05) saturate(1.05); }
+  body.post canvas#c { filter: none; } body.post #grade { display: none; }
+  #grade { position: fixed; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(10,14,24,0.30) 100%), linear-gradient(180deg, rgba(255,200,140,0.10), rgba(255,255,255,0) 50%, rgba(40,60,110,0.10)); mix-blend-mode: multiply; }
+  [hidden] { display: none !important; }
+  .hud { position: absolute; pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+  #speed { right: 14px; top: 10px; text-align: right; font-weight: 800; font-size: 34px; font-variant-numeric: tabular-nums; }
+  #speed small { display: block; font-size: 11px; font-weight: 600; letter-spacing: .12em; opacity: .85; }
+  #region { left: 50%; top: 10px; transform: translateX(-50%); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 13px; background: rgba(10,20,30,.45); padding: 5px 12px; border-radius: 99px; white-space: nowrap; }
+  #race { left: 50%; top: 44px; transform: translateX(-50%); text-align: center; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; background: rgba(10,20,30,.45); padding: 6px 12px; border-radius: 10px; white-space: nowrap; }
+  #toast { left: 50%; top: 30%; transform: translateX(-50%); font-size: 20px; font-weight: 800; text-align: center; transition: opacity .4s; opacity: 0; max-width: 86vw; }
+  #big { left: 50%; top: 38%; transform: translate(-50%,-50%); font-size: 90px; font-weight: 900; }
+  #mini { position: absolute; left: 10px; top: 10px; width: 132px; height: 132px; border-radius: 14px; border: 2px solid rgba(255,255,255,.55); background: #1c5d78; }
+  .tb { position: absolute; left: 150px; top: 10px; display: flex; gap: 6px; flex-wrap: wrap; max-width: 150px; }
+  button { font: inherit; color: #fff; border: 0; border-radius: 10px; background: rgba(12,24,36,.6); padding: 8px 11px; font-weight: 700; touch-action: none; }
+  button:active, button.on { background: rgba(240,170,40,.85); }
+  .pad { position: absolute; bottom: max(14px, env(safe-area-inset-bottom)); display: flex; gap: 12px; align-items: flex-end; }
+  .pad button { width: 76px; height: 76px; border-radius: 50%; font-size: 26px; background: rgba(12,24,36,.45); border: 2px solid rgba(255,255,255,.5); }
+  #padL { left: 14px; } #padR { right: 14px; }
+  #bGas { width: 86px; height: 104px; border-radius: 22px; } #bHand { width: 56px; height: 56px; font-size: 13px; }
+  .overlay { position: absolute; inset: 0; background: rgba(6,14,22,.8); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; box-sizing: border-box; overflow: auto; touch-action: pan-y; }
+  .overlay h1 { margin: 0; font-size: 34px; letter-spacing: .04em; } .overlay p { margin: 0; opacity: .85; text-align: center; max-width: 520px; }
+  .menu { display: grid; gap: 10px; width: min(360px, 92vw); }
+  .menu button { padding: 14px; font-size: 17px; background: #1d6f8f; text-align: left; } .menu button small { display: block; font-weight: 500; opacity: .85; font-size: 12px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  #mapWrap { position: relative; width: min(94vw, 150vh); } #bigMap { width: 100%; border-radius: 12px; display: block; background: #1c5d78; }
+  #load { font-size: 15px; }
+  #note { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font-size: 11px; opacity: .7; pointer-events: none; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
+  <div id="grade"></div>
+  <canvas id="mini" width="264" height="264"></canvas>
+  <div class="tb" id="tb" hidden>
+    <button id="bMenu" type="button">Menu</button><button id="bMap" type="button">Map</button>
+    <button id="bCam" type="button">Cam</button><button id="bReset" type="button">Reset</button>
+  </div>
+  <div class="hud" id="speed" hidden>0<small>KM/H</small></div>
+  <div class="hud" id="region" hidden></div>
+  <div class="hud" id="race" hidden></div>
+  <div class="hud" id="toast"></div>
+  <div class="hud" id="big" hidden></div>
+  <div class="pad" id="padL" hidden><button id="bLeft" type="button" aria-label="Steer left">&#9664;</button><button id="bRight" type="button" aria-label="Steer right">&#9654;</button></div>
+  <div class="pad" id="padR" hidden><button id="bHand" type="button">DRIFT</button><button id="bBrake" type="button" aria-label="Brake">&#9660;</button><button id="bGas" type="button" aria-label="Accelerate">&#9650;</button></div>
+  <div id="note" hidden></div>
+  <div class="overlay" id="menu">
+    <h1>AURELIA ISLAND</h1>
+    <p id="load">Loading the island…</p>
+    <div class="menu" id="modes" hidden>
+      <button type="button" data-mode="free">Free Roam<small>Drive anywhere and find every landmark.</small></button>
+      <button type="button" data-mode="circuit">Circuit Time Trial<small>3 laps of the racing circuit. Beat your best lap.</small></button>
+      <button type="button" data-mode="ring">Island Lap<small>One timed lap of the 10 km coastal ring highway.</small></button>
+    </div>
+    <div class="row" id="opts" hidden>
+      <button type="button" id="oQual">Graphics: Medium</button><button type="button" id="oSound">Sound: On</button><button type="button" id="oAuto">Auto gas: Off</button><button type="button" id="oTime">Time: Day</button>
+    </div>
+    <p id="help" hidden>Touch: arrows steer, right pedals for gas and brake, DRIFT for the handbrake. Keyboard: arrows or WASD, Space handbrake, R reset, C camera, M map.</p>
+  </div>
+  <div class="overlay" id="mapOv" hidden>
+    <div id="mapWrap"><canvas id="bigMap" width="1200" height="840"></canvas></div>
+    <div class="row" id="travel"></div>
+    <button type="button" id="mapClose">Close map</button>
+  </div>
+</div>
+<script src="lib/three.min.js"></script>
+<script src="lib/GLTFLoader.js"></script>
+<script src="lib/meshopt_decoder.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const loadEl = $('load');
+function fail(msg) { loadEl.textContent = msg; $('menu').hidden = false; }
+if (!window.THREE) { fail('The 3D library did not load.'); return; }
+THREE.ShaderChunk.fog_fragment = '#ifdef USE_FOG\n float fd_ = max(fogDepth - fogNear * 0.25, 0.0) / max(fogFar - fogNear * 0.25, 1.0);\n float fogFactor = 1.0 - exp(-pow(fd_ * 2.4, 1.3));\n gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, clamp(fogFactor, 0.0, 0.97));\n#endif';   // haze that thickens with distance like real air
+const T3 = THREE, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t;
+const store = { get(k, d) { try { const v = localStorage.getItem('aurelia_' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem('aurelia_' + k, JSON.stringify(v)); } catch (e) {} } };
+
+/* ---------------------------------------------------------------- renderer */
+let renderer;
+try { renderer = new T3.WebGLRenderer({ canvas: $('c'), antialias: true, powerPreference: 'high-performance' }); }
+catch (e) { fail('This device or browser has 3D graphics turned off.'); return; }
+renderer.outputEncoding = T3.sRGBEncoding;
+const scene = new T3.Scene(); let envTex = null;
+const SKY = new T3.Color(0x9fc6e6);
+scene.background = SKY; scene.fog = new T3.Fog(0xb9d6ea, 500, 3000);
+const camera = new T3.PerspectiveCamera(64, 1, 0.4, 3400);
+renderer.toneMapping = T3.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.74;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = T3.PCFSoftShadowMap;
+const hemi = new T3.HemisphereLight(0xd3e6ff, 0x7d7258, 0.5); scene.add(hemi);                 // sky above, warm earth bounce below
+const SUND = new T3.Vector3(-0.55, 0.43, 0.62).normalize();          // late-afternoon sun: long shadows, warm light
+const sun = new T3.DirectionalLight(0xfff0d8, 1.75); sun.position.copy(SUND); scene.add(sun); scene.add(sun.target);
+const bounce = new T3.DirectionalLight(0xd9c7a4, 0.2); bounce.position.set(-SUND.x, 0.3, -SUND.z); scene.add(bounce);                         // light thrown back off the sunlit ground, opposite the sun
+sun.shadow.mapSize.set(4096, 4096); sun.shadow.camera.left = -110; sun.shadow.camera.right = 110; sun.shadow.camera.top = 110; sun.shadow.camera.bottom = -110; sun.shadow.camera.near = 10; sun.shadow.camera.far = 700; sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.6;
+const skyGeo = new T3.SphereGeometry(3000, 24, 12);
+{ const c = [], p = skyGeo.attributes.position, top = new T3.Color(0x2f74c4), hor = new T3.Color(0xc3dcee), t = new T3.Color();
+  for (let i = 0; i < p.count; i++) { const h = clamp(p.getY(i) / 3000, 0, 1); t.copy(hor).lerp(top, Math.pow(h, 0.55)); c.push(t.r, t.g, t.b); }
+  skyGeo.setAttribute('color', new T3.Float32BufferAttribute(c, 3)); }
+function buildEnv(warm) { // image-based light: the sky dome plus a ground bounce, so glass, paint and water pick up reflections
+  const eg = new T3.SphereGeometry(50, 24, 16), c = [], p = eg.attributes.position, t = new T3.Color(), top = new T3.Color(warm ? 0x35588f : 0x3f86cf), hor = new T3.Color(warm ? 0xf0b98a : 0xdfeaf2), gnd = new T3.Color(warm ? 0x5a4b3a : 0x5d6b45), sw = new T3.Color(0xffa860), v = new T3.Vector3();
+  for (let i = 0; i < p.count; i++) { const h = p.getY(i) / 50; if (h >= 0) t.copy(hor).lerp(top, Math.pow(h, warm ? 0.45 : 0.55)); else t.copy(hor).lerp(gnd, Math.min(1, -h * 6));
+    if (warm) { v.set(p.getX(i), p.getY(i), p.getZ(i)).normalize(); t.lerp(sw, Math.pow(Math.max(0, v.dot(SUND)), 3) * 0.7 * (1 - Math.min(1, Math.abs(h) * 2))); } c.push(t.r, t.g, t.b); }
+  eg.setAttribute('color', new T3.Float32BufferAttribute(c, 3));
+  const es = new T3.Scene(); es.add(new T3.Mesh(eg, new T3.MeshBasicMaterial({ vertexColors: true, side: T3.BackSide })));
+  const sd = new T3.Mesh(new T3.SphereGeometry(4, 12, 8), new T3.MeshBasicMaterial({ color: warm ? 0xffc890 : 0xfff4e0 })); sd.position.copy(SUND).multiplyScalar(44); es.add(sd);
+  try { const pm = new T3.PMREMGenerator(renderer); const tx = pm.fromScene(es, 0.02, 0.1, 100).texture; pm.dispose(); return tx; } catch (e) { return null; } }
+const ENV = { day: null, dusk: null }; ENV.day = envTex = buildEnv(false); scene.environment = envTex;
+const SUN_DAY = SUND.clone(), SUN_DUSK = new T3.Vector3(-0.72, 0.2, 0.66).normalize();
+// clouds
+const cloudTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 1024; const g = cv.getContext('2d'); let sd = 7; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  for (let k = 0; k < 12; k++) { const cx = rnd() * 1024, cy = rnd() * 1024, n = 7 + (rnd() * 8 | 0);
+    for (let q = 0; q < n; q++) { const x = cx + (rnd() - .5) * 190, y = cy + (rnd() - .5) * 70, r = 26 + rnd() * 58;
+      for (const ox of [-1024, 0, 1024]) for (const oy of [-1024, 0, 1024]) { const gr = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, r); gr.addColorStop(0, 'rgba(255,255,255,0.7)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(x + ox - r, y + oy - r, 2 * r, 2 * r); } } }
+  const t = new T3.CanvasTexture(cv); t.wrapS = t.wrapT = T3.RepeatWrapping; t.repeat.set(2, 2); return t; })();
+const clouds = new T3.Mesh(new T3.PlaneGeometry(14000, 14000), new T3.MeshBasicMaterial({ map: cloudTex, transparent: true, opacity: 0.8, depthWrite: false, fog: false, side: T3.DoubleSide }));
+clouds.rotation.x = Math.PI / 2; clouds.renderOrder = -0.5; scene.add(clouds);
+new T3.TextureLoader().load('data/clouds.png', t => { t.wrapS = t.wrapT = T3.RepeatWrapping; t.repeat.set(3, 3); t.encoding = T3.sRGBEncoding; t.anisotropy = 8; t.offset.copy(cloudTex.offset);
+  clouds.material.map = t; clouds.material.opacity = night ? 0.12 : 0.95; clouds.material.needsUpdate = true; cloudTex.offset = t.offset; });   // sun-lit cumulus field
+const SKYU = { uSun: { value: SUND.clone() }, uNight: { value: 0 }, uWarm: { value: 0 } };
+const sky = new T3.Mesh(skyGeo, new T3.ShaderMaterial({ uniforms: SKYU, side: T3.BackSide, depthWrite: false, fog: false,
+  vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position.z = gl_Position.w; }',
+  fragmentShader: `varying vec3 vD; uniform vec3 uSun; uniform float uNight, uWarm;
+    void main(){ vec3 d = normalize(vD); float h = max(d.y, 0.0);
+      vec3 zen = vec3(0.13, 0.33, 0.68), mid = vec3(0.42, 0.62, 0.86), hor = vec3(0.80, 0.86, 0.90), gnd = vec3(0.62, 0.66, 0.66);
+      vec3 c = mix(hor, mid, smoothstep(0.0, 0.18, h)); c = mix(c, zen, smoothstep(0.18, 0.85, h)); if (d.y < 0.0) c = mix(hor, gnd, smoothstep(0.0, -0.2, d.y));
+      float s = max(dot(d, normalize(uSun)), 0.0); c += vec3(1.0, 0.86, 0.62) * (pow(s, 8.0) * 0.28 + pow(s, 64.0) * 0.5) + vec3(1.0, 0.95, 0.85) * smoothstep(0.9993, 0.9997, s) * 2.0;
+      c = mix(c, vec3(0.93, 0.88, 0.8), exp(-h * 22.0) * 0.35 * (0.5 + 0.5 * s));                 // warm haze at the horizon, strongest toward the sun
+      if (uWarm > 0.0) {                                                            // golden hour: deep blue zenith, amber and rose toward the low sun
+        vec3 dz = vec3(0.09, 0.2, 0.46), dm = vec3(0.42, 0.5, 0.72), dh = vec3(1.0, 0.66, 0.4), dr = vec3(0.95, 0.55, 0.5);
+        vec3 w = mix(dh, dm, smoothstep(0.0, 0.22, h)); w = mix(w, dz, smoothstep(0.22, 0.8, h)); if (d.y < 0.0) w = mix(dh, vec3(0.45, 0.38, 0.34), smoothstep(0.0, -0.2, d.y));
+        float sa = max(dot(normalize(vec3(d.x, 0.0, d.z)), normalize(vec3(uSun.x, 0.0, uSun.z))), 0.0);
+        w = mix(w, mix(dr, dh, sa), exp(-h * 9.0) * (0.35 + 0.65 * sa) * 0.8);
+        w += vec3(1.0, 0.62, 0.28) * (pow(s, 6.0) * 0.55 + pow(s, 48.0) * 0.9) + vec3(1.0, 0.85, 0.6) * smoothstep(0.9994, 0.9997, s) * 3.0;
+        c = mix(c, w, uWarm); }
+      vec3 n = mix(vec3(0.015, 0.03, 0.07), vec3(0.06, 0.09, 0.16), exp(-h * 6.0)); c = mix(c, n, uNight);
+      gl_FragColor = vec4(c, 1.0); }` })); sky.renderOrder = -1; scene.add(sky);
+const QUAL = [{ n: 'Low', pr: 1.25, far: 1700, f0: 160, f1: 1550 }, { n: 'Medium', pr: 2, far: 2600, f0: 220, f1: 2500 }, { n: 'High', pr: 3, far: 3600, f0: 300, f1: 3500 }];
+let qual = store.get('qual', 1);
+function applyQual() {
+  const q = QUAL[qual]; renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pr));
+  camera.far = q.far; scene.fog.near = q.f0; scene.fog.far = q.f1; sky.scale.setScalar(q.far * 0.95 / 3000); sun.castShadow = qual >= 1; clouds.position.y = Math.min(620, q.far * 0.2); shadow.visible = qual === 0;
+  { const e = qual === 2 ? 110 : 75, m = qual === 2 ? 4096 : 2048; const sc = sun.shadow.camera; sc.left = sc.bottom = -e; sc.right = sc.top = e; sc.updateProjectionMatrix();
+    if (sun.shadow.mapSize.x !== m) { sun.shadow.mapSize.set(m, m); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } } }
+  POST.on = qual >= 1; document.body.classList.toggle('post', POST.on); POST.w = 0;
+  $('oQual').textContent = 'Graphics: ' + q.n; resize();
+}
+function resize() { const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+window.addEventListener('resize', resize);
+
+
+/* ---------------------------------------------------------------- post-processing: bloom, grading, speed blur, sun flare */
+const MOODS = { 'Desert': [1.06, 1.0, 0.88, 0.08], 'Forest Trails': [0.95, 1.03, 0.96, 0.05], 'Mountain Roads': [0.96, 0.99, 1.05, -0.03], 'City': [1.01, 0.99, 0.99, -0.02], 'Coastal Highway': [0.97, 1.0, 1.04, 0.07], 'Harbour': [0.98, 1.0, 1.03, 0.04], 'Countryside': [1.03, 1.02, 0.94, 0.05], 'Racing Circuit': [1.02, 1.0, 0.97, 0.06] };
+const POST = { on: false, rt: null, a: null, b: null, w: 0, h: 0, speed: 0, ok: true };
+const WIND = { t: { value: 0 } };
+const fsGeo = new T3.BufferGeometry(); fsGeo.setAttribute('position', new T3.Float32BufferAttribute([-1, -1, 0, 3, -1, 0, -1, 3, 0], 3));
+const fsCam = new T3.OrthographicCamera(-1, 1, 1, -1, 0, 1), fsScene = new T3.Scene(), fsMesh = new T3.Mesh(fsGeo); fsMesh.frustumCulled = false; fsScene.add(fsMesh);
+const fsV = 'varying vec2 vU; void main(){ vU = position.xy * 0.5 + 0.5; gl_Position = vec4(position.xy, 0.0, 1.0); }';
+const mBright = new T3.ShaderMaterial({ uniforms: { t: { value: null }, th: { value: 0.72 } }, vertexShader: fsV, depthTest: false, depthWrite: false,
+  fragmentShader: 'uniform sampler2D t; uniform float th; varying vec2 vU; void main(){ vec3 c = texture2D(t, vU).rgb; float l = max(c.r, max(c.g, c.b)); gl_FragColor = vec4(c * smoothstep(th, 1.0, l), 1.0); }' });
+const mBlur = new T3.ShaderMaterial({ uniforms: { t: { value: null }, d: { value: new T3.Vector2() } }, vertexShader: fsV, depthTest: false, depthWrite: false,
+  fragmentShader: `uniform sampler2D t; uniform vec2 d; varying vec2 vU;
+    void main(){ vec3 c = texture2D(t, vU).rgb * 0.1964825501511404;
+      c += (texture2D(t, vU + d * 1.411764705882353).rgb + texture2D(t, vU - d * 1.411764705882353).rgb) * 0.2969069646728344;
+      c += (texture2D(t, vU + d * 3.2941176470588234).rgb + texture2D(t, vU - d * 3.2941176470588234).rgb) * 0.09447039785044732;
+      c += (texture2D(t, vU + d * 5.176470588235294).rgb + texture2D(t, vU - d * 5.176470588235294).rgb) * 0.010381362401148057;
+      gl_FragColor = vec4(c, 1.0); }` });
+const mComp = new T3.ShaderMaterial({ uniforms: { t: { value: null }, bl: { value: null }, spd: { value: 0 }, sunP: { value: new T3.Vector3() }, night: { value: 0 }, asp: { value: 1 }, px: { value: new T3.Vector2() }, tint: { value: new T3.Vector3(1, 1, 1) }, satd: { value: 0 }, dusk: { value: 0 } },
+  vertexShader: fsV, depthTest: false, depthWrite: false,
+  fragmentShader: `uniform sampler2D t, bl; uniform float spd, night, asp, satd, dusk; uniform vec3 sunP, tint; uniform vec2 px; varying vec2 vU;
+    vec3 grade(vec3 c) {
+      float l = dot(c, vec3(0.299, 0.587, 0.114));
+      c = mix(vec3(l), c, 1.16 - 0.08 * night + satd * (1.0 - night)); c *= mix(tint, vec3(1.0), night);   // richer colour, with a mood per region
+      c = c * c * (3.0 - 2.0 * c) * 0.32 + c * 0.68;                                // gentle S-curve contrast
+      vec3 warm = vec3(1.04, 1.0, 0.93), cool = vec3(0.93, 0.98, 1.06);            // warm highlights, cool shadows, like a film grade
+      c *= mix(cool, warm, smoothstep(0.15, 0.75, l)) * mix(vec3(1.0), vec3(0.9, 0.95, 1.12), night);
+      c *= mix(vec3(1.0), vec3(1.05, 0.99, 0.93), dusk); c = mix(c, c * c * (3.0 - 2.0 * c), 0.12 * dusk);   // golden hour: warmer, a touch more contrast
+      return c * 1.03; }
+    void main(){
+      vec2 d = vU - 0.5; float r = length(d * vec2(asp, 1.0));
+      vec3 c = texture2D(t, vU).rgb;
+      if (spd > 0.01) {                                                              // speed: radial blur toward the edges and slight chromatic split
+        float k = spd * smoothstep(0.18, 0.75, r) * 0.045; vec3 a = c;
+        for (int i = 1; i <= 6; i++) a += texture2D(t, vU - d * k * float(i) / 6.0).rgb;
+        c = a / 7.0;
+        float ca = spd * smoothstep(0.3, 0.8, r) * 0.004; c.r = mix(c.r, texture2D(t, vU - d * ca).r, 0.8); c.b = mix(c.b, texture2D(t, vU + d * ca).b, 0.8); }
+      vec3 b = texture2D(bl, vU).rgb; c += b * (0.42 + 0.5 * night);              // bloom
+      if (sunP.z > 0.0) {                                                            // sun glare and lens ghosts, faded when the sun is hidden
+        vec2 s = sunP.xy; float vis = 0.0;
+        for (int i = 0; i < 5; i++) { vec2 o = vec2(float(i - 2) * 0.012, float(i - 2) * 0.012 * float(1 - 2 * (i - i / 2 * 2))); vis += step(0.93, max(max(texture2D(t, s + o).r, texture2D(t, s + o).g), texture2D(t, s + o).b)); }
+        vis = vis / 5.0 * sunP.z;
+        vec2 ds = (vU - s) * vec2(asp, 1.0); float g = exp(-length(ds) * 3.2) * 0.32 + exp(-length(ds) * 18.0) * 0.6;
+        float st = pow(abs(cos(atan(ds.y, ds.x) * 3.0)), 30.0) * exp(-length(ds) * 5.0) * 0.25;
+        c += vec3(1.0, 0.9, 0.72) * (g + st) * vis;
+        vec2 ax = 0.5 - s;
+        for (int i = 1; i <= 4; i++) { float f = float(i) * 0.55 - 0.3; vec2 gp = s + ax * (1.0 + f); float gd = length((vU - gp) * vec2(asp, 1.0)); float sz = 0.02 + 0.03 * float(i);
+          c += vec3(0.35 + 0.15 * float(i), 0.55, 0.9 - 0.12 * float(i)) * smoothstep(sz, sz * 0.6, gd) * 0.05 * vis; } }
+      c = grade(c);
+      c *= mix(1.0, smoothstep(1.05, 0.35, r), 0.42 + 0.25 * spd);                   // vignette, a little stronger at speed
+      c += (fract(sin(dot(vU * 937.0, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0;   // dither against banding
+      gl_FragColor = vec4(c, 1.0); }` });
+function postSize() {
+  if (!POST.on) return; const s = renderer.getDrawingBufferSize(new T3.Vector2()), w = s.x, h = s.y; if (w === POST.w && h === POST.h && POST.rt) return; POST.w = w; POST.h = h;
+  [POST.rt, POST.a, POST.b].forEach(r => r && r.dispose());
+  const ms = renderer.capabilities.isWebGL2 && T3.WebGLMultisampleRenderTarget;
+  POST.rt = ms ? new T3.WebGLMultisampleRenderTarget(w, h) : new T3.WebGLRenderTarget(w, h); if (ms) POST.rt.samples = qual === 2 ? 4 : 2;
+  POST.rt.texture.encoding = T3.sRGBEncoding;
+  const bw = Math.max(8, w >> 2), bh = Math.max(8, h >> 2); POST.a = new T3.WebGLRenderTarget(bw, bh); POST.b = new T3.WebGLRenderTarget(bw, bh);
+}
+const _sv = new T3.Vector3();
+function postRender() {
+  if (!POST.on || !POST.ok) { renderer.render(scene, camera); return; }
+  try {
+    postSize(); renderer.setRenderTarget(POST.rt); renderer.render(scene, camera);
+    const tm = renderer.toneMapping; renderer.toneMapping = T3.NoToneMapping; renderer.autoClear = false;
+    fsMesh.material = mBright; mBright.uniforms.t.value = POST.rt.texture; mBright.uniforms.th.value = SKYU.uNight.value > 0.5 ? 0.45 : 0.74; renderer.setRenderTarget(POST.a); renderer.render(fsScene, fsCam);
+    fsMesh.material = mBlur; for (let i = 0; i < 2; i++) { const sp = 1 + i * 1.5;
+      mBlur.uniforms.t.value = POST.a.texture; mBlur.uniforms.d.value.set(sp / POST.a.width, 0); renderer.setRenderTarget(POST.b); renderer.render(fsScene, fsCam);
+      mBlur.uniforms.t.value = POST.b.texture; mBlur.uniforms.d.value.set(0, sp / POST.a.height); renderer.setRenderTarget(POST.a); renderer.render(fsScene, fsCam); }
+    _sv.copy(SUND).multiplyScalar(2000).add(camera.position).project(camera);
+    const inF = _sv.z < 1 && Math.abs(_sv.x) < 1.3 && Math.abs(_sv.y) < 1.3 && SKYU.uNight.value < 0.5;
+    mComp.uniforms.sunP.value.set(_sv.x * 0.5 + 0.5, _sv.y * 0.5 + 0.5, inF ? clamp(1.3 - Math.max(Math.abs(_sv.x), Math.abs(_sv.y)), 0, 1) : 0);
+    POST.speed = lerp(POST.speed, clamp((car.speed * 3.6 - 120) / 160, 0, 1), 0.08);
+    Object.assign(mComp.uniforms, {}); mComp.uniforms.t.value = POST.rt.texture; mComp.uniforms.bl.value = POST.a.texture; mComp.uniforms.spd.value = POST.speed; mComp.uniforms.night.value = SKYU.uNight.value; mComp.uniforms.dusk.value = SKYU.uWarm.value; mComp.uniforms.asp.value = POST.w / POST.h;
+    { const M = POST.mood || (POST.mood = { t: new T3.Vector3(1, 1, 1), s: 0 }), tw = new T3.Vector3(0.3, 0.3, 0.3); let ws = 0.3, ss = 0;
+      for (const r of W.regions) { const md = MOODS[r.name]; if (!md) continue; const w = Math.exp(-(((car.x - r.x) / r.rx) ** 2 + ((car.z - r.z) / r.rz) ** 2) * 1.5); tw.x += md[0] * w; tw.y += md[1] * w; tw.z += md[2] * w; ss += md[3] * w; ws += w; }
+      tw.multiplyScalar(1 / ws); ss /= ws; M.t.lerp(tw, 0.02); M.s += (ss - M.s) * 0.02; mComp.uniforms.tint.value.copy(M.t); mComp.uniforms.satd.value = M.s; }
+    fsMesh.material = mComp; renderer.setRenderTarget(null); renderer.render(fsScene, fsCam);
+    renderer.toneMapping = tm; renderer.autoClear = true;
+  } catch (e) { console.warn('post off', e); POST.ok = false; renderer.setRenderTarget(null); renderer.autoClear = true; renderer.render(scene, camera); }
+}
+
+/* ---------------------------------------------------------------- world data */
+let W, HM, roads = [], segGrid = new Map(), obGrid = new Map(), SPIN = [], falls = [];
+const SG = 48, OG = 120;
+function hAt(x, z) {
+  const m = W.heightmap; let fx = (x - m.x0) / m.cell, fy = (-z - m.y0) / m.cell;
+  fx = clamp(fx, 0, m.nx - 1.001); fy = clamp(fy, 0, m.ny - 1.001);
+  const ix = fx | 0, iy = fy | 0, u = fx - ix, v = fy - iy, i = iy * m.nx + ix;
+  return ((HM[i] * (1 - u) + HM[i + 1] * u) * (1 - v) + (HM[i + m.nx] * (1 - u) + HM[i + m.nx + 1] * u) * v) * m.scale;
+}
+function prepWorld() {
+  W.roads.forEach((r, ri) => {
+    const p = new Float32Array(r.pts), n = p.length / 3; r.p = p; r.n = n; r.hw = r.w / 2; r.segs = r.closed ? n : n - 1; roads.push(r);
+    for (let i = 0; i < r.segs; i++) {
+      const j = (i + 1) % n, cx = (p[i * 3] + p[j * 3]) / 2, cz = (p[i * 3 + 2] + p[j * 3 + 2]) / 2, k = Math.floor(cx / SG) + ',' + Math.floor(cz / SG);
+      let a = segGrid.get(k); if (!a) segGrid.set(k, a = []); a.push(ri, i);
+    }
+  });
+  const put = (o, kind) => { const rad = kind === 'c' ? o[2] : Math.hypot(o[2], o[3]);
+    for (let gx = Math.floor((o[0] - rad) / OG); gx <= Math.floor((o[0] + rad) / OG); gx++) for (let gz = Math.floor((o[1] - rad) / OG); gz <= Math.floor((o[1] + rad) / OG); gz++) {
+      const k = gx + ',' + gz; let a = obGrid.get(k); if (!a) obGrid.set(k, a = { o: [], c: [], p: [] }); a[kind].push(o); } };
+  W.obstacles.forEach(o => put(o, 'o')); W.circles.forEach(o => put(o, 'c')); W.platforms.forEach(o => put(o, 'p'));
+}
+const RQ = { ok: false, road: null, i: 0, t: 0, d: 0, y: 0, tx: 0, tz: 1 };
+function roadQuery(x, z, yref, out) {
+  out = out || RQ; out.ok = false; let best = 1e9; const gx = Math.floor(x / SG), gz = Math.floor(z / SG);
+  for (let ax = gx - 1; ax <= gx + 1; ax++) for (let az = gz - 1; az <= gz + 1; az++) {
+    const a = segGrid.get(ax + ',' + az); if (!a) continue;
+    for (let q = 0; q < a.length; q += 2) {
+      const r = roads[a[q]], i = a[q + 1], j = (i + 1) % r.n, p = r.p;
+      const x0 = p[i * 3], z0 = p[i * 3 + 2], dx = p[j * 3] - x0, dz = p[j * 3 + 2] - z0, L2 = dx * dx + dz * dz;
+      const t = clamp(((x - x0) * dx + (z - z0) * dz) / L2, 0, 1), px = x0 + dx * t, pz = z0 + dz * t, d = Math.hypot(x - px, z - pz);
+      if (d > r.hw + 4) continue;
+      const y = p[i * 3 + 1] + (p[j * 3 + 1] - p[i * 3 + 1]) * t, sc = d + 4 * Math.max(0, Math.abs(yref - y) - 2.5);
+      if (sc < best) { best = sc; const L = Math.sqrt(L2); out.ok = true; out.road = r; out.i = i; out.t = t; out.y = y; out.tx = dx / L; out.tz = dz / L;
+        out.d = ((x - px) * (dz / L) - (z - pz) * (dx / L)); }
+    }
+  }
+  return out;
+}
+const GR = { y: 0, surf: 'grass', rq: null, water: false };
+const rqTmp = { ok: false };
+function ground(x, z, yref, out) {
+  out = out || GR; let th = hAt(x, z); out.water = false; out.rq = null; let surf = 'grass';
+  const cell = obGrid.get(Math.floor(x / OG) + ',' + Math.floor(z / OG));
+  if (cell) for (const o of cell.p) { const dx = x - o[0], dz = z - o[1], c = Math.cos(o[4]), s = Math.sin(o[4]);
+    if (Math.abs(dx * c - dz * s) < o[2] && Math.abs(-dx * s - dz * c) < o[3] && yref > o[5] - 3 && o[5] > th) { th = o[5]; surf = 'road'; } }
+  const rq = roadQuery(x, z, yref, out === GR ? RQ : rqTmp);
+  if (rq.ok) {
+    const r = rq.road, ad = Math.abs(rq.d), wall = r.wall[rq.i] || r.wall[(rq.i + 1) % r.n];
+    if (wall) { if (yref > rq.y - 3.5 && ad < r.hw + 1.2) { out.y = rq.y; out.surf = 'road'; out.rq = rq; return out; } }
+    else if (ad <= r.hw) { out.y = Math.max(th, rq.y); out.surf = r.type === 'dirt' ? 'dirt' : 'road'; out.rq = rq; return out; }
+    else { th = Math.max(th, rq.y - 0.78 * (ad - r.hw) / 4); surf = 'dirt'; out.rq = rq; }
+  }
+  if (surf !== 'road') {
+    if (th < -0.5) { out.water = true; out.wl = 0; }
+    for (const l of W.lakes) if (th < l[1] - 0.35 && Math.hypot(x - l[0], z - l[2]) < l[3]) { out.water = true; out.wl = l[1]; }
+    if (surf === 'grass') { if (th > W.snowline + 6) surf = 'snow'; else if (regionAt(x, z) === 'Desert' || th < 3) surf = 'sand'; }
+  }
+  out.y = th; out.surf = surf; return out;
+}
+function regionAt(x, z) { let b = 'Aurelia Island', bd = 1; for (const r of W.regions) { const d = ((x - r.x) / r.rx) ** 2 + ((z - r.z) / r.rz) ** 2; if (d < bd) { bd = d; b = r.name; } } return b; }
+function roadPoint(r, i) { const n = r.n; i = ((i % n) + n) % n; const j = r.closed ? (i + 1) % n : Math.min(i + 1, n - 1), k = j === i ? i - 1 : i, p = r.p;
+  const dx = p[(j === i ? i : j) * 3] - p[k * 3], dz = p[(j === i ? i : j) * 3 + 2] - p[k * 3 + 2];
+  return { x: p[i * 3], y: p[i * 3 + 1], z: p[i * 3 + 2], h: Math.atan2(dx, dz) }; }
+function nearestRoadPoint(x, z) { let b = null, bd = 1e12; roads.forEach(r => { for (let i = 2; i < r.n - 2; i += 2) { if (r.wall[i]) continue; const d = (r.p[i * 3] - x) ** 2 + (r.p[i * 3 + 2] - z) ** 2; if (d < bd) { bd = d; b = roadPoint(r, i); } } }); return b; }
+
+/* ---------------------------------------------------------------- car */
+const car = { x: 0, y: 0, z: 0, h: 0, vx: 0, vz: 0, vy: 0, air: false, steer: 0, pitch: 0, roll: 0, speed: 0, safe: null, safeT: 0, frozen: false, sink: 0 };
+const carRoot = new T3.Group(), carBody = new T3.Group(); carRoot.add(carBody); scene.add(carRoot);
+let wheels = [], carName = 'Stand-in car';
+const headL = new T3.SpotLight(0xfff2d6, 0, 60, 0.5, 0.55, 1.6); headL.position.set(0, 1.0, 1.6); carRoot.add(headL); headL.target.position.set(0, 0.2, 30); carRoot.add(headL.target);
+const headPool = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x2 = cv.getContext('2d'), g = x2.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, 'rgba(255,248,225,0.7)'); g.addColorStop(0.5, 'rgba(255,240,210,0.28)'); g.addColorStop(1, 'rgba(255,240,210,0)'); x2.fillStyle = g; x2.fillRect(0, 0, 128, 128);
+  const m = new T3.Mesh(new T3.PlaneGeometry(7, 26), new T3.MeshBasicMaterial({ map: new T3.CanvasTexture(cv), transparent: true, depthWrite: false, blending: T3.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8, toneMapped: false }));
+  m.rotation.x = -Math.PI / 2; m.position.set(0, 0.12, 15); m.renderOrder = 2; m.visible = false; carRoot.add(m); return m; })();
+const shadow = new T3.Mesh(new T3.CircleGeometry(2.6, 20), new T3.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
+shadow.rotation.x = -Math.PI / 2; shadow.scale.set(0.5, 1.0, 1); scene.add(shadow);
+function standInCar() {
+  const g = new T3.Group();
+  const prof = [[2.28, 0.2], [2.3, 0.42], [1.5, 0.66], [0.6, 0.78], [0.05, 1.1], [-0.75, 1.13], [-1.75, 0.86], [-2.22, 0.84], [-2.28, 0.5], [-2.2, 0.2]];
+  const sh = new T3.Shape(); prof.forEach((p, i) => i ? sh.lineTo(p[0], p[1]) : sh.moveTo(p[0], p[1])); sh.closePath();
+  const geo = new T3.ExtrudeGeometry(sh, { depth: 1.72, bevelEnabled: true, bevelSize: 0.1, bevelThickness: 0.1, bevelSegments: 3, curveSegments: 4 });
+  geo.translate(0, 0, -0.86); geo.rotateY(-Math.PI / 2);
+  g.add(new T3.Mesh(geo, new T3.MeshStandardMaterial({ color: 0xb3121a, metalness: 0.6, roughness: 0.25 })));
+  const cab = new T3.Shape(); [[0.62, 0.8], [0.06, 1.14], [-0.74, 1.17], [-1.5, 0.94]].forEach((p, i) => i ? cab.lineTo(p[0], p[1]) : cab.moveTo(p[0], p[1])); cab.closePath();
+  const cg = new T3.ExtrudeGeometry(cab, { depth: 1.5, bevelEnabled: false }); cg.translate(0, 0.01, -0.75); cg.rotateY(-Math.PI / 2);
+  g.add(new T3.Mesh(cg, new T3.MeshStandardMaterial({ color: 0x10151b, metalness: 0.7, roughness: 0.15 })));
+  const lamp = (x, y, z, c) => { const m = new T3.Mesh(new T3.BoxGeometry(0.42, 0.09, 0.06), new T3.MeshBasicMaterial({ color: c })); m.position.set(x, y, z); g.add(m); };
+  lamp(-0.62, 0.62, -2.37, 0xff2a1a); lamp(0.62, 0.62, -2.37, 0xff2a1a); lamp(-0.6, 0.5, 2.36, 0xfff6d8); lamp(0.6, 0.5, 2.36, 0xfff6d8);
+  const wing = new T3.Mesh(new T3.BoxGeometry(1.7, 0.05, 0.36), new T3.MeshStandardMaterial({ color: 0x15171a, roughness: 0.5 })); wing.position.set(0, 1.12, -2.05); g.add(wing);
+  const tyre = new T3.CylinderGeometry(0.35, 0.35, 0.3, 18); tyre.rotateZ(Math.PI / 2);
+  const rim = new T3.CylinderGeometry(0.22, 0.22, 0.31, 10); rim.rotateZ(Math.PI / 2);
+  [[-0.86, 1.42], [0.86, 1.42], [-0.88, -1.4], [0.88, -1.4]].forEach((p, k) => { const w = new T3.Group(), s = new T3.Group();
+    s.add(new T3.Mesh(tyre, new T3.MeshStandardMaterial({ color: 0x141414, roughness: 0.9 }))); s.add(new T3.Mesh(rim, new T3.MeshStandardMaterial({ color: 0xb9bcc2, metalness: 0.8, roughness: 0.3 })));
+    w.add(s); w.position.set(p[0], 0.35, p[1]); g.add(w); wheels.push({ steer: k < 2 ? w : null, spin: s, r: 0.35 }); });
+  return g;
+}
+function fitCar(obj, noseNegZ) {            // a loaded model: scale to 4.6 m, nose toward +Z, wheels found by name
+  const box = new T3.Box3().setFromObject(obj), sz = box.getSize(new T3.Vector3());
+  if (noseNegZ) obj.rotation.y = Math.PI; else if (sz.x > sz.z) { obj.rotation.y = -Math.PI / 2; }
+  const holder = new T3.Group(); holder.add(obj);
+  let b2 = new T3.Box3().setFromObject(holder), s2 = b2.getSize(new T3.Vector3()); holder.scale.setScalar(4.6 / s2.z);
+  b2 = new T3.Box3().setFromObject(holder); const c = b2.getCenter(new T3.Vector3()); holder.position.set(-c.x, -b2.min.y, -c.z);
+  const g = new T3.Group(); g.add(holder); wheels = [];
+  const named = []; obj.traverse(o => { if (/^(Front|Rear)_(Left|Right)$/.test(o.name)) named.push(o); });
+  if (named.length === 4) {                 // sale-pack cars: wheels on their axles, front ones inside steering pivots
+    for (const o of named) { const bb = new T3.Box3().setFromObject(o), s = bb.getSize(new T3.Vector3()); const st = o.parent && /^Steer_/.test(o.parent.name) ? o.parent : null;
+      wheels.push({ steer: st, spin: o, r: Math.max(s.y, 0.2) / 2 * holder.scale.x, model: true, sign: noseNegZ ? -1 : 1 }); }
+    obj.traverse(o => { if (o.isMesh && o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(m => { m.envMapIntensity = /glass|window/i.test(m.name) ? 1.6 : 1.25; }); } });
+    return g; }
+  obj.traverse(o => { if (/wheel/i.test(o.name) && o.children.length + (o.isMesh ? 1 : 0) > 0 && !/wheels$/i.test(o.name) && !(o.parent && /wheel/i.test(o.parent.name) && !/wheels$/i.test(o.parent.name))) {
+    const bb = new T3.Box3().setFromObject(o), s = bb.getSize(new T3.Vector3()); wheels.push({ steer: null, spin: o, r: Math.max(s.y, 0.2) / 2, model: true }); } });
+  return g;
+}
+function loadCar(done) {
+  const use = g => { while (carBody.children.length) carBody.remove(carBody.children[0]); g.traverse(o => { if (o.isMesh) o.castShadow = true; }); carBody.add(g); done(); };
+  Promise.resolve(window.MeshoptDecoder && window.MeshoptDecoder.ready).then(() => getBin('cars/vortex')).then(buf => new Promise((res, rej) => { const L = new T3.GLTFLoader(); if (window.MeshoptDecoder) L.setMeshoptDecoder(window.MeshoptDecoder); L.parse(buf, '', res, rej); }))
+    .then(g => { carName = 'Vortex'; use(fitCar(g.scene, true)); })
+    .catch(() => getBin('cars/aurelia_gt').then(buf => new Promise((res, rej) => new T3.GLTFLoader().parse(buf, '', res, rej))).then(g => { carName = 'Aurelia GT'; use(fitCar(g.scene)); }))
+    .catch(() => { wheels = []; carName = 'Stand-in car'; use(standInCar()); });
+}
+function placeCar(p) { car.x = p.x; car.z = p.z; car.y = p.y + 0.05; car.h = p.h; car.vx = car.vz = car.vy = 0; car.air = false; car.pitch = car.roll = 0; car.steer = 0; car.safe = p; car.sink = 0; camPos.set(p.x - Math.sin(p.h) * 9, p.y + 4, p.z - Math.cos(p.h) * 9); }
+
+/* ---------------------------------------------------------------- input */
+const inp = { left: 0, right: 0, gas: 0, brake: 0, hand: 0 }; let autoGas = store.get('auto', false);
+function bindBtn(id, key) { const b = $(id); const set = v => e => { e.preventDefault(); inp[key] = v; b.classList.toggle('on', !!v); if (v) audioStart(); };
+  b.addEventListener('pointerdown', e => { try { b.setPointerCapture(e.pointerId); } catch (x) {} set(1)(e); }); ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(n => b.addEventListener(n, set(0))); b.addEventListener('contextmenu', e => e.preventDefault()); }
+bindBtn('bLeft', 'left'); bindBtn('bRight', 'right'); bindBtn('bGas', 'gas'); bindBtn('bBrake', 'brake'); bindBtn('bHand', 'hand');
+const KEYS = { ArrowLeft: 'left', a: 'left', ArrowRight: 'right', d: 'right', ArrowUp: 'gas', w: 'gas', ArrowDown: 'brake', s: 'brake', ' ': 'hand' };
+window.addEventListener('keydown', e => { const k = KEYS[e.key] || KEYS[e.key.toLowerCase()]; if (k) { inp[k] = 1; e.preventDefault(); audioStart(); }
+  else if (e.key === 'r' || e.key === 'R') resetCar(); else if (e.key === 'c' || e.key === 'C') nextCam(); else if (e.key === 'm' || e.key === 'M') toggleMap(); });
+window.addEventListener('keyup', e => { const k = KEYS[e.key] || KEYS[e.key.toLowerCase()]; if (k) inp[k] = 0; });
+
+/* ---------------------------------------------------------------- physics */
+const SURF = { road: { grip: 9, drag: 0.0035, top: 95 }, dirt: { grip: 5.5, drag: 0.02, top: 62 }, grass: { grip: 4.2, drag: 0.05, top: 42 }, sand: { grip: 3.6, drag: 0.07, top: 36 }, snow: { grip: 2.6, drag: 0.05, top: 40 } };
+const g0 = { y: 0 }, g1 = { y: 0 }, g2 = { y: 0 }, g3 = { y: 0 };
+let bumpT = 0;
+function physics(dt) {
+  if (car.frozen) { car.speed = 0; return; }
+  if (car.sink > 0) { car.sink -= dt; car.y -= dt * 0.8; if (car.sink <= 0) { placeCar(car.safe || nearestRoadPoint(car.x, car.z)); toast('Back on the road'); } return; }
+  const fx = Math.sin(car.h), fz = Math.cos(car.h), rx = fz, rz = -fx;
+  let vf = car.vx * fx + car.vz * fz, vl = car.vx * rx + car.vz * rz;
+  const G = ground(car.x, car.z, car.y + 1), S = SURF[G.surf] || SURF.grass;
+  const st = (inp.left - inp.right); car.steer = lerp(car.steer, st, 1 - Math.exp(-dt * (st ? 7 : 10)));
+  const gas = inp.gas || (autoGas && !inp.brake ? 1 : 0);
+  if (!car.air) {
+    if (gas && vf > -1) vf += 13.5 * Math.max(0, 1 - Math.pow(Math.max(vf, 0) / S.top, 1.6)) * dt;
+    else if (gas) vf += 16 * dt;
+    if (inp.brake) { if (vf > 0.6) vf -= 20 * dt; else vf = Math.max(vf - 6 * dt, -13); }
+    vf -= vf * (S.drag * Math.abs(vf) * 0.4 + 0.08) * dt + (gas || inp.brake ? 0 : Math.sign(vf) * Math.min(Math.abs(vf), 1.6 * dt));
+    if (Math.abs(vf) > S.top) vf -= (vf - Math.sign(vf) * S.top) * Math.min(1, 2.5 * dt);
+    const maxSt = 0.56 / (1 + Math.pow(Math.abs(vf) / 24, 2) * 1.1);
+    let yaw = vf * Math.tan(car.steer * maxSt) / 2.8; const maxYaw = (S.grip * 1.25 + 2) / Math.max(4, Math.abs(vf)); yaw = clamp(yaw, -maxYaw, maxYaw);
+    car.h += yaw * dt * (inp.hand ? 1.35 : 1);
+    const k = inp.hand ? 1.3 : S.grip; vl *= Math.exp(-k * dt);
+    if (inp.hand) vf -= Math.sign(vf) * Math.min(Math.abs(vf), 5 * dt);
+    vf -= 9.8 * Math.sin(car.pitch) * dt * 0.85;
+  }
+  const nfx = Math.sin(car.h), nfz = Math.cos(car.h); car.vx = nfx * vf + nfz * vl; car.vz = nfz * vf - nfx * vl;
+  let nx = car.x + car.vx * dt, nz = car.z + car.vz * dt;
+  // bridge / tunnel walls
+  if (G.rq && G.rq.ok) { const r = G.rq.road; if ((r.wall[G.rq.i] || r.wall[(G.rq.i + 1) % r.n]) && Math.abs(car.y - G.rq.y) < 3) {
+    const q = roadQuery(nx, nz, car.y, rqTmp); if (q.ok && q.road === r) { const lim = r.hw - 1.1; if (Math.abs(q.d) > lim) { const px = q.tz, pz = -q.tx, over = q.d - Math.sign(q.d) * lim;
+      nx -= px * over; nz -= pz * over; const vn = car.vx * px + car.vz * pz; car.vx -= px * vn * 1.2; car.vz -= pz * vn * 1.2; car.vx *= 0.985; car.vz *= 0.985; } } } }
+  // buildings and other solid things
+  const cell = obGrid.get(Math.floor(nx / OG) + ',' + Math.floor(nz / OG)); const R = 1.25;
+  if (cell) {
+    for (const o of cell.o) { const dx = nx - o[0], dz = nz - o[1], c = Math.cos(o[4]), s = Math.sin(o[4]), lx = dx * c - dz * s, ly = -dx * s - dz * c;
+      const px = o[2] + R - Math.abs(lx), py = o[3] + R - Math.abs(ly); if (px > 0 && py > 0) { let ax, az, pen;
+        if (px < py) { ax = c * Math.sign(lx); az = -s * Math.sign(lx); pen = px; } else { ax = -s * Math.sign(ly); az = -c * Math.sign(ly); pen = py; }
+        nx += ax * pen; nz += az * pen; const vn = car.vx * ax + car.vz * az; if (vn < 0) { car.vx -= ax * vn * 1.3; car.vz -= az * vn * 1.3; if (vn < -6) { car.vx *= 0.6; car.vz *= 0.6; bump(); } } } }
+    for (const o of cell.c) { const dx = nx - o[0], dz = nz - o[1], d = Math.hypot(dx, dz), pen = o[2] + R - d; if (pen > 0 && d > 0.01) { const ax = dx / d, az = dz / d; nx += ax * pen; nz += az * pen;
+      const vn = car.vx * ax + car.vz * az; if (vn < 0) { car.vx -= ax * vn * 1.3; car.vz -= az * vn * 1.3; if (vn < -6) { car.vx *= 0.6; car.vz *= 0.6; bump(); } } } }
+  }
+  car.x = nx; car.z = nz;
+  const Gn = ground(car.x, car.z, car.y + 1);
+  if (!car.air) { const dy = Gn.y - car.y;
+    if (dy < -0.5 - Math.abs(vf) * dt * 0.9) { car.air = true; car.vy = Math.min(car.vy, 6); }
+    else { car.vy = clamp(dy / dt, -30, 12); car.y = Gn.y; } }
+  if (car.air) { car.vy -= 24 * dt; car.y += car.vy * dt; if (car.y <= Gn.y) { car.y = Gn.y; car.air = false; if (car.vy < -9) bump(); car.vy = 0; } }
+  // attitude from the ground under the four corners
+  const fxx = Math.sin(car.h), fzz = Math.cos(car.h);
+  ground(car.x + fxx * 1.4, car.z + fzz * 1.4, car.y + 1, g0); ground(car.x - fxx * 1.4, car.z - fzz * 1.4, car.y + 1, g1);
+  ground(car.x + fzz * 0.85, car.z - fxx * 0.85, car.y + 1, g2); ground(car.x - fzz * 0.85, car.z + fxx * 0.85, car.y + 1, g3);
+  const tp = car.air ? car.pitch : Math.atan2(clamp(g0.y - g1.y, -2.2, 2.2), 2.8), tr = car.air ? car.roll : Math.atan2(clamp(g2.y - g3.y, -1.4, 1.4), 1.7);
+  car.pitch = lerp(car.pitch, tp, 1 - Math.exp(-dt * 9)); car.roll = lerp(car.roll, tr, 1 - Math.exp(-dt * 9));
+  car.speed = Math.hypot(car.vx, car.vz); car.vf = vf; car.vl = vl; car.surf = Gn.surf;
+  if (Gn.water && car.y < Gn.wl - 0.25) { car.sink = 1.3; car.vx = car.vz = 0; toast('Splash!'); return; }
+  car.safeT += dt; if (car.safeT > 0.7 && Gn.rq && Gn.rq.ok && Gn.surf === 'road' && Math.abs(Gn.rq.d) < Gn.rq.road.hw - 1.5 && !car.air) { car.safeT = 0; const q = Gn.rq, r = q.road;
+    const fwd = (fxx * q.tx + fzz * q.tz) >= 0; car.safe = { x: car.x - q.tz * q.d * 0, y: q.y, z: car.z, h: Math.atan2(q.tx, q.tz) + (fwd ? 0 : Math.PI) }; car.safe.x = r.p[q.i * 3] + (r.p[((q.i + 1) % r.n) * 3] - r.p[q.i * 3]) * q.t; car.safe.z = r.p[q.i * 3 + 2] + (r.p[((q.i + 1) % r.n) * 3 + 2] - r.p[q.i * 3 + 2]) * q.t; }
+}
+function bump() { if (bumpT <= 0) { bumpT = 0.8; shake = 0.35; } }
+function resetCar() { if (race && race.state === 'count') return; placeCar(car.safe || nearestRoadPoint(car.x, car.z)); }
+
+/* ---------------------------------------------------------------- camera */
+const camPos = new T3.Vector3(), look = new T3.Vector3(); let camMode = 0, shake = 0; const CAMS = [[7.0, 2.5], [13, 5.2], [0.2, 1.25]];
+function nextCam() { camMode = (camMode + 1) % CAMS.length; }
+function updateCamera(dt) {
+  const fx = Math.sin(car.h), fz = Math.cos(car.h), sp = car.speed, [dist, hgt] = CAMS[camMode];
+  if (camMode === 2) { camPos.set(car.x + fx * 0.3, car.y + hgt, car.z + fz * 0.3); look.set(car.x + fx * 20, car.y + 1.0 + Math.sin(car.pitch) * 20, car.z + fz * 20); }
+  else {
+    const vh = sp > 3 ? Math.atan2(car.vx, car.vz) : car.h; let dh = vh - car.h; while (dh > Math.PI) dh -= 2 * Math.PI; while (dh < -Math.PI) dh += 2 * Math.PI;
+    const ch = car.h + clamp(dh, -0.6, 0.6) * 0.5 * (car.vf < -1 ? 0 : 1), d = dist + sp * 0.035;
+    const tx = car.x - Math.sin(ch) * d, tz = car.z - Math.cos(ch) * d, ty = car.y + hgt + sp * 0.006;
+    const k = 1 - Math.exp(-dt * 6.5); camPos.x = lerp(camPos.x, tx, k); camPos.z = lerp(camPos.z, tz, k); camPos.y = lerp(camPos.y, ty, 1 - Math.exp(-dt * 5));
+    const gy = ground(camPos.x, camPos.z, car.y + 1, g0).y; if (camPos.y < gy + 1.3) camPos.y = gy + 1.3;
+    look.set(car.x + fx * 4, car.y + 1.3, car.z + fz * 4);
+  }
+  camera.position.copy(camPos); if (shake > 0) { shake -= dt; camera.position.y += Math.sin(shake * 90) * shake * 0.5; }
+  { const v = clamp((sp * 3.6 - 140) / 120, 0, 1); if (v > 0 && camMode !== 2) { const t = performance.now() * 0.001; camera.position.x += Math.sin(t * 31) * 0.025 * v; camera.position.y += Math.sin(t * 43 + 1.3) * 0.03 * v; } }   // a light rumble at high speed
+  camera.lookAt(look); const fov = 62 + Math.min(18, sp * 0.22); if (Math.abs(camera.fov - fov) > 0.2) { camera.fov = fov; camera.updateProjectionMatrix(); }
+  sky.position.copy(camera.position); clouds.position.x = camera.position.x; clouds.position.z = camera.position.z; cloudTex.offset.x += dt * 0.0012;
+  if (sun.castShadow) { sun.target.position.set(car.x, car.y, car.z); sun.position.set(car.x + SUND.x * 300, car.y + SUND.y * 300, car.z + SUND.z * 300); }
+}
+
+/* ---------------------------------------------------------------- HUD, minimap, toasts */
+let toastT = 0; function toast(t, secs) { const e = $('toast'); e.textContent = t; e.style.opacity = 1; toastT = secs || 2.2; }
+const mapC = document.createElement('canvas'); mapC.width = 1200; mapC.height = 840; let mapScale = 1;
+function drawBaseMap() {
+  const m = W.heightmap, g = mapC.getContext('2d'), id = g.createImageData(m.nx, m.ny), d = id.data;
+  for (let iy = 0; iy < m.ny; iy++) for (let ix = 0; ix < m.nx; ix++) { const h = HM[iy * m.nx + ix] * m.scale, o = ((m.ny - 1 - iy) * m.nx + ix) * 4, x = m.x0 + ix * m.cell, z = -(m.y0 + iy * m.cell);
+    let c; if (h < 0) c = [28 + h * 0.4, 98 + h * 1.2, 128 + h]; else if (h > W.snowline + 10) c = [236, 240, 244]; else if (h > 95) c = [128, 124, 118]; else if (h < 3) c = [219, 203, 158];
+    else { const rg = regionAt(x, z); c = rg === 'Desert' ? [208, 172, 118] : rg === 'City' ? [150, 152, 148] : rg === 'Forest Trails' ? [58, 104, 52] : [98, 142, 66]; }
+    d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255; }
+  const t = document.createElement('canvas'); t.width = m.nx; t.height = m.ny; t.getContext('2d').putImageData(id, 0, 0);
+  g.imageSmoothingEnabled = true; g.drawImage(t, 0, 0, mapC.width, mapC.height); mapScale = mapC.width / (W.bounds[1] - W.bounds[0]);
+  g.fillStyle = '#2f8fb0'; for (const l of W.lakes) { const p = mp(l[0], l[2]); g.beginPath(); g.arc(p[0], p[1], l[3] * mapScale, 0, 7); g.fill(); }
+  const COL = { hwy: '#f4d35e', road: '#f2f2f2', street: '#d8d8d8', dirt: '#b88a55', circuit: '#ff5a4a', rbt: '#f2f2f2' };
+  for (const pass of [0, 1]) roads.forEach(r => { g.beginPath(); for (let i = 0; i <= r.segs; i++) { const p = mp(r.p[(i % r.n) * 3], r.p[(i % r.n) * 3 + 2]); i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); }
+    g.lineWidth = (r.type === 'hwy' ? 4.2 : 3) + (pass ? 0 : 2); g.strokeStyle = pass ? COL[r.type] : 'rgba(20,30,40,.75)'; g.stroke(); });
+}
+function mp(x, z) { return [(x - W.bounds[0]) * mapScale, (z + W.bounds[3]) * mapScale]; }
+const mini = $('mini'), mg = mini.getContext('2d');
+function drawMini() {
+  const p = mp(car.x, car.z), s = 264, view = 300; mg.clearRect(0, 0, s, s); mg.drawImage(mapC, p[0] - view / 2, p[1] - view / 2, view, view, 0, 0, s, s);
+  if (race && race.beacon) { const b = mp(race.bx, race.bz), bx = clamp((b[0] - p[0]) * s / view + s / 2, 8, s - 8), by = clamp((b[1] - p[1]) * s / view + s / 2, 8, s - 8); mg.fillStyle = '#ffd23c'; mg.beginPath(); mg.arc(bx, by, 9, 0, 7); mg.fill(); }
+  mg.save(); mg.translate(s / 2, s / 2); mg.rotate(Math.PI - car.h); mg.fillStyle = '#ff3b30'; mg.strokeStyle = '#fff'; mg.lineWidth = 3; mg.beginPath(); mg.moveTo(0, -17); mg.lineTo(12, 13); mg.lineTo(0, 6); mg.lineTo(-12, 13); mg.closePath(); mg.fill(); mg.stroke(); mg.restore();
+}
+function drawBigMap() { const c = $('bigMap'), g = c.getContext('2d'); g.drawImage(mapC, 0, 0); g.font = 'bold 15px system-ui'; g.textAlign = 'center';
+  W.regions.forEach(r => { const p = mp(r.x, r.z); g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(r.name.toUpperCase(), p[0], p[1]); g.fillStyle = '#fff'; g.fillText(r.name.toUpperCase(), p[0], p[1]); });
+  W.landmarks.forEach(l => { const p = mp(l.pos[0], l.pos[2]); g.fillStyle = found[l.name] ? '#ffd23c' : 'rgba(255,255,255,.55)'; g.beginPath(); g.arc(p[0], p[1], 6, 0, 7); g.fill(); g.strokeStyle = '#222'; g.lineWidth = 1.5; g.stroke(); });
+  const p = mp(car.x, car.z); g.fillStyle = '#ff3b30'; g.beginPath(); g.arc(p[0], p[1], 9, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 3; g.stroke(); }
+let found = store.get('found', {});
+function toggleMap() { if (!started) return; const o = $('mapOv'); o.hidden = !o.hidden; paused = !o.hidden; if (!o.hidden) drawBigMap(); }
+$('mini').addEventListener('click', toggleMap); $('bMap').addEventListener('click', toggleMap); $('mapClose').addEventListener('click', toggleMap);
+$('bCam').addEventListener('click', nextCam); $('bReset').addEventListener('click', resetCar);
+$('bMenu').addEventListener('click', () => { paused = true; $('menu').hidden = false; });
+const fmt = t => { const m = Math.floor(t / 60), s = t - m * 60; return m + ':' + (s < 10 ? '0' : '') + s.toFixed(1); };
+
+/* ---------------------------------------------------------------- game modes */
+let race = null, mode = 'free', started = false, paused = true;
+const beacon = new T3.Mesh(new T3.CylinderGeometry(9, 9, 60, 20, 1, true), new T3.MeshBasicMaterial({ color: 0xffd23c, transparent: true, opacity: 0.32, side: T3.DoubleSide, depthWrite: false, fog: false })); beacon.visible = false; scene.add(beacon);
+function startMode(m) {
+  mode = m; race = null; beacon.visible = false; $('race').hidden = true; $('big').hidden = true; car.frozen = false;
+  if (m === 'free') { const r = roads[W.ring], i = 388; placeCar(roadPoint(r, i)); toast('Free Roam — ' + carName, 3); }
+  else { const ri = m === 'circuit' ? W.circuit.road : W.ring, r = roads[ri], st = m === 'circuit' ? W.circuit.start : 60, laps = m === 'circuit' ? 3 : 1;
+    placeCar(roadPoint(r, st - 4)); race = { r, st, laps, idx: st - 4, prog: -4, lap: 1, t: 0, lapT: 0, best: store.get('best_' + m, null), last: null, state: 'count', count: 3.2, key: m, gap: m === 'circuit' ? 60 : 90, beacon: true, bx: 0, bz: 0 };
+    car.frozen = true; $('race').hidden = false; }
+  $('menu').hidden = true; paused = false; started = true;
+  ['tb', 'speed', 'region', 'padL', 'padR'].forEach(id => $(id).hidden = false);
+}
+function updateRace(dt) {
+  const R = race, r = R.r, n = r.n;
+  if (R.state === 'count') { R.count -= dt; const b = $('big'); b.hidden = false; b.textContent = R.count > 0.2 ? Math.ceil(R.count - 0.2) : 'GO'; if (R.count <= 0) { R.state = 'run'; car.frozen = false; setTimeout(() => { $('big').hidden = true; }, 600); } }
+  if (R.state === 'run') { R.t += dt; R.lapT += dt;
+    let bi = -1, bd = 55 * 55; for (let k = -3; k <= 36; k++) { const i = (((R.idx + k) % n) + n) % n, d = (r.p[i * 3] - car.x) ** 2 + (r.p[i * 3 + 2] - car.z) ** 2; if (d < bd) { bd = d; bi = k; } }
+    if (bi > 0) { R.idx += bi; R.prog += bi; }
+    if (R.prog >= R.lap * n) { R.last = R.lapT; if (!R.best || R.lapT < R.best) { R.best = R.lapT; store.set('best_' + R.key, R.best); toast('New best lap ' + fmt(R.lapT), 3); } else toast('Lap ' + fmt(R.lapT), 2.5);
+      R.lapT = 0; R.lap++; if (R.lap > R.laps) { R.state = 'done'; R.beacon = false; beacon.visible = false; const b = $('big'); b.hidden = false; b.style.fontSize = '44px'; b.textContent = 'FINISH ' + fmt(R.t); setTimeout(() => { b.hidden = true; b.style.fontSize = ''; }, 4000); } }
+    const tgt = Math.min(Math.ceil((R.prog + 12) / R.gap) * R.gap, R.laps * n), p = roadPoint(r, R.st + tgt + 4 - 4);
+    R.bx = r.p[((((R.st - 4 + tgt + 4) % n) + n) % n) * 3]; const bi2 = (((R.st + tgt) % n) + n) % n; R.bx = r.p[bi2 * 3]; R.bz = r.p[bi2 * 3 + 2]; beacon.position.set(R.bx, r.p[bi2 * 3 + 1] + 28, R.bz); beacon.visible = R.beacon; }
+  $('race').textContent = (R.laps > 1 ? 'Lap ' + Math.min(R.lap, R.laps) + '/' + R.laps + '  ·  ' : '') + fmt(R.state === 'done' ? R.t : R.lapT) + (R.best ? '  ·  Best ' + fmt(R.best) : '') + (R.laps === 1 && R.state !== 'done' ? '  ·  ' + Math.max(0, Math.round(R.prog / r.n * 100)) + '%' : '');
+}
+document.querySelectorAll('#modes button').forEach(b => b.addEventListener('click', () => { audioStart(); startMode(b.dataset.mode); }));
+$('oQual').addEventListener('click', () => { qual = (qual + 1) % 3; store.set('qual', qual); applyQual(); });
+$('oAuto').addEventListener('click', () => { autoGas = !autoGas; store.set('auto', autoGas); $('oAuto').textContent = 'Auto gas: ' + (autoGas ? 'On' : 'Off'); });
+$('oAuto').textContent = 'Auto gas: ' + (autoGas ? 'On' : 'Off');
+$('oTime').addEventListener('click', () => { tod = (tod + 1) % 3; night = tod === 2; store.set('tod', tod); store.set('night', night); applyTime(); });
+
+/* ---------------------------------------------------------------- sound */
+let AC = null, osc1, osc2, gainN, filt, soundOn = store.get('sound', true);
+function audioStart() { if (AC || !soundOn) return; try { AC = new (window.AudioContext || window.webkitAudioContext)(); osc1 = AC.createOscillator(); osc2 = AC.createOscillator(); osc1.type = 'sawtooth'; osc2.type = 'square';
+  filt = AC.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 500; gainN = AC.createGain(); gainN.gain.value = 0; osc1.connect(filt); osc2.connect(filt); filt.connect(gainN); gainN.connect(AC.destination); osc1.start(); osc2.start(); } catch (e) { AC = null; } }
+function audioUpdate() { if (!AC) return; const v = Math.abs(car.vf || 0), gear = Math.min(5, Math.floor(v / 17)), rpm = 0.25 + 0.75 * ((v - gear * 17) / 17) * (gear < 5 ? 1 : 0.6) + (gear === 5 ? 0.3 : 0);
+  const f = 46 + rpm * 95 + gear * 6, t = AC.currentTime; osc1.frequency.setTargetAtTime(f, t, 0.05); osc2.frequency.setTargetAtTime(f * 0.5, t, 0.05); filt.frequency.setTargetAtTime(320 + rpm * 900 + (inp.gas ? 500 : 0), t, 0.08);
+  gainN.gain.setTargetAtTime(soundOn && started && !paused ? 0.035 + (inp.gas ? 0.03 : 0) : 0, t, 0.1); }
+$('oSound').addEventListener('click', () => { soundOn = !soundOn; store.set('sound', soundOn); $('oSound').textContent = 'Sound: ' + (soundOn ? 'On' : 'Off'); if (soundOn) audioStart(); });
+$('oSound').textContent = 'Sound: ' + (soundOn ? 'On' : 'Off');
+
+/* ---------------------------------------------------------------- loading */
+function b64into(out, o, s) { const CH = 1 << 20; for (let i = 0; i < s.length; i += CH) { const bin = atob(s.substr(i, CH)); for (let k = 0; k < bin.length; k++) out[o++] = bin.charCodeAt(k); } return o; }
+function getJ(u) { return fetch(u).then(r => { if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); }); }
+function getBin(base) {            // binary assets ship as base64 inside .json files, large ones in several parts
+  return getJ(base + '.json').then(j => { const out = new Uint8Array(j.bytes);
+    if (!j.parts) { b64into(out, 0, j.b64); return out.buffer; }
+    let o = 0, chain = Promise.resolve();
+    if (j.fmt === 'bin') {             // raw binary parts (a third smaller than base64), fetched two at a time and placed by offset
+      const offs = []; let acc = 0; for (let k = 0; k < j.parts; k++) { offs.push(acc); acc += j.sizes[k]; }
+      let done = 0; const one = k => fetch(base + '.p' + k + '.' + (j.ext || 'wasm')).then(r => { if (!r.ok) throw new Error(base + ' part ' + k + ' ' + r.status); return r.arrayBuffer(); })
+        .then(b => { if (b.byteLength !== j.sizes[k]) throw new Error(base + ' part ' + k + ' size'); out.set(new Uint8Array(b), offs[k]); done++; loadEl.textContent = 'Loading the island… part ' + done + ' of ' + j.parts; });
+      const lanes = [0, 1].map(l => { let c = Promise.resolve(); for (let k = l; k < j.parts; k += 2) c = c.then(() => one(k)); return c; });
+      return Promise.all(lanes).then(() => out.buffer); }
+    for (let k = 0; k < j.parts; k++) chain = chain.then(() => getJ(base + '.p' + k + '.json')).then(p => { o = b64into(out, o, p.b64); loadEl.textContent = 'Loading the island… part ' + (k + 1) + ' of ' + j.parts; });
+    return chain.then(() => out.buffer); }); }
+const SHADE = { tex: { value: null }, on: { value: 0 } };
+getJ('data/shade.json').then(j => { const im = new Image(); im.onload = () => { const t = new T3.Texture(im); t.needsUpdate = true; t.minFilter = T3.LinearFilter; t.generateMipmaps = false; SHADE.tex.value = t; SHADE.on.value = 1; }; im.src = 'data:image/png;base64,' + j.png; }).catch(() => {});
+const FAC = [], GLZ = [], HSIGN = []; let tod = store.get('tod', 1), night = tod === 2, lampGlow = null, sea = null, seaN = null;
+function makeSea() {       // animated sea with a wave normal map made in a canvas
+  const n = 256, cv = document.createElement('canvas'); cv.width = cv.height = n; const g = cv.getContext('2d'), id = g.createImageData(n, n), h = new Float32Array(n * n);
+  for (let k = 0; k < 26; k++) { const fx = (1 + (k * 7) % 6) * (k % 2 ? 1 : -1), fy = 1 + (k * 5) % 7, ph = k * 1.7, a = 1 / (Math.abs(fx) + fy);
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) h[y * n + x] += a * Math.sin(2 * Math.PI * (fx * x + fy * y) / n + ph); }
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { const dx = h[y * n + (x + 1) % n] - h[y * n + (x + n - 1) % n], dy = h[((y + 1) % n) * n + x] - h[((y + n - 1) % n) * n + x], o = (y * n + x) * 4, l = Math.hypot(dx * 2.2, dy * 2.2, 1);
+    id.data[o] = 127 - dx * 2.2 / l * 127; id.data[o + 1] = 127 - dy * 2.2 / l * 127; id.data[o + 2] = 255 / l; id.data[o + 3] = 255; }
+  g.putImageData(id, 0, 0); seaN = new T3.CanvasTexture(cv); seaN.wrapS = seaN.wrapT = T3.RepeatWrapping; seaN.repeat.set(1400, 1400);
+  sea = new T3.Mesh(new T3.PlaneGeometry(60000, 60000), new T3.MeshStandardMaterial({ color: 0x1b6f8c, transparent: true, opacity: 0.86, roughness: 0.07, metalness: 0.4, normalMap: seaN, normalScale: new T3.Vector2(0.45, 0.45), depthWrite: false }));
+  sea.rotation.x = -Math.PI / 2; sea.renderOrder = 2; sea.material.envMapIntensity = 1.2; scene.add(sea);
+}
+
+const NIGHTU = { value: 0 };
+const GROUND = { tex: { value: null }, m: { value: new T3.Vector4() }, r: { value: new T3.Vector2() }, cell: { value: 0 } };
+function interior(m) {            // fake rooms behind the glass, ray-traced per pixel in the plane of each window
+  if (m.userData.room) return; m.userData.room = 1; m.flatShading = true; m.color.setRGB(0.02, 0.025, 0.03); m.roughness = 0.05; m.metalness = 0.0; m.envMapIntensity = 2.0;
+  m.emissive = new T3.Color(0xffffff); m.emissiveIntensity = 1; m.emissiveMap = null; m.transparent = false; m.opacity = 1; m.depthWrite = true;
+  const prev = m.onBeforeCompile;
+  m.onBeforeCompile = sh => {
+    sh.uniforms.uNightR = NIGHTU;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vRW;').replace('#include <worldpos_vertex>', `#include <worldpos_vertex>
+      { vec4 rp = vec4(transformed, 1.0);
+        #ifdef USE_INSTANCING
+        rp = instanceMatrix * rp;
+        #endif
+        vRW = (modelMatrix * rp).xyz; }`);
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+      varying vec3 vRW; uniform float uNightR;
+      float rh(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
+      vec3 room(vec3 P, vec3 V, out float lit) {
+        vec3 N = normalize(cross(dFdx(vRW), dFdy(vRW))); if (dot(N, V) > 0.0) N = -N;           // outward normal, toward the camera
+        if (abs(N.y) > 0.6) { lit = 0.0; return vec3(0.05); }                                         // skylights and flat glass: no room
+        vec3 T = normalize(cross(vec3(0.0, 1.0, 0.0), N));
+        float u = dot(P, T), v = P.y, Wu = 3.7, Hv = 3.4, D = 5.5;
+        vec3 d = vec3(dot(V, T), V.y, -dot(V, N)); d.z = max(d.z, 0.02);
+        float cu = floor(u / Wu), cv = floor(v / Hv); vec3 id = vec3(cu, cv, floor(dot(P, N) * 0.5 + 0.5));
+        float fu = u - cu * Wu, fv = v - cv * Hv;
+        float tu = (d.x > 0.0 ? (Wu - fu) : -fu) / (abs(d.x) < 1e-4 ? 1e-4 : d.x);
+        float tv = (d.y > 0.0 ? (Hv - fv) : -fv) / (abs(d.y) < 1e-4 ? 1e-4 : d.y);
+        float tw = D / d.z; tu = abs(tu); tv = abs(tv);
+        float t = min(tw, min(tu, tv)); vec3 h = vec3(fu, fv, 0.0) + d * t;                          // hit point inside the room (u across, v up, w depth)
+        float r = rh(id), r2 = rh(id + 7.1), r3 = rh(id + 3.7);
+        vec3 wallC = mix(vec3(0.78, 0.74, 0.66), mix(vec3(0.62, 0.68, 0.72), vec3(0.8, 0.66, 0.55), r2), step(0.5, r));
+        vec3 c;
+        if (t == tv) c = d.y < 0.0 ? mix(vec3(0.32, 0.22, 0.14), vec3(0.42, 0.42, 0.44), step(0.6, r3)) * (0.8 + 0.2 * step(0.5, fract(h.x * 1.6)))     // wood or tile floor
+                                    : vec3(0.85) * (0.75 + 0.6 * exp(-dot(h.xz - vec2(Wu * 0.5, D * 0.45), h.xz - vec2(Wu * 0.5, D * 0.45)) * 0.9));   // ceiling with a lamp
+        else if (t == tw) { c = wallC; float sh = step(h.y, 0.9 + 0.5 * r3) * step(Wu * (0.15 + 0.3 * r), h.x) * step(h.x, Wu * (0.55 + 0.35 * r));
+          c = mix(c, mix(vec3(0.18, 0.16, 0.15), vec3(0.35, 0.2, 0.14), r2), sh);                     // furniture against the back wall
+          c = mix(c, vec3(0.25, 0.3, 0.35) * (0.6 + r), step(abs(h.x - Wu * 0.5), 0.55) * step(abs(h.y - 2.0), 0.4) * step(0.5, r2));   // a picture
+          c *= 0.75; }
+        else c = wallC * 0.88;
+        c *= mix(1.0, 0.5, clamp(h.z / D, 0.0, 1.0));                                                  // darker toward the back
+        float bl = step(r3, 0.32) * step(Hv - (0.6 + 2.2 * r) , fv);                                  // blinds pulled part way down
+        c = mix(c, vec3(0.72, 0.7, 0.64) * (0.8 + 0.2 * step(0.5, fract(fv * 9.0))), bl);
+        lit = step(0.5, r) * (0.65 + 0.35 * r2);
+        return c; }`).replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      { vec3 V = normalize(vRW - cameraPosition); float lt; vec3 rc = room(vRW, V, lt);
+        float cs = abs(dot(normalize(cross(dFdx(vRW), dFdy(vRW))), V)); float fr = 0.04 + 0.96 * pow(1.0 - cs, 5.0);
+        vec3 day = rc * 0.30, nt = rc * lt * vec3(1.25, 1.0, 0.72) * 1.35 + rc * 0.01;
+        totalEmissiveRadiance = mix(day, nt, uNightR) * (1.0 - fr); }`);
+    if (prev && prev !== T3.Material.prototype.onBeforeCompile) {}
+  };
+  m.needsUpdate = true;
+}
+function litWindows(m) {   // emissive map: the dark window panes of the facade texture glow at night
+  try { const im = m.map.image, cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height; const g = cv.getContext('2d'); g.drawImage(im, 0, 0);
+    const id = g.getImageData(0, 0, cv.width, cv.height), d = id.data, glass = /Glass/.test(m.name);
+    for (let i = 0; i < d.length; i += 4) { const l = (d[i] + d[i + 1] + d[i + 2]) / 765, on = glass ? (l < 0.72 && ((i / 4 / cv.width / 32 | 0) + (i / 4 % cv.width / 32 | 0)) % 3 !== 0) : l < 0.45;
+      d[i] = on ? 255 : 0; d[i + 1] = on ? (glass ? 232 : 205) : 0; d[i + 2] = on ? (glass ? 200 : 130) : 0; }
+    g.putImageData(id, 0, 0); const t = new T3.CanvasTexture(cv); t.flipY = m.map.flipY; t.wrapS = m.map.wrapS; t.wrapT = m.map.wrapT; t.encoding = T3.sRGBEncoding; m.emissiveMap = t; m.emissive = new T3.Color(0xffffff); m.emissiveIntensity = 0;
+    // each bay-and-floor cell is lit or dark on its own, so buildings do not glow uniformly
+    m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n{ vec2 cl = floor(vUv * ' + (glass ? 'vec2(1.0)' : 'vec2(4.0, 2.0)') + '); float rn = fract(sin(dot(cl, vec2(12.9898, 78.233))) * 43758.5453); totalEmissiveRadiance *= step(0.42, rn) * (0.55 + 0.45 * fract(rn * 7.0)); }'); };
+    m.needsUpdate = true; } catch (e) {} }
+function applyTime() {
+  const dusk = tod === 1; $('oTime').textContent = 'Time: ' + ['Day', 'Sunset', 'Night'][tod];
+  SUND.copy(dusk ? SUN_DUSK : SUN_DAY); SKYU.uSun.value.copy(SUND); SKYU.uWarm.value = dusk ? 1 : 0; bounce.position.set(-SUND.x, 0.3, -SUND.z);
+  if (dusk && !ENV.dusk) ENV.dusk = buildEnv(true); envTex = dusk ? ENV.dusk : ENV.day;
+  SKYU.uNight.value = night ? 1 : 0; scene.fog.color.set(night ? 0x0d1522 : dusk ? 0xd8a98a : 0xbccbd6); clouds.material.opacity = night ? 0.12 : 0.95; clouds.material.color.set(dusk ? 0xffbf96 : 0xffffff);
+  hemi.intensity = night ? 0.16 : dusk ? 0.44 : 0.34; hemi.color.set(night ? 0xdfeeff : dusk ? 0x7f9ad8 : 0xb6d0f5); hemi.groundColor.set(night ? 0x6b7a55 : dusk ? 0x8a6448 : 0x8c7552); bounce.intensity = night ? 0.03 : dusk ? 0.2 : 0.2;
+  sun.intensity = night ? 0.28 : dusk ? 3.6 : 2.85; sun.color.set(night ? 0x9db4e8 : dusk ? 0xffa462 : 0xffd9a8); renderer.toneMappingExposure = night ? 1.0 : dusk ? 0.86 : 0.78; document.body.classList.toggle('night', night);
+  scene.environment = night ? null : envTex; if (lampGlow) lampGlow.visible = night; headL.intensity = night ? 3.2 : 0; headPool.visible = night;
+  for (const m of FAC) m.emissiveIntensity = night ? (/Glass/.test(m.name) ? 0.55 : 0.9) : 0;
+  for (const m of GLZ) m.emissiveIntensity = night ? 1.5 : 0; NIGHTU.value = night ? 1 : 0; for (const m of HSIGN) m.emissiveIntensity = night ? 0.75 : 0;
+  if (sea) sea.material.color.set(night ? 0x0c2a3a : 0x1b6f8c);
+}
+
+/* ---------------------------------------------------------------- plants: modelled trees near the car, simpler ones further out, impostor cards in the distance */
+const FLO = { cells: new Map(), bt: new Map(), cardU: { value: 100 }, size: 80, cardMat: null, lib: {}, n: 0, ready: false };
+const LODR = [{ t0: 0, t1: 55, s0: 0, s1: 22, far: 400, b: 0 }, { t0: 35, t1: 120, s0: 25, s1: 60, far: 800, b: 110 }, { t0: 60, t1: 170, s0: 40, s1: 90, far: 1300, b: 220 }];   // full trees out to t1, cheaper LOD from t0, impostor cards beyond
+function noFlip(m, wind) { m.side = T3.DoubleSide; m.onBeforeCompile = sh => {
+  if (wind) { sh.uniforms.uWind = WIND.t; sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uWind;').replace('#include <begin_vertex>', `#include <begin_vertex>
+    { float hg = max(position.y - 0.3, 0.0); vec3 ip = vec3(0.0);
+      #ifdef USE_INSTANCING
+      ip = instanceMatrix[3].xyz;
+      #endif
+      vec3 wp = (modelMatrix * vec4(ip, 1.0)).xyz; float ph = dot(wp.xz, vec2(0.071, 0.053));
+      float sw = sin(uWind * 1.25 + ph) * 0.65 + sin(uWind * 2.7 + ph * 1.9) * 0.3;
+      float fl = sin(uWind * 6.5 + dot(position, vec3(3.1, 2.3, 4.7))) * 0.035 * min(hg, 1.5);
+      transformed.x += sw * 0.014 * hg * min(hg, 4.0) / 4.0 * 3.0 + fl; transformed.z += sw * 0.006 * hg + fl * 0.7; }`); }
+  sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', 'vec3 normal = normalize( vNormal ); vec3 geometryNormal = normal;'); }; m.needsUpdate = true; }
+function floraLib(g) {
+  g.scene.updateMatrixWorld(true);
+  g.scene.traverse(o => { const m = /^FLORA_(.+)_LOD([01])$/.exec(o.name); if (!m) return; const pr = []; o.traverse(c => { if (c.isMesh) pr.push(c); }); (FLO.lib[m[1]] = FLO.lib[m[1]] || {})[m[2]] = pr; });
+  g.scene.traverse(o => { if (!o.isMesh || !/^Leaves/.test(o.material.name) || o.geometry.userData.soft) return; { const gg = o.geometry; gg.userData.soft = 1; gg.computeBoundingBox(); const c = new T3.Vector3(); gg.boundingBox.getCenter(c);   // canopy lit as one soft volume
+      const sz = new T3.Vector3(); gg.boundingBox.getSize(sz); const P = gg.attributes.position, N = gg.attributes.normal, v = new T3.Vector3(), n = new T3.Vector3(), flat = sz.y < 1.2;
+      if (N) { const NF = new Float32Array(P.count * 3); for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).sub(c); if (flat) v.y = Math.abs(v.y) + sz.y; v.x /= sz.x || 1; v.y /= sz.y || 1; v.z /= sz.z || 1; v.normalize(); n.fromBufferAttribute(N, i); v.multiplyScalar(0.8).addScaledVector(n, 0.2).normalize(); NF[i * 3] = v.x; NF[i * 3 + 1] = v.y; NF[i * 3 + 2] = v.z; } gg.setAttribute('normal', new T3.Float32BufferAttribute(NF, 3)); } } });
+  const seen = new Set();
+  g.scene.traverse(o => { if (!o.isMesh || seen.has(o.material)) return; const m = o.material; seen.add(m);
+    if (/^Leaves/.test(m.name)) { m.transparent = false; m.alphaTest = 0.38; m.roughness = 1; m.envMapIntensity = 0.3; m.color.setRGB(1.05, 1.03, 0.94); m.emissive = new T3.Color(0x050a03); noFlip(m, true); if (m.map) m.map.anisotropy = 4; }
+    else if (m.name === 'PaintedFlora') { m.envMapIntensity = 0.3; noFlip(m); } else if (m.name === 'KitWindow') interior(m); else if (/^Kit/.test(m.name)) { sharpen(m); m.envMapIntensity = 1.0; if (m.name === 'KitLens') m.emissiveIntensity = 0.35; if (m.name === 'KitGlass') { m.transparent = true; m.depthWrite = false; } } else m.envMapIntensity = 0.4; });
+}
+function floraAssign(data, only) {
+  const S = FLO.size;
+  for (const sp in data.instances) { const a = data.instances[sp], spec = data.species[sp]; if (!FLO.lib[sp] || (only && !only.has(sp))) continue;
+    const small = /^(grass|flowers)/.test(sp), grp = small ? 'small' : /^prop_(house|barn|winery|warehouse|hut|container|cottage|farmhouse|village_row|silos|hay_shed)/.test(sp) ? 'bld' : /^prop_(scooter|bikerack|cafe|planter|kiosk|person|hydrant|bin|bench|bollard|reflector|farm_stand|tractor|rk_post|rk_cone|rk_worksign)/.test(sp) ? 'tiny' : (spec.card >= 0 ? 'tree' : 'solid');
+    for (let i = 0; i < a.length; i += 8) { const k = Math.floor(a[i] / S) + '_' + Math.floor(a[i + 2] / S); let c = FLO.cells.get(k);
+      if (!c) { c = { x: (Math.floor(a[i] / S) + 0.5) * S, z: (Math.floor(a[i + 2] / S) + 0.5) * S, y: a[i + 1], it: { tree: {}, solid: {}, small: {}, bld: {}, tiny: {} }, g: {}, cards: null }; FLO.cells.set(k, c); }
+      (c.it[grp][sp] = c.it[grp][sp] || []).push(i); } }
+}
+function addKit(g) {               // street furniture and buildings arrive after the start: add them to the cells and rebuild the affected groups
+  const before = new Set(Object.keys(FLO.lib)); floraLib(g); const only = new Set(Object.keys(FLO.lib).filter(k => !before.has(k))); floraAssign(FLO.data, only);
+  for (const c of FLO.cells.values()) for (const k of Object.keys(c.g)) if (/^(solid|bld|tiny)/.test(k)) { scene.remove(c.g[k]); delete c.g[k]; }
+  floraTick = 0;
+}
+function setupFlora(g, data) {
+  floraLib(g);
+  const ASP = [0.66, 0.66, 1.3, 0.5, 1.0, 0.9], S = FLO.size;
+  floraAssign(data);
+  FLO.data = data;
+  const BK = new Map();
+  if (FLO.cardMat) for (const c of FLO.cells.values()) {          // impostor cards: two crossed quads and a top quad per tree, merged into 480 m blocks
+    const bk = Math.floor(c.x / 480) + '_' + Math.floor(c.z / 480); let B = BK.get(bk); if (!B) { B = { P: [], U: [], N: [], C: [], I: [], n: 0 }; BK.set(bk, B); }
+    const { P, U, N, C, I } = B; let n = B.n;
+    for (const sp in c.it.tree) { const a = data.instances[sp], spec = data.species[sp], cl = spec.card, top = (cl === 2 || cl === 4 || cl === 5) ? 7 : 6, kt = cl === 2 ? 0.62 : cl === 5 ? 0.9 : cl === 4 ? 0.66 : 0.3;
+      const uv = q => { const e = 0.006, u0 = (q % 4) / 4 + e, u1 = (q % 4 + 1) / 4 - e, r = Math.floor(q / 4); return [u0, u1, 1 - r / 2 - e, 1 - (r + 1) / 2 + e]; };
+      for (const i of c.it.tree[sp]) { const x = a[i], y = a[i + 1] - 0.22, z = a[i + 2], h = a[i + 3] * spec.height, w = h * ASP[cl], ya = a[i + 4], col = [a[i + 5], a[i + 6], a[i + 7]];
+        for (let d = 0; d < 2; d++) { const dx = Math.cos(ya + d * Math.PI / 2) * w / 2, dz = Math.sin(ya + d * Math.PI / 2) * w / 2, [u0, u1, vb, vt] = uv(cl);
+          P.push(x - dx, y, z - dz, x + dx, y, z + dz, x + dx, y + h, z + dz, x - dx, y + h, z - dz); U.push(u0, vb, u1, vb, u1, vt, u0, vt);
+          N.push(-dx, w * 1.6, -dz, dx, w * 1.6, dz, dx * 0.6, w * 1.9, dz * 0.6, -dx * 0.6, w * 1.9, -dz * 0.6); for (let q = 0; q < 4; q++) C.push(col[0], col[1], col[2]); I.push(n, n + 1, n + 2, n, n + 2, n + 3); n += 4; }
+        const t = w * 0.48, yt = y + h * kt, [u0, u1, vb, vt] = uv(top); P.push(x - t, yt, z + t, x + t, yt, z + t, x + t, yt, z - t, x - t, yt, z - t); U.push(u0, vb, u1, vb, u1, vt, u0, vt);
+        for (let q = 0; q < 4; q++) { N.push(0, 1, 0); C.push(col[0], col[1], col[2]); } I.push(n, n + 1, n + 2, n, n + 2, n + 3); n += 4; } }
+    B.n = n; }
+  for (const B of BK.values()) { if (!B.n) continue; const geo = new T3.BufferGeometry(); geo.setAttribute('position', new T3.Float32BufferAttribute(B.P, 3)); geo.setAttribute('uv', new T3.Float32BufferAttribute(B.U, 2));
+    geo.setAttribute('normal', new T3.Float32BufferAttribute(B.N, 3)); geo.normalizeNormals(); geo.setAttribute('color', new T3.Float32BufferAttribute(B.C, 3)); geo.setIndex(B.I);
+    const cm = new T3.Mesh(geo, FLO.cardMat); scene.add(cm); }
+  if (FLO.cardMat) { const m = FLO.cardMat; m.vertexColors = true; m.side = T3.DoubleSide; m.color.setRGB(1.18, 1.15, 1.05); m.emissive = new T3.Color(0x050a03);
+    m.onBeforeCompile = sh => { sh.uniforms.uCardNear = FLO.cardU;      // cards vanish where the modelled trees take over
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vCardXZ;').replace('#include <begin_vertex>', '#include <begin_vertex>\n vCardXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vCardXZ; uniform float uCardNear;').replace('#include <normal_fragment_begin>', 'if (distance(vCardXZ, cameraPosition.xz) < uCardNear) discard;\n vec3 normal = normalize( vNormal ); vec3 geometryNormal = normal;'); };
+    m.needsUpdate = true; }
+  { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const g2 = cv.getContext('2d'), gr = g2.createRadialGradient(32, 32, 2, 32, 32, 31); gr.addColorStop(0, 'rgba(0,0,0,0.5)'); gr.addColorStop(0.6, 'rgba(0,0,0,0.28)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g2.fillStyle = gr; g2.fillRect(0, 0, 64, 64);
+    const mat = new T3.MeshBasicMaterial({ map: new T3.CanvasTexture(cv), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }), BB = new Map();
+    for (const c of FLO.cells.values()) { const bk = Math.floor(c.x / 480) + '_' + Math.floor(c.z / 480); let B = BB.get(bk); if (!B) { B = { P: [], U: [], I: [], n: 0 }; BB.set(bk, B); }
+      for (const sp in c.it.tree) { const a = data.instances[sp], spec = data.species[sp], cl = spec.card; for (const i of c.it.tree[sp]) { const x = a[i], z = a[i + 2], r = a[i + 3] * spec.height * ASP[cl] * 0.62, y = a[i + 1] - 0.1;
+        B.P.push(x - r, y, z + r, x + r, y, z + r, x + r, y, z - r, x - r, y, z - r); B.U.push(0, 0, 1, 0, 1, 1, 0, 1); B.I.push(B.n, B.n + 1, B.n + 2, B.n, B.n + 2, B.n + 3); B.n += 4; } } }
+    for (const B of BB.values()) { if (!B.n) continue; const geo = new T3.BufferGeometry(); geo.setAttribute('position', new T3.Float32BufferAttribute(B.P, 3)); geo.setAttribute('uv', new T3.Float32BufferAttribute(B.U, 2)); geo.setIndex(B.I); const ms = new T3.Mesh(geo, mat); ms.renderOrder = 1; scene.add(ms); } }
+  FLO.ready = true;
+}
+let _cg = null; const carGlass = () => _cg || (_cg = new T3.MeshStandardMaterial({ name: 'CarGlass', color: 0x0b1118, roughness: 0.05, metalness: 0.2, envMapIntensity: 1.6 }));
+const _m4 = new T3.Matrix4(), _q = new T3.Quaternion(), _p = new T3.Vector3(), _s = new T3.Vector3(), _yAx = new T3.Vector3(0, 1, 0), _col = new T3.Color();
+function floraGroup(c, grp, lod) {          // instanced meshes for one cell, made the first time they are needed
+  const key = grp + lod; if (c.g[key]) return c.g[key]; const G = new T3.Group(), data = FLO.data;
+  for (const sp in c.it[grp]) { const L = FLO.lib[sp], prims = L[lod] || L[1 - lod], a = data.instances[sp], idx = c.it[grp][sp]; if (!prims) continue;
+    const isCar = /^prop_tcar/.test(sp);
+    for (const pm of prims) { const im = new T3.InstancedMesh(pm.geometry, isCar && pm.material.name === 'KitWindow' ? carGlass() : pm.material, idx.length), tint = !isCar || pm.material.name === 'KitSmooth';
+      idx.forEach((i, k) => { if (!tint) { _q.setFromAxisAngle(_yAx, a[i + 4]); _p.set(a[i], a[i + 1], a[i + 2]); _s.setScalar(a[i + 3]); im.setMatrixAt(k, _m4.compose(_p, _q, _s).multiply(pm.matrixWorld)); im.setColorAt(k, _col.setRGB(1, 1, 1)); return; } _q.setFromAxisAngle(_yAx, a[i + 4]); _p.set(a[i], a[i + 1], a[i + 2]); _s.setScalar(a[i + 3]); _m4.compose(_p, _q, _s).multiply(pm.matrixWorld); im.setMatrixAt(k, _m4); im.setColorAt(k, _col.setRGB(Math.min(1.25, a[i + 5] * 1.1), Math.min(1.25, a[i + 6] * 1.1), Math.min(1.25, a[i + 7] * 1.1))); });
+      im.frustumCulled = false; im.castShadow = lod === 0 && grp !== 'small'; im.receiveShadow = grp !== 'small'; G.add(im); FLO.n += idx.length; } }
+  scene.add(G); c.g[key] = G; return G;
+}
+let floraTick = 0; const _fw = new T3.Vector3();
+function updateDetail() {
+  const nowT = performance.now(); if (nowT - floraTick < 200) return; floraTick = nowT; cullDetail(); if (!FLO.ready) return; const R = LODR[qual], cx = camera.position.x, cz = camera.position.z, half = FLO.size * 0.71; camera.getWorldDirection(_fw); FLO.cardU.value = R.t1;
+  const show = (c, grp, lod, on) => { const k = grp + lod; if (on) floraGroup(c, grp, lod).visible = true; else if (c.g[k]) c.g[k].visible = false; };
+  for (const c of FLO.cells.values()) { const dx = c.x - cx, dz = c.z - cz, d = Math.max(0, Math.hypot(dx, dz) - half), behind = dx * _fw.x + dz * _fw.z < -half * 1.6;
+    const lt = d < R.t0 ? 0 : d < R.t1 ? 1 : 2, ls = d < R.s0 ? 0 : d < R.s1 ? 1 : 2, vis = !behind || d < 60;
+    show(c, 'tree', 0, vis && lt === 0); show(c, 'tree', 1, vis && lt === 1);
+    show(c, 'solid', 0, vis && lt === 0); show(c, 'solid', 1, vis && lt >= 1 && d < R.far * 0.6); show(c, 'tiny', 0, vis && d < R.t0); show(c, 'tiny', 1, vis && d >= R.t0 && d < R.t1 * 1.1); show(c, 'bld', 0, vis && d < R.t0 + 50); show(c, 'bld', 1, vis && d >= R.t0 + 50 && d < R.far * 2.2); show(c, 'small', 0, vis && ls === 0); show(c, 'small', 1, vis && ls === 1); }
+  for (const b of FLO.bt.values()) { const near = R.b > 0 && b.hd.length && Math.hypot(b.x - cx, b.z - cz) < R.b + 141; for (const o of b.hd) o.visible = near; for (const o of b.far) o.visible = !near; }
+}
+const DCULL = [], CULLD = [[450, 900], [700, 1500], [1000, 2400]];   // chunks of small detail / big structures are dropped beyond these distances (Low, Medium, High)
+function cullDetail() { const cx = camera.position.x, cz = camera.position.z, D = CULLD[qual]; for (const c of DCULL) c.o.visible = Math.hypot(c.x - cx, c.z - cz) - c.r < (c.small ? D[0] : D[1]); }
+function loadGLB(name) {      // compressed copy first; if the decoder cannot run here, the uncompressed copy
+  const plain = () => getBin('map/' + name).then(buf => new Promise((res, rej) => new T3.GLTFLoader().parse(buf, '', res, rej)));
+  if (!window.MeshoptDecoder) return plain();
+  return Promise.resolve(MeshoptDecoder.ready).then(() => getBin('map/' + name + 'c')).then(buf => new Promise((res, rej) => { const L = new T3.GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder); L.parse(buf, '', res, rej); })).catch(() => plain());
+}
+const MAXANI = Math.min(16, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 4);
+function sharpen(m) {             // full anisotropic filtering, and a second, finer sample of the same photo for close-up grain
+  for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap']) if (m[k]) { m[k].anisotropy = MAXANI; m[k].needsUpdate = true; }
+  if (!m.map || m.onBeforeCompile !== T3.Material.prototype.onBeforeCompile || m.userData.sharp || m.transparent || m.alphaTest > 0) return; m.userData.sharp = 1;
+  const grime = /^Kit(Plaster|Brick|Stone|Ashlar|Concrete|Pwood|Wood|Roof|Corr|Planks|Boards)/.test(m.name) || /Facade|Wall|Plaster|Brick/.test(m.name);
+  m.onBeforeCompile = sh => {
+    let f = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n { vec3 d_ = texture2D(map, vUv * 4.13).rgb; float l_ = dot(d_, vec3(0.3333)); diffuseColor.rgb *= mix(1.0, 0.6 + l_ * 0.85, 0.3); }');
+    if (grime) {
+      sh.uniforms.uGH = GROUND.tex; sh.uniforms.uGM = GROUND.m; sh.uniforms.uGR = GROUND.r;
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vGW; varying float vGN;').replace('#include <worldpos_vertex>', `#include <worldpos_vertex>
+        { vec4 gp = vec4(transformed, 1.0);
+          #ifdef USE_INSTANCING
+          gp = instanceMatrix * gp;
+          #endif
+          vGW = (modelMatrix * gp).xyz; vGN = abs(normalize(mat3(modelMatrix) * objectNormal).y); }`);
+      f = f.replace('#include <common>', `#include <common>
+        varying vec3 vGW; varying float vGN; uniform sampler2D uGH; uniform vec4 uGM; uniform vec2 uGR;
+        float gh(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float gn(vec2 p) { vec2 i = floor(p), q = fract(p); q = q * q * (3.0 - 2.0 * q); return mix(mix(gh(i), gh(i + vec2(1, 0)), q.x), mix(gh(i + vec2(0, 1)), gh(i + vec2(1, 1)), q.x), q.y); }`)
+       .replace('#include <map_fragment>', `#include <map_fragment>
+        { float vert = 1.0 - smoothstep(0.35, 0.7, vGN); float hz = vGW.x * 0.71 + vGW.z * 0.7;
+          float big = gn(vec2(hz * 0.09, vGW.y * 0.06)) * 0.6 + gn(vec2(hz * 0.35, vGW.y * 0.2)) * 0.4;
+          float streak = smoothstep(0.55, 0.95, gn(vec2(hz * 2.6, vGW.y * 0.045))) * smoothstep(0.2, 0.8, gn(vec2(hz * 0.4 + 7.0, vGW.y * 0.08)));
+                    float g = (0.12 + 0.14 * big) * vert + streak * 0.16 * vert;
+          diffuseColor.rgb *= 1.0 - clamp(g, 0.0, 0.4);
+          vec2 huv = vec2((vGW.x - uGM.x) * uGM.z, (-vGW.z - uGM.y) * uGM.w); vec4 hg = texture2D(uGH, huv);
+          float gy = (hg.r * 255.0 * 256.0 + hg.g * 255.0) / 65535.0 * uGR.y + uGR.x, ab = vGW.y - gy;
+          if (uGR.y > 0.0) diffuseColor.rgb *= mix(0.6 + 0.12 * big, 1.0, smoothstep(0.05, 1.8, ab) * 0.85 + 0.15) * (1.0 - vert * 0.0) + 0.0;   // walls darken and dirty toward the pavement
+          diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.93, 0.97, 0.9), smoothstep(0.55, 0.85, big) * 0.35); }`); }
+    sh.fragmentShader = f; };
+  m.needsUpdate = true;
+}
+function setupMap(g, detail) {
+  const root = g.scene; scene.add(root); root.updateMatrixWorld(true); const fac0 = FAC.length;
+  root.traverse(o => { if (!o.isMesh) return; const m = o.material, nm = m.name || '';
+    if (/Markings|Checker|Kerb/.test(nm)) { m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; }
+    if (nm === 'Water') { m.transparent = true; m.opacity = 0.86; m.depthWrite = false; m.roughness = 0.06; m.metalness = 0.35; m.envMapIntensity = 1.2; o.renderOrder = 2; }
+    if (nm === 'Waterfall') { m.transparent = true; m.depthWrite = false; if (m.map) { m.map.wrapS = m.map.wrapT = T3.RepeatWrapping; if (falls.indexOf(m.map) < 0) falls.push(m.map); } o.renderOrder = 3; }
+    if (m.map && /Asphalt|Terrain|Facade/.test(nm)) m.map.anisotropy = 4;
+    if (/Asphalt/.test(nm) && !m.userData.gloss) { m.userData.gloss = 1; m.roughness = 0.84; m.envMapIntensity = 1.15; }        // a little sheen so the sky shows on the road at low angles
+    if (nm === 'TreeCards' || nm === 'GrassCards') { m.transparent = false; m.alphaTest = 0.5; m.side = T3.DoubleSide; m.envMapIntensity = 0.35; m.roughness = 1; if (nm === 'TreeCards') FLO.cardMat = m; o.visible = false; }
+    if (nm === 'Skids') { m.transparent = true; m.depthWrite = false; m.polygonOffset = true; m.polygonOffsetFactor = -3; m.polygonOffsetUnits = -6; o.renderOrder = 1; o.castShadow = false; }
+    if (nm === 'Puddles') { m.transparent = true; m.depthWrite = false; m.polygonOffset = true; m.polygonOffsetFactor = -4; m.polygonOffsetUnits = -7; m.roughness = 0.04; m.metalness = 0.2; m.envMapIntensity = 1.6; o.renderOrder = 1; o.castShadow = false; }
+    if (nm === 'Markings' && !m.userData.worn) { m.userData.worn = 1; m.onBeforeCompile = sh => {             // paint worn through by traffic, unevenly
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vMW;').replace('#include <begin_vertex>', '#include <begin_vertex>\n vMW = (modelMatrix * vec4(transformed, 1.0)).xz;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+        varying vec2 vMW; float wh(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float wn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(wh(i), wh(i + vec2(1, 0)), f.x), mix(wh(i + vec2(0, 1)), wh(i + vec2(1, 1)), f.x), f.y); }`)
+        .replace('#include <color_fragment>', `#include <color_fragment>
+        { float w = wn(vMW * 0.08) * 0.55 + wn(vMW * 0.9) * 0.3 + wn(vMW * 7.0) * 0.15; float k = smoothstep(0.42, 0.78, w);
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.16, 0.16, 0.17), k * 0.72); }`); }; m.needsUpdate = true; }
+    if (/^RoadDecals/.test(nm)) { m.transparent = true; m.depthWrite = false; m.polygonOffset = true; m.polygonOffsetFactor = -3; m.polygonOffsetUnits = -6; o.renderOrder = 1; o.castShadow = false; }
+    if (nm === 'ContactAO') { m.transparent = true; m.depthWrite = false; m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -2; m.roughness = 1; m.envMapIntensity = 0; o.renderOrder = 1; }
+    if (nm === 'WindowGlass' || nm === 'KitWindow') interior(m);
+    if (/^Terrain/.test(nm) && m.map && !m.userData.two) { m.userData.two = 1; const bl = /^TerrainBlend/.test(nm);     // second, much larger sample of the same texture breaks up the visible repeat
+      if (bl) { m.transparent = true; m.depthWrite = false; m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -1; }
+      m.onBeforeCompile = sh => { sh.uniforms.uShade = SHADE.tex; sh.uniforms.uShadeOn = SHADE.on;
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vSh;').replace('#include <begin_vertex>', '#include <begin_vertex>\n { vec4 wp_ = modelMatrix * vec4(transformed, 1.0); vSh = vec2((wp_.x - (-2400.0)) / 4800.0, (-wp_.z - (-1680.0)) / 3360.0); }');
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vSh; uniform sampler2D uShade; uniform float uShadeOn;').replace('#include <map_fragment>', '#include <map_fragment>\n diffuseColor.rgb *= 0.66 + 0.62 * texture2D(map, vUv * 0.087).g; if (uShadeOn > 0.5) diffuseColor.rgb *= mix(1.0, texture2D(uShade, vSh).r, 0.85);' + (bl ? ' diffuseColor.a *= vBl;' : ''));
+        if (bl) { sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec2 uv2; varying float vBl;').replace('#include <begin_vertex>', '#include <begin_vertex>\n vBl = uv2.x;'); sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vBl;'); } }; }
+    if (/^TerrainBlend/.test(o.name)) { o.renderOrder = 0.5; if (!o.geometry.attributes.uv2) o.visible = false; }
+    { const t = /^Buildings(HD|LOD)[^_]*.*__t(-?\d+)_(-?\d+)/.exec(o.name); if (t) { const k = t[2] + '_' + t[3]; let b = FLO.bt.get(k); if (!b) { b = { x: (+t[2] + 0.5) * 200, z: -(+t[3] + 0.5) * 200, hd: [], far: [] }; FLO.bt.set(k, b); } (t[1] === 'HD' ? b.hd : b.far).push(o); if (t[1] === 'HD') o.visible = false; } }
+    if (/^Terrain/.test(nm) || nm === 'Foliage') m.envMapIntensity = 0.45;
+    if (/^Facade/.test(nm) && FAC.indexOf(m) < 0) FAC.push(m);
+    if (nm === 'HeroSigns' && !m.userData.hs) { m.userData.hs = 1; m.emissive = new T3.Color(0xffffff); m.emissiveMap = m.map; m.emissiveIntensity = 0; HSIGN.push(m); }     // shop signs light up at night
+    if (nm === 'HeroCurtain') { m.side = T3.DoubleSide; interior(m); }
+    if (/^Water/.test(o.name) && nm === 'Water' && !/Lake|River/.test(o.name)) o.visible = false;
+    if (/^Facade/.test(nm)) { if (m.roughnessMap) { m.metalness = 1; m.roughness = 1; } m.envMapIntensity = 1.25; }
+    if (m.normalScale && /^Terrain/.test(nm)) m.normalScale.set(0.8, 0.8);
+    o.receiveShadow = !/Water|Waterfall|TreeCards|GrassCards/.test(nm); o.castShadow = !/Water|Waterfall|Markings|Terrain|Asphalt|Seabed|Checker|Kerb|GrassCards|ContactAO/.test(nm) && !/^(Verge|Road)/.test(o.name);
+    if (nm === 'Seabed') m.fog = true;
+    if (!/^Terrain|Leaves|Water|Tree|Grass/.test(nm)) sharpen(m); else if (m.map) m.map.anisotropy = MAXANI;
+    if (/^(Props|Shapes|KitTrim|ArchTrim|Structures|Bridges|Houses)__/.test(o.name)) { if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere(); const s = o.geometry.boundingSphere.clone().applyMatrix4(o.matrixWorld); DCULL.push({ o, x: s.center.x, z: s.center.z, r: s.radius, small: /^(Props|Shapes|KitTrim|ArchTrim)/.test(o.name) }); } });
+  FAC.slice(fac0).forEach(litWindows); if (detail) { applyTime(); return; } makeSea();
+  if (W.lamps && W.lamps.length) { const pos = new Float32Array(W.lamps.length * 3); W.lamps.forEach((l, i) => pos.set(l, i * 3));
+    const cv = document.createElement('canvas'); cv.width = cv.height = 64; const g2 = cv.getContext('2d'), gr = g2.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,240,200,1)'); gr.addColorStop(0.25, 'rgba(255,214,140,0.55)'); gr.addColorStop(1, 'rgba(255,200,120,0)'); g2.fillStyle = gr; g2.fillRect(0, 0, 64, 64);
+    const geo = new T3.BufferGeometry(); geo.setAttribute('position', new T3.BufferAttribute(pos, 3));
+    lampGlow = new T3.Points(geo, new T3.PointsMaterial({ map: new T3.CanvasTexture(cv), size: 11, sizeAttenuation: true, transparent: true, depthWrite: false, blending: T3.AdditiveBlending })); lampGlow.frustumCulled = false; scene.add(lampGlow);
+    { // pools of warm light on the ground under each lamp (children of the glow, so they show only at night)
+      const P = [], U = [], I = [], R = 10, G = 6; let n = 0;
+      for (const l of W.lamps) { for (let a = 0; a <= G; a++) for (let b = 0; b <= G; b++) { const x = l[0] + (a / G - 0.5) * 2 * R, z = l[2] + (b / G - 0.5) * 2 * R; P.push(x, Math.max(hAt(x, z), l[1] - 8) + 0.07, z); U.push(a / G, b / G); }
+        for (let a = 0; a < G; a++) for (let b = 0; b < G; b++) { const q = n + a * (G + 1) + b; I.push(q, q + 1, q + G + 2, q, q + G + 2, q + G + 1); } n += (G + 1) * (G + 1); }
+      const pg = new T3.BufferGeometry(); pg.setAttribute('position', new T3.Float32BufferAttribute(P, 3)); pg.setAttribute('uv', new T3.Float32BufferAttribute(U, 2)); pg.setIndex(I);
+      const pc = document.createElement('canvas'); pc.width = pc.height = 128; const x2 = pc.getContext('2d'), g3 = x2.createRadialGradient(64, 64, 0, 64, 64, 64); g3.addColorStop(0, 'rgba(255,214,150,0.62)'); g3.addColorStop(0.45, 'rgba(255,200,130,0.3)'); g3.addColorStop(1, 'rgba(255,190,120,0)'); x2.fillStyle = g3; x2.fillRect(0, 0, 128, 128);
+      const pool = new T3.Mesh(pg, new T3.MeshBasicMaterial({ map: new T3.CanvasTexture(pc), transparent: true, depthWrite: false, blending: T3.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8, toneMapped: false }));
+      pool.renderOrder = 2; pool.frustumCulled = false; lampGlow.add(pool); } }
+  applyTime();
+  (W.spinners || []).forEach(s => { const o = root.getObjectByName(s.name); if (!o || !s.pos) return; const piv = new T3.Group(); piv.position.set(s.pos[0], s.pos[1], s.pos[2]); scene.add(piv); piv.attach(o); SPIN.push({ piv, axis: s.axis, speed: s.speed }); });
+}
+loadEl.textContent = qual === 2 ? 'Loading the island in high resolution… (about 50 MB; close-up detail streams in while you drive)' : 'Loading the island… (about 25 MB; close-up detail streams in while you drive)';
+Promise.all([fetch('data/world.json').then(r => r.json()), getBin('data/height')]).then(([w, hb]) => {
+  W = w; HM = new Int16Array(hb); prepWorld(); drawBaseMap();
+  { const m = W.heightmap; let lo = 1e9, hi = -1e9; for (let i = 0; i < HM.length; i++) { const h = HM[i] * m.scale; if (h < lo) lo = h; if (h > hi) hi = h; }
+    const d = new Uint8Array(m.nx * m.ny * 4), rg = Math.max(1, hi - lo);
+    for (let i = 0; i < HM.length; i++) { const v = Math.round((HM[i] * m.scale - lo) / rg * 65535); d[i * 4] = v >> 8; d[i * 4 + 1] = v & 255; d[i * 4 + 3] = 255; }
+    const t = new T3.DataTexture(d, m.nx, m.ny, T3.RGBAFormat); t.magFilter = t.minFilter = T3.NearestFilter; t.needsUpdate = true;
+    GROUND.tex.value = t; GROUND.m.value.set(m.x0, m.y0, 1 / (m.nx * m.cell), 1 / (m.ny * m.cell)); GROUND.r.value.set(lo, rg); GROUND.cell.value = m.cell / (m.nx * m.cell); }
+  // compressed map first; if the decoder cannot run here, fall back to the uncompressed copy
+  return qual === 2 ? Promise.resolve(MeshoptDecoder && MeshoptDecoder.ready).then(() => getBin('map/islandhc')).then(buf => new Promise((res, rej) => { const L = new T3.GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder); L.parse(buf, '', res, rej); })).catch(() => loadGLB('island')) : loadGLB('island');
+}).then(g => {
+  setupMap(g); applyQual(); loadEl.textContent = 'Loading trees and plants…';
+  return Promise.all([loadGLB('flora'), getJ('data/flora.json')]).then(([fg, fd]) => setupFlora(fg, fd)).catch(e => { console.warn('plants not loaded', e); scene.traverse(o => { if (o.isMesh && o.material && o.material.name === 'TreeCards') o.visible = true; }); });
+}).then(() => {
+  loadCar(() => { placeCar(roadPoint(roads[W.ring], 388)); updateCamera(0.016);
+    loadEl.textContent = 'Car: ' + carName + '. Pick a mode.'; ['modes', 'opts', 'help'].forEach(id => $(id).hidden = false);
+    W.regions.forEach(r => { const b = document.createElement('button'); b.type = 'button'; b.textContent = r.name; b.addEventListener('click', () => { if (race) { race = null; mode = 'free'; $('race').hidden = true; beacon.visible = false; car.frozen = false; } placeCar(nearestRoadPoint(r.x, r.z)); toggleMap(); }); $('travel').appendChild(b); });
+    loadGLB('islandd').then(g => { setupMap(g, true); return loadGLB('florak'); }).then(g => { addKit(g); setupLife(); window.__detail = 1; }).catch(e => { console.warn('detail not loaded', e); window.__detail = 1; });
+    window.__game = { FLO, scene, camera, car, roads, W, ground, startMode, inp, placeCar, roadPoint, renderer, get race() { return race; } };
+    requestAnimationFrame(frame); });
+}).catch(e => fail('Could not load the island: ' + (e && e.message ? e.message : e)));
+
+/* ---------------------------------------------------------------- traffic and people */
+const LIFE = window.__life = { cars: [], walkers: [], ready: false, t: 0 };
+function setupLife() {
+  const L = FLO.lib; if (!L.prop_tcar_a || !L.prop_walker_0_a) return;
+  const QC = [0, 1.5, 3][qual], QW = [0, 1, 1.6][qual], nCar = Math.round(70 * QC), nWalk = Math.round(90 * QW); if (!nCar && !nWalk) return;
+  const pal = [0xb3241d, 0x1f3f7a, 0xe8e8e4, 0x2b2d31, 0x8a8f96, 0xd9a521, 0x2f6b45, 0xf4f4f0, 0x3b8fa3, 0x101114].map(c => new T3.Color(c));
+  const gm = m => m.name === 'KitWindow' ? carGlass() : m;
+  const mk = (sp, n) => (/walker/.test(sp) ? (L[sp][1] || L[sp][0]) : (L[sp][0] || L[sp][1])).map(pm => { const im = new T3.InstancedMesh(pm.geometry, gm(pm.material), n); for (let j = 0; j < n; j++) { im.setColorAt(j, _col.setRGB(1, 1, 1)); im.setMatrixAt(j, _m4.makeScale(0, 0, 0)); } im.frustumCulled = false; im.castShadow = qual >= 1; im.userData.pm = pm; scene.add(im); return im; });
+  const kinds = ['prop_tcar_a', 'prop_tcar_b', 'prop_tcar_c', 'prop_tcar_d', 'prop_tcar_e'].filter(k => L[k]), per = Math.ceil(nCar / kinds.length);
+  LIFE.carMesh = kinds.map(k => mk(k, per)); LIFE.carN = kinds.map(() => 0);
+  const mkF = (sp, n) => (L[sp][1] || L[sp][0]).map(pm => { const im = new T3.InstancedMesh(pm.geometry, gm(pm.material), n); for (let j = 0; j < n; j++) { im.setColorAt(j, _col.setRGB(1, 1, 1)); im.setMatrixAt(j, _m4.makeScale(0, 0, 0)); } im.frustumCulled = false; im.castShadow = false; im.receiveShadow = true; im.userData.pm = pm; scene.add(im); return im; });
+  LIFE.carFar = kinds.map(k => L[k][1] ? mkF(k, per) : []);          // cheap copies for cars beyond 70 m
+  const busy = roads.filter(r => r.type !== 'dirt' && r.type !== 'circuit' && r.n > 40), wsum = busy.reduce((a, r) => a + r.n * (r.type === 'street' ? 3 : 1), 0);
+  for (let i = 0; i < nCar; i++) { let u = Math.random() * wsum, r = busy[0]; for (const q of busy) { u -= q.n * (q.type === 'street' ? 3 : 1); if (u <= 0) { r = q; break; } }
+    const k = i % kinds.length; if (LIFE.carN[k] >= per) continue; const slot = LIFE.carN[k]++; const col = pal[i % pal.length];
+    for (const im of LIFE.carMesh[k]) { if (/Paint|Smooth/.test(im.material.name) || true) im.setColorAt(slot, col); }
+    for (const im of LIFE.carFar[k]) im.setColorAt(slot, col);
+    LIFE.cars.push({ r, s: Math.random() * r.n, dir: Math.random() < 0.5 ? 1 : -1, v: (r.type === 'hwy' ? 24 : r.type === 'street' ? 11 : 16) * (0.85 + Math.random() * 0.3), k, slot, lane: r.w / 4 }); }
+  for (const ims of LIFE.carMesh.concat(LIFE.carFar)) for (const im of ims) { const pm = im.userData.pm; im.instanceColor && (im.instanceColor.needsUpdate = true);
+    if (!/Paint|Smooth/.test(im.material.name)) { /* trims, glass and tyres keep their own colour */ for (let j = 0; j < im.count; j++) im.setColorAt(j, new T3.Color(1, 1, 1)); } }
+  const ways = W.walkways || []; if (ways.length && nWalk) {
+    LIFE.walkMesh = [0, 1, 2, 3].filter(o => L['prop_walker_' + o + '_a']).map(o => ['a', 'b', 'm', 'c', 'd'].filter(p => L['prop_walker_' + o + '_' + p]).map(p => mk('prop_walker_' + o + '_' + p, Math.ceil(nWalk / 4))));
+    for (let i = 0; i < nWalk; i++) { const w = ways[(Math.random() * ways.length) | 0], o = i % LIFE.walkMesh.length; LIFE.walkers.push({ w, t: Math.random(), dir: Math.random() < 0.5 ? 1 : -1, v: 1.2 + Math.random() * 0.5, o, slot: (i / LIFE.walkMesh.length) | 0, side: (Math.random() - 0.5) * 1.6, ph: Math.random() }); } }
+  { // night lights for traffic: headlight flares, tail lights and a pool of light on the road ahead, one instanced mesh
+    const bb = new T3.Box3(); for (const pm of L.prop_tcar_a[0]) bb.expandByObject(pm);
+    const fx = bb.max.x + 0.05, bx = bb.min.x - 0.05, hz = (bb.max.z - bb.min.z) * 0.32, hy = bb.min.y + (bb.max.y - bb.min.y) * 0.42;
+    const P = [], U = [], C = [], I = []; let n = 0;
+    const quad = (a, b, c, d, col) => { P.push(...a, ...b, ...c, ...d); U.push(0, 0, 1, 0, 1, 1, 0, 1); for (let q = 0; q < 4; q++) C.push(...col); I.push(n, n + 1, n + 2, n, n + 2, n + 3); n += 4; };
+    for (const s of [-1, 1]) { const z = s * hz, w = 0.32;
+      quad([fx, hy - w, z - w], [fx, hy - w, z + w], [fx, hy + w, z + w], [fx, hy + w, z - w], [0.75, 0.7, 0.6]);
+      quad([fx - 0.4, hy, z - w * 1.4], [fx + 0.8, hy, z - w * 1.4], [fx + 0.8, hy, z + w * 1.4], [fx - 0.4, hy, z + w * 1.4], [0.35, 0.33, 0.27]);
+      const r = 0.22; quad([bx, hy + 0.1 - r, z + r], [bx, hy + 0.1 - r, z - r], [bx, hy + 0.1 + r, z - r], [bx, hy + 0.1 + r, z + r], [0.8, 0.05, 0.03]); }
+    quad([fx + 1.0, bb.min.y + 0.08, -2.6], [fx + 1.0, bb.min.y + 0.08, 2.6], [fx + 15, bb.min.y + 0.08, 2.6], [fx + 15, bb.min.y + 0.08, -2.6], [0.26, 0.23, 0.18]);
+    const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(U, 2)); g.setAttribute('color', new T3.Float32BufferAttribute(C, 3)); g.setIndex(I);
+    const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x2 = cv.getContext('2d'), gr = x2.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,0.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x2.fillStyle = gr; x2.fillRect(0, 0, 64, 64);
+    const mat = new T3.MeshBasicMaterial({ map: new T3.CanvasTexture(cv), vertexColors: true, transparent: true, depthWrite: false, blending: T3.AdditiveBlending, side: T3.DoubleSide, toneMapped: false });
+    LIFE.cars.forEach((c, i) => c.gi = i); LIFE.glow = new T3.InstancedMesh(g, mat, LIFE.cars.length); LIFE.glow.frustumCulled = false; LIFE.glow.renderOrder = 3; LIFE.glow.visible = night; scene.add(LIFE.glow);
+    for (let j = 0; j < LIFE.cars.length; j++) LIFE.glow.setMatrixAt(j, _m4.makeScale(0, 0, 0)); }
+  { // junctions of the city grid, found where two streets cross; each runs a two-way signal cycle the traffic obeys
+    const st = roads.filter(r => r.type === 'street'), J = [];
+    for (let a = 0; a < st.length; a++) for (let b = a + 1; b < st.length; b++) { const A = st[a], B = st[b];
+      for (let i = 0; i < A.n; i += 1) { const ax = A.p[i * 3], az = A.p[i * 3 + 2];
+        for (let k = 0; k < B.n; k += 1) { const dx = B.p[k * 3] - ax, dz = B.p[k * 3 + 2] - az; if (dx * dx + dz * dz < 9 && !J.some(j => (j.x - ax) ** 2 + (j.z - az) ** 2 < 400)) J.push({ x: ax, z: az, off: Math.random() * 30 }); } } }
+    LIFE.J = J; for (const r of roads) r.jn = [];
+    for (const r of roads) { if (r.type !== 'street') continue; for (let i = 0; i < r.n; i++) for (const j of J) { const dx = r.p[i * 3] - j.x, dz = r.p[i * 3 + 2] - j.z; if (dx * dx + dz * dz < r.step * r.step * 0.3) { if (!r.jn.some(q => q.j === j)) r.jn.push({ i, j }); } } }
+    for (const c of LIFE.cars) c.cur = c.v;
+    for (const r of roads) for (const q of r.jn) (q.j.rs = q.j.rs || []).push({ r, i: q.i }); }
+  { // live lamps on the traffic signal models, driven by the same junction cycle as the cars
+    const a = FLO.data && FLO.data.instances && FLO.data.instances.prop_signal, S = [];
+    if (a && LIFE.J.length) for (let i = 0; i < a.length; i += 8) { const x = a[i], y = a[i + 1], z = a[i + 2], sc = a[i + 3], ya = a[i + 4];
+      let j = null, bd = 400; for (const q of LIFE.J) { const d = (q.x - x) ** 2 + (q.z - z) ** 2; if (d < bd) { bd = d; j = q; } } if (!j) continue;
+      for (const hy of [0, Math.PI / 2]) { const lx = Math.cos(hy) * 0.45, lz = -Math.sin(hy) * 0.45, c = Math.cos(ya), s = Math.sin(ya);
+        const wx = x + (lx * c + lz * s) * sc, wz = z + (-lx * s + lz * c) * sc, dx = wx - x, dz = wz - z, ax = Math.abs(dx) > Math.abs(dz) ? 0 : 1;
+        for (let k = 0; k < 3; k++) S.push({ x: wx, y: y + (4.6 + 0.36 - k * 0.36) * sc, z: wz, j, ax, k, dx: dx / 0.45 / sc, dz: dz / 0.45 / sc }); } }
+    if (S.length) { const pos = new Float32Array(S.length * 3), col = new Float32Array(S.length * 3); S.forEach((s, i) => pos.set([s.x, s.y, s.z], i * 3));
+      const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.BufferAttribute(pos, 3)); g.setAttribute('color', new T3.BufferAttribute(col, 3));
+      const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x2 = cv.getContext('2d'), gr = x2.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.3, 'rgba(255,255,255,0.6)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x2.fillStyle = gr; x2.fillRect(0, 0, 64, 64);
+      LIFE.sig = new T3.Points(g, new T3.PointsMaterial({ map: new T3.CanvasTexture(cv), size: 1.5, sizeAttenuation: true, vertexColors: true, transparent: true, depthWrite: false, blending: T3.AdditiveBlending, toneMapped: false }));
+      LIFE.sig.frustumCulled = false; LIFE.sig.userData.S = S; scene.add(LIFE.sig); } }
+  LIFE.ready = true;
+}
+const _lm = new T3.Matrix4(), _lq = new T3.Quaternion(), _lp = new T3.Vector3(), _ls = new T3.Vector3(1, 1, 1), _l0 = new T3.Vector3(0, 0, 0);
+LIFE.step = dt => updateLife(dt);
+function updateLife(dt) {
+  if (!LIFE.ready) return; LIFE.t += dt; const cx = camera.position.x, cz = camera.position.z;
+  for (const c of LIFE.cars) { const r = c.r, n = r.n;
+    { let tgt = c.v; const pi = Math.floor(c.s);                                                       // obey the lights and keep a gap to the player
+      if (r.jn && r.jn.length) for (const q of r.jn) { const d = (q.i - c.s) * c.dir * r.step; if (d > 8.5 && d < 20) {
+        const ax = Math.abs(r.p[Math.min(n - 1, q.i + 1) * 3] - r.p[Math.max(0, q.i - 1) * 3]) > Math.abs(r.p[Math.min(n - 1, q.i + 1) * 3 + 2] - r.p[Math.max(0, q.i - 1) * 3 + 2]) ? 0 : 1;
+        const ph = (LIFE.t + q.j.off) % 30, green = ax === 0 ? ph < 12.5 : (ph >= 15 && ph < 27.5); if (!green) tgt = Math.min(tgt, Math.max(0, (d - 10.5) * 0.9)); } }
+      if (c.ox !== undefined) { const fx_ = c.hx, fz_ = c.hz, dx = car.x - c.ox, dz = car.z - c.oz, ah = dx * fx_ + dz * fz_, sd = Math.abs(dx * fz_ - dz * fx_); if (ah > 0 && ah < 18 && sd < 2.2) tgt = Math.min(tgt, Math.max(0, (ah - 6) * 0.8)); }
+      for (const o of LIFE.cars) { if (o === c || o.r !== r || o.dir !== c.dir) continue; let g = (o.s - c.s) * c.dir; if (r.closed) g = ((g % n) + n) % n; g *= r.step; if (g > 0 && g < 22) tgt = Math.min(tgt, Math.max(0, (g - 7.5) * 0.9)); }   // queue behind the car ahead
+      c.cur += clamp(tgt - c.cur, -9 * dt, 3.5 * dt); }
+    { const s0 = c.s; c.s += c.dir * c.cur * dt / r.step;
+      if (r.jn && r.jn.length) for (const q of r.jn) if ((q.i - s0) * (q.i - c.s) <= 0 && q.j !== c.lastJ) { c.lastJ = q.j;      // crossing a junction: sometimes turn onto the other street
+        const opts = (q.j.rs || []).filter(o => o.r !== r && o.i > 3 && o.i < o.r.n - 4); if (opts.length && Math.random() < 0.45) { const o = opts[(Math.random() * opts.length) | 0];
+          c.r = o.r; c.s = o.i; c.dir = o.i < 6 ? 1 : o.i > o.r.n - 7 ? -1 : (Math.random() < 0.5 ? 1 : -1); c.lane = o.r.w / 4; c.lastJ = q.j; }
+        break; } }
+    if (c.r !== r) continue;
+    if (r.closed) c.s = ((c.s % n) + n) % n; else if (c.s < 2 || c.s > n - 3) { c.dir = -c.dir; c.s = Math.min(n - 3, Math.max(2, c.s)); }
+    const i = Math.floor(c.s), f = c.s - i, p = r.p, j = r.closed ? (i + 1) % n : Math.min(i + 1, n - 1);
+    const x = p[i * 3] + (p[j * 3] - p[i * 3]) * f, y = p[i * 3 + 1] + (p[j * 3 + 1] - p[i * 3 + 1]) * f, z = p[i * 3 + 2] + (p[j * 3 + 2] - p[i * 3 + 2]) * f;
+    let hx = p[j * 3] - p[i * 3], hz = p[j * 3 + 2] - p[i * 3 + 2]; const hl = Math.hypot(hx, hz) || 1; hx /= hl; hz /= hl; if (c.dir < 0) { hx = -hx; hz = -hz; }
+    const ox = x - hz * c.lane, oz = z + hx * c.lane;                                                    // keep to the right-hand lane
+    if (c.sx === undefined) { c.sx = ox; c.sz = oz; c.sa = Math.atan2(hx, hz); }
+    { const k = 1 - Math.exp(-dt * 5), ta = Math.atan2(hx, hz); let da = ta - c.sa; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+      const jump = (ox - c.sx) ** 2 + (oz - c.sz) ** 2 > 900; c.sx = jump ? ox : lerp(c.sx, ox, k); c.sz = jump ? oz : lerp(c.sz, oz, k); c.sa = jump ? ta : c.sa + da * Math.min(1, dt * 4); }
+    c.ox = ox; c.oz = oz; c.hx = hx; c.hz = hz;
+    const dx = ox - car.x, dz = oz - car.z, dd = dx * dx + dz * dz;
+    if (dd < 2.6 * 2.6) { const d = Math.sqrt(dd) || 1; car.vx -= dx / d * 4; car.vz -= dz / d * 4; c.v *= 0.98; }   // a nudge when the player hits it
+    const far = (ox - cx) ** 2 + (oz - cz) ** 2 > 700 * 700;
+    _lq.setFromAxisAngle(_yAx, c.sa - Math.PI / 2); _lp.set(c.sx, y + 0.05, c.sz); _lm.compose(_lp, _lq, far ? _l0 : _ls);
+    { const near = !far && (c.sx - cx) ** 2 + (c.sz - cz) ** 2 < 70 * 70, nf = LIFE.carFar[c.k].length > 0;
+      for (const im of LIFE.carMesh[c.k]) { if (near || !nf) im.setMatrixAt(c.slot, _m4.copy(_lm).multiply(im.userData.pm.matrixWorld)); else im.setMatrixAt(c.slot, _m4.makeScale(0, 0, 0)); }
+      for (const im of LIFE.carFar[c.k]) { if (!near && !far) im.setMatrixAt(c.slot, _m4.copy(_lm).multiply(im.userData.pm.matrixWorld)); else im.setMatrixAt(c.slot, _m4.makeScale(0, 0, 0)); } }
+    if (LIFE.glow && night) LIFE.glow.setMatrixAt(c.gi, _lm); }
+  for (const ims of LIFE.carMesh.concat(LIFE.carFar)) for (const im of ims) im.instanceMatrix.needsUpdate = true; if (LIFE.glow) { LIFE.glow.visible = night; if (night) LIFE.glow.instanceMatrix.needsUpdate = true; }
+  if (LIFE.sig && (LIFE.sigT = (LIFE.sigT || 0) + dt) > 0.1) { LIFE.sigT = 0; const S = LIFE.sig.userData.S, col = LIFE.sig.geometry.attributes.color, k0 = night ? 1.4 : 1.0;
+    for (let i = 0; i < S.length; i++) { const s = S[i], ph = (LIFE.t + s.j.off) % 30, t = s.ax === 0 ? ph : (ph + 15) % 30;
+      const st = t < 10.5 ? 2 : t < 12.5 ? 1 : 0; const lit = st === s.k;
+      const c = !lit ? [0, 0, 0] : s.k === 0 ? [1, 0.12, 0.06] : s.k === 1 ? [1, 0.6, 0.05] : [0.15, 1, 0.45]; const vx = camera.position.x - s.x, vz = camera.position.z - s.z, vl = Math.hypot(vx, vz) || 1, f = clamp((vx * s.dx + vz * s.dz) / vl * 1.6 - 0.1, 0, 1) * k0; col.setXYZ(i, c[0] * f, c[1] * f, c[2] * f); }
+    col.needsUpdate = true; }
+  if (LIFE.walkMesh) { for (const w of LIFE.walkers) { const a = w.w; w.t += w.dir * w.v * dt / Math.max(1, Math.hypot(a[2] - a[0], a[3] - a[1]));
+      if (w.t > 1 || w.t < 0) { w.dir = -w.dir; w.t = Math.min(1, Math.max(0, w.t)); }
+      let hx = (a[2] - a[0]) * w.dir, hz = (a[3] - a[1]) * w.dir; const hl = Math.hypot(hx, hz) || 1; hx /= hl; hz /= hl;
+      const x = a[0] + (a[2] - a[0]) * w.t - hz * w.side, z = a[1] + (a[3] - a[1]) * w.t + hx * w.side, far = (x - cx) ** 2 + (z - cz) ** 2 > 220 * 220;
+      const np_ = LIFE.walkMesh[w.o].length, cyc = Math.floor((LIFE.t * w.v * 6.4 + w.ph * 8)) % 8, step = np_ > 4 ? [0, 3, 2, 4, 1, 4, 2, 3][cyc] : np_ > 2 ? [0, 2, 1, 2][cyc % 4] : cyc % 2;
+      _lq.setFromAxisAngle(_yAx, Math.atan2(hx, hz) - Math.PI / 2); _lp.set(x, a[4] + Math.abs(Math.sin((LIFE.t * w.v * 1.6 + w.ph * 2) * Math.PI)) * 0.03, z);
+      for (let ps = 0; ps < LIFE.walkMesh[w.o].length; ps++) { _lm.compose(_lp, _lq, (far || ps !== step) ? _l0 : _ls); for (const im of LIFE.walkMesh[w.o][ps]) { im.setMatrixAt(w.slot, _m4.copy(_lm).multiply(im.userData.pm.matrixWorld)); } } }
+    for (const pair of LIFE.walkMesh) for (const ims of pair) for (const im of ims) im.instanceMatrix.needsUpdate = true; }
+}
+
+/* ---------------------------------------------------------------- main loop */
+let last = performance.now(), regT = 0, curRegion = '', miniT = 0, wheelSpin = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!paused) {
+    const steps = dt > 0.02 ? 2 : 1; for (let i = 0; i < steps; i++) physics(dt / steps);
+    if (race) updateRace(dt); bumpT -= dt;
+    regT -= dt; if (regT <= 0) { regT = 0.5; const rg = regionAt(car.x, car.z); if (rg !== curRegion) { curRegion = rg; $('region').textContent = rg; }
+      if (mode === 'free') for (const l of W.landmarks) if (!found[l.name] && (l.pos[0] - car.x) ** 2 + (l.pos[2] - car.z) ** 2 < 110 * 110) { found[l.name] = 1; store.set('found', found); toast('Discovered: ' + l.name + '  (' + Object.keys(found).length + '/' + W.landmarks.length + ')', 3.2); } }
+    $('speed').firstChild.nodeValue = Math.round(car.speed * 3.6);
+  }
+  carRoot.position.set(car.x, car.y, car.z); carRoot.rotation.set(0, car.h, 0); carBody.rotation.set(-car.pitch, 0, car.roll + clamp((car.vl || 0) * 0.012, -0.08, 0.08), 'YXZ');
+  wheelSpin += (car.vf || 0) * dt; for (const w of wheels) { if (w.model) { w.spin.rotation.x = (w.sign || 1) * wheelSpin / w.r; if (w.steer) w.steer.rotation.y = car.steer * 0.45; } else { w.spin.rotation.x = wheelSpin / w.r; if (w.steer) w.steer.rotation.y = car.steer * 0.45; } }
+  shadow.position.set(car.x, car.y + 0.06, car.z); shadow.rotation.z = car.h; shadow.visible = !car.air && qual === 0;
+  updateCamera(dt);
+  for (const s of SPIN) s.piv.rotation[s.axis] += s.speed * dt; for (const m of falls) m.offset.y += dt * 0.55;
+  if (seaN) { seaN.offset.x += dt * 0.012; seaN.offset.y += dt * 0.007; }
+  if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').style.opacity = 0; }
+  miniT -= dt; if (miniT <= 0 && W) { miniT = 0.1; drawMini(); }
+  audioUpdate(); updateDetail(); updateLife(dt); WIND.t.value += dt; postRender();
+}
+})();
+</script>
+</body>
+</html>

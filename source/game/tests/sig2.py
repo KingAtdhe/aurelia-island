@@ -1,0 +1,6 @@
+pg.evaluate("localStorage.setItem('aurelia_qual','1')"); pg.reload(); pg.wait_for_function('window.__game !== undefined', timeout=400000); pg.wait_for_function('window.__detail === 1', timeout=500000)
+pg.click('button[data-mode="free"]'); time.sleep(2)
+pg.evaluate("document.querySelectorAll('#help,#toast,.ctl,#modes,#opts').forEach(e=>e.style.display='none')")
+pg.evaluate("()=>{__life.sig.material.size=4; const c=__life.sig.geometry.attributes.color; for(let i=0;i<c.count;i++) c.setXYZ(i,1,0,1); c.needsUpdate=true; __life.sigT=-1e9;}")
+print('RES', pg.evaluate("()=>JSON.stringify(__life.sig.userData.S.slice(0,3).map(s=>[s.x,s.y,s.z]))"))
+pg.evaluate('''()=>{const R=__game.roads.find(r=>r.name==='Street E-20');let b=0,bd=1e9;for(let i=0;i<R.n;i++){const p=__game.roadPoint(R,i),d=Math.hypot(p.x-300,p.z+20);if(d<bd){bd=d;b=i}}__game.placeCar(__game.roadPoint(R,b));}'''); time.sleep(5); shot('SG3')
