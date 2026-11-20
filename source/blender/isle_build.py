@@ -325,7 +325,9 @@ def build():
             quads(r, 0, 0.3, i2[ok], i2[ok] + 2, YL)
             i4 = np.arange(0, last - 2, 4); ok4 = ~jm[i4 % n]
             for o in (-3.45, 3.45): quads(r, o, 0.2, i4[ok4], i4[ok4] + 2, WH)
-        if typ in ('road', 'street'):
+        if r['name'] in ('Summit Pass', 'Skyline Road', 'Eagle Descent', 'Serpentine'):          # art sheet 11: double yellow no-overtaking line on the passes
+            for o in (-0.17, 0.17): quads(r, o, 0.14, i2[ok], i2[ok] + 2, YL)
+        elif typ in ('road', 'street'):
             i3 = np.arange(1, last - 1, 3); ok3 = ~jm[i3 % n] & ~jm[(i3 + 1) % n]
             quads(r, 0, 0.2, i3[ok3], i3[ok3] + 1, WH)
         if typ == 'circuit':
@@ -345,6 +347,14 @@ def build():
                 m = dilate(drop, 3) & ground & ~dilate(r['junction'], 5)
                 if not m.any(): continue
                 o = side * (hw + 2.6)
+                if r['name'] in ('Summit Pass', 'Skyline Road', 'Eagle Descent', 'Serpentine'):        # art sheet 11: white guard pipe on the passes
+                    for zp in (0.55, 0.8, 0.98):
+                        pr = [(o - 0.045, zp - 0.045), (o - 0.045, zp + 0.045), (o + 0.045, zp + 0.045), (o + 0.045, zp - 0.045), (o - 0.045, zp - 0.045)]
+                        Vg, Fg, _ = rib(r, pr, m); Vg, Fg = compact(Vg, Fg); PR.add((Vg, Fg), WHITE, solid=False); PR.add((Vg, Fg[:, ::-1]), WHITE, solid=False)
+                    for i in np.where(m)[0][::2]:
+                        p = P(r, i, o); PR.add(cyl(p[0], p[1], p[2] - 0.6, 0.075, 0.075, 1.65, 8), WHITE)
+                        p = P(r, i, o + side * 0.08); PR.add(box(p[0], p[1], p[2] + 0.84, .02, .07, .07, r['head'][i]), lin('#ffb020'))
+                    continue
                 wb = [(-.05, .20), (.02, .25), (.05, .31), (-.01, .39), (.05, .47), (.02, .53), (-.05, .60)]                   # art sheet 07: W-beam profile
                 prof = [(o + side * dx, z) for dx, z in wb]
                 Vg, Fg, _ = rib(r, prof if side < 0 else prof[::-1], m)
@@ -380,7 +390,7 @@ def build():
                         if p[2] - 1.7 - bed > 1.0 and clear: BT.add(cyl(p[0], p[1], bed, 1.3, 1.05, p[2] - 1.7 - bed, 8), CONC)
                     p = P(r, i, 0); BT.add(box(p[0], p[1], p[2] - 2.6, 2.6, r['w'] + 1.5, 0.9, r['head'][i % n]), CONC)
     import isle_stage7 as S7; S7.roads_extra(C, roads, G, Rd, Mk)
-    import isle_roads_build as RB; L.STATS['roads_sheet08'] = RB.apply(C, roads, Mk, Dt, rib, dilate, rng)
+    import isle_roads_build as RB; L.STATS['roads_sheet08'] = RB.apply(C, roads, Mk, Dt, rib, dilate, rng); L.STATS['touge_sheet11'] = RB.touge(C, roads, Mk, Dt, rib, dilate, rng)
     if len(Rs.F):                                                # art sheet 08: granite setts on the old-town streets
         import isle_props as KPm; Ms_ = L.new_mat('Setts', image=make_image('setts', KPm._col('PavingStones070', 0.5, 0.5, 1.0)), vcol=True, normal=make_image('setts_n', KPm._rawrect('PavingStones070', 'NormalGL')[..., :3], raw=True), nstrength=1.2,
                                                           orm=make_image('setts_orm', np.dstack([np.ones((8, 8)), np.full((8, 8), 0.82), np.zeros((8, 8))]), raw=True))

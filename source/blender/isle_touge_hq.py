@@ -236,3 +236,8 @@ ITEMS = dict(tg_hairpin=(touge_hairpin, 9.0), tg_straight=(touge_straight, 12.0)
 def register(M=None):
     M = M if M is not None else P.mats(); RQ.materials(M); RQ.register_kit(M)
     for k, (fn, h) in ITEMS.items(): P.PROPS[k] = (fn, {}); P.HEIGHT[k] = h
+
+
+def register_kit(M=None):
+    """Map pieces placed along the passes: curve mirror and hairpin light."""
+    for k, fn, h in (('tg_mirror', curve_mirror, 3.7), ('tg_light', road_light, 8.6)): P.PROPS[k] = (fn, {}); P.HEIGHT[k] = h

@@ -656,12 +656,12 @@ function floraLib(g) {
   const seen = new Set();
   g.scene.traverse(o => { if (!o.isMesh || seen.has(o.material)) return; const m = o.material; seen.add(m);
     if (/^Leaves/.test(m.name)) { m.transparent = false; m.alphaTest = 0.38; m.roughness = 1; m.envMapIntensity = 0.3; m.color.setRGB(1.05, 1.03, 0.94); m.emissive = new T3.Color(0x050a03); noFlip(m, true); if (m.map) m.map.anisotropy = 4; }
-    else if (m.name === 'PaintedFlora') { m.envMapIntensity = 0.3; noFlip(m); } else if (m.name === 'KitWindow') interior(m); else if (/^Kit/.test(m.name)) { sharpen(m); m.envMapIntensity = 1.0; if (m.name === 'KitLens') m.emissiveIntensity = 0.35; if (m.name === 'KitGlass') { m.transparent = true; m.depthWrite = false; } } else m.envMapIntensity = 0.4; });
+    else if (m.name === 'PaintedFlora') { m.envMapIntensity = 0.3; noFlip(m); } else if (m.name === 'KitWindow') interior(m); else if (/^Kit/.test(m.name)) { sharpen(m); m.envMapIntensity = 1.0; if (m.name === 'KitLens') m.emissiveIntensity = 0.35; if (m.name === 'KitGlass' || m.name === 'KitShopGlass') { m.transparent = true; m.depthWrite = false; } if (m.name === 'KitShopInterior') { m.emissiveIntensity = 0.85; m.envMapIntensity = 0.2; } } else m.envMapIntensity = 0.4; });
 }
 function floraAssign(data, only) {
   const S = FLO.size;
   for (const sp in data.instances) { const a = data.instances[sp], spec = data.species[sp]; if (!FLO.lib[sp] || (only && !only.has(sp))) continue;
-    const small = /^(grass|flowers)/.test(sp), grp = small ? 'small' : /^prop_(house|barn|winery|warehouse|hut|container|cottage|farmhouse|village_row|silos|hay_shed)/.test(sp) ? 'bld' : /^prop_(scooter|bikerack|cafe|planter|kiosk|person|hydrant|bin|bench|bollard|reflector|farm_stand|tractor|rk_post|rk_cone|rk_worksign)/.test(sp) ? 'tiny' : (spec.card >= 0 ? 'tree' : 'solid');
+    const small = /^(grass|flowers)/.test(sp), grp = small ? 'small' : /^prop_(house|barn|winery|warehouse|hut|container|cottage|farmhouse|village_row|silos|hay_shed|shop_)/.test(sp) ? 'bld' : /^prop_(scooter|bikerack|cafe|planter|kiosk|person|hydrant|bin|bench|bollard|reflector|farm_stand|tractor|rk_post|rk_cone|rk_worksign)/.test(sp) ? 'tiny' : (spec.card >= 0 ? 'tree' : 'solid');
     for (let i = 0; i < a.length; i += 8) { const k = Math.floor(a[i] / S) + '_' + Math.floor(a[i + 2] / S); let c = FLO.cells.get(k);
       if (!c) { c = { x: (Math.floor(a[i] / S) + 0.5) * S, z: (Math.floor(a[i + 2] / S) + 0.5) * S, y: a[i + 1], it: { tree: {}, solid: {}, small: {}, bld: {}, tiny: {} }, g: {}, cards: null }; FLO.cells.set(k, c); }
       (c.it[grp][sp] = c.it[grp][sp] || []).push(i); } }
@@ -773,6 +773,7 @@ function setupMap(g, detail) {
     if (nm === 'Waterfall') { m.transparent = true; m.depthWrite = false; if (m.map) { m.map.wrapS = m.map.wrapT = T3.RepeatWrapping; if (falls.indexOf(m.map) < 0) falls.push(m.map); } o.renderOrder = 3; }
     if (m.map && /Asphalt|Terrain|Facade/.test(nm)) m.map.anisotropy = 4;
     if (/Asphalt/.test(nm) && !m.userData.gloss) { m.userData.gloss = 1; m.roughness = 0.84; m.envMapIntensity = 1.15; }        // a little sheen so the sky shows on the road at low angles
+    if (nm === 'TougeLattice') { m.transparent = false; m.alphaTest = 0.5; m.side = T3.DoubleSide; m.roughness = 0.9; m.envMapIntensity = 0.5; }   // art sheet 11: concrete lattice over the cut slopes
     if (nm === 'TreeCards' || nm === 'GrassCards') { m.transparent = false; m.alphaTest = 0.5; m.side = T3.DoubleSide; m.envMapIntensity = 0.35; m.roughness = 1; if (nm === 'TreeCards') FLO.cardMat = m; o.visible = false; }
     if (nm === 'Skids') { m.transparent = true; m.depthWrite = false; m.polygonOffset = true; m.polygonOffsetFactor = -3; m.polygonOffsetUnits = -6; o.renderOrder = 1; o.castShadow = false; }
     if (nm === 'Puddles') { m.transparent = true; m.depthWrite = false; m.polygonOffset = true; m.polygonOffsetFactor = -4; m.polygonOffsetUnits = -7; m.roughness = 0.04; m.metalness = 0.2; m.envMapIntensity = 1.6; o.renderOrder = 1; o.castShadow = false; }
@@ -787,6 +788,9 @@ function setupMap(g, detail) {
     if (/^RoadDecals/.test(nm)) { m.transparent = true; m.depthWrite = false; m.polygonOffset = true; m.polygonOffsetFactor = -3; m.polygonOffsetUnits = -6; o.renderOrder = 1; o.castShadow = false; }
     if (nm === 'ContactAO') { m.transparent = true; m.depthWrite = false; m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -2; m.roughness = 1; m.envMapIntensity = 0; o.renderOrder = 1; }
     if (nm === 'WindowGlass' || nm === 'KitWindow') interior(m);
+    if (nm === 'KitShopGlass') { m.transparent = true; m.depthWrite = false; m.opacity = Math.min(m.opacity, 0.3); }
+    if (nm === 'KitShopInterior' && !m.userData.si) { m.userData.si = 1; if (m.map) { m.emissiveMap = m.map; m.emissive = new T3.Color(0xffffff); } m.emissiveIntensity = 0.75; m.envMapIntensity = 0.15; }   // lit shop rooms behind the glass
+    if (nm === 'KitShopSign' && !m.userData.ss) { m.userData.ss = 1; if (m.map) { m.emissiveMap = m.map; m.emissive = new T3.Color(0xffffff); } m.emissiveIntensity = 0.12; HSIGN.push(m); }
     if (/^Terrain/.test(nm) && m.map && !m.userData.two) { m.userData.two = 1; const bl = /^TerrainBlend/.test(nm);     // second, much larger sample of the same texture breaks up the visible repeat
       if (bl) { m.transparent = true; m.depthWrite = false; m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -1; }
       m.onBeforeCompile = sh => { sh.uniforms.uShade = SHADE.tex; sh.uniforms.uShadeOn = SHADE.on;

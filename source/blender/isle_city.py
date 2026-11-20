@@ -1,3 +1,4 @@
+import os
 """City blocks for Aurelia Island, modelled like the houses: a stone-clad ground floor of shopfronts (glazing with mullions and transoms,
 recessed doors, fascia with a name panel, fabric awnings, pilasters), upper floors in brick, painted render or concrete with framed windows,
 stone sills and lintels, French balconies, floor bands, a moulded cornice and parapet with coping, and a flat roof with plant:
@@ -102,7 +103,14 @@ def building(K, M, W, D, h, style, rng):
         for i in range(ns):
             a = -L2 / 2 + L2 * i / ns + 0.45; b = -L2 / 2 + L2 * (i + 1) / ns - 0.45; gh.append((a, b, 0.0, gf - 0.25))
         walls(K, M, F, L2, 0.0, gf, gh, (0.82, 0.8, 0.76), 0.35, M['ashlar'], 'box', 1.6)
-        for i, (a, b, _, _) in enumerate(gh): shopfront(K, M, F, a, b, gf, rng, door=(i % 2 == 0))
+        import isle_shops_hq as SH_                                                               # art sheet 10: storefronts placed as instanced prefabs (K.shops)
+        for i, (a, b, _, _) in enumerate(gh):
+            if os.environ.get('NOSHOPS'): shopfront(K, M, F, a, b, gf, rng, door=(i % 2 == 0)); continue
+            SH_.place(K, F, a, b, gf, rng)
+            if getattr(K, 'shops', None) and K.shops[-1][4] is not None:                         # close the bay either side of the prefab
+                s0, s1 = K.shops[-1][4]; K.shops[-1] = K.shops[-1][:4] + (None,)
+                for u0, u1 in ((a, s0), (s1, b)):
+                    if u1 - u0 > 0.02: K.obj(F.box(u0, u1, -0.36, 0.0, 0.0, gf - 0.25), M['ashlar'], (0.82, 0.8, 0.76), 'box', 1.6)
         K.obj(F.box(-L2 / 2 - 0.05, L2 / 2 + 0.05, -0.02, 0.12, gf - 0.12, gf + 0.12), M['stone'], (0.9, 0.88, 0.84), 'box', 1.4)   # band over the shops
         # upper floors
         holes = []; items = []
@@ -160,6 +168,13 @@ def tower_base(K, M, W, D, rng):
     """Street level of a glass tower: stone plinth band, an entrance portal with a steel-and-glass canopy, revolving door, planters."""
     for k, (F, Ln) in enumerate(fronts(W, D)):
         K.obj(F.box(-Ln / 2 - 0.1, Ln / 2 + 0.1, -0.05, 0.25, 0.0, 0.7, back=False), M['ashlar'], (0.75, 0.74, 0.72), 'box', 1.6)
+    import isle_shops_hq as SH_                                                                   # art sheet 10: retail podium round the tower base (instanced prefabs)
+    for k, (F, Ln) in enumerate(fronts(W, D)):
+        if os.environ.get('NOSHOPS') or k > 1: break
+        spans = ((-Ln / 2 + 0.6, -4.6), (4.6, Ln / 2 - 0.6)) if k == 0 else ((-Ln / 2 + 0.6, Ln / 2 - 0.6),)
+        for a, b in spans:
+            u = a
+            while b - u >= 4.0: w = min(float(rng.choice([6.0, 7.0])), b - u); SH_.place(K, F, u, u + w, 5.0, rng); u += w
     F, Ln = fronts(W, D)[0]
     K.obj(F.box(-4.2, 4.2, 0.0, 0.5, 0.0, 6.2, back=False), M['stone'], (0.88, 0.87, 0.84), 'box', 2.0)            # portal surround
     K.obj(F.box(-3.6, 3.6, 0.5, 0.52, 0.2, 5.6), M['winglass'], (1, 1, 1))

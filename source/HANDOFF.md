@@ -106,3 +106,4 @@ curve Rw = hw + 1.3, Ht = 7) replaces portal_masonry (6 portals). Lookouts (isle
 - Saba pointed at CarX's "IDA Hakone Nanamagiri Touge" map. blender/isle_touge_hq.py: lattice_slope, shotcrete_cut, retaining_wall, u_ditch,
   curve_mirror, guard_pipe, road_light, spillway, delineators, road scenes touge_straight / touge_hairpin; trees are flora instances
   (TREES dict filled by the scenes). sheet11_render.py, art/sheet11.py.
+- App repo: github.com/KingAtdhe/aurelia-island (full textures, PWA, Pages workflow; pack_app.py FULL=1 SITE=<repo>)

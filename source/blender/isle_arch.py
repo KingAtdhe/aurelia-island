@@ -282,6 +282,8 @@ def emit_model(K, x, y, z, yaw, name):
     for Pq, T, N, U, Cq, mt in K.arrays():
         Pw = np.c_[x + Pq[:, 0] * c_ - Pq[:, 1] * s_, y + Pq[:, 0] * s_ + Pq[:, 1] * c_, z + Pq[:, 2]]; Nw = np.c_[N[:, 0] * c_ - N[:, 1] * s_, N[:, 0] * s_ + N[:, 1] * c_, N[:, 2]]
         groups.append((Pw, T, Nw, U, Cq, mt))
+    for (nm_, px, py, yw, _) in getattr(K, 'shops', []):                                       # art sheet 10: storefront prefabs as instances
+        KP.KIT.append((nm_, x + px * c_ - py * s_, y + px * s_ + py * c_, z, yw + a_))
     ob, nt = KP.make_prop(name, groups); ob.parent = L.ROOT; return nt
 
 

@@ -89,7 +89,7 @@ def place_flora(C, H6, out):
     lib = FL.build_library(dict(bark=M.bark, leaf=M.leaf, painted=M.pflora, rock=M.rockf))
     import isle_props as KP, isle_houses as HS, isle_sheds as SH, isle_life as LF; HS.register(); SH.register(); LF.register()    # modelled street furniture and houses, placed as instances like the plants
     import isle_landmarks as LMK_; KP.PROPS['container'] = (LMK_.container, {})
-    import isle_props_hq as HQ, isle_country_hq as CQ, isle_coast_hq as CO, isle_wild_hq as WH; HQ.register(); CQ.register(); CO.register(); WH.register(); import isle_roads_hq as RQ_; RQ_.register_kit(); L.STATS['kit_swapped_hq'] = HQ.apply(KP.KIT)                        # art sheet 03 street furniture in the old town
+    import isle_props_hq as HQ, isle_country_hq as CQ, isle_coast_hq as CO, isle_wild_hq as WH; HQ.register(); CQ.register(); CO.register(); WH.register(); import isle_roads_hq as RQ_; RQ_.register_kit(); import isle_shops_hq as SHk_; SHk_.register_kit(KP.mats()); L.STATS['kit_swapped_hq'] = HQ.apply(KP.KIT)                        # art sheet 03 street furniture in the old town
     KP.PROPS.pop('fountain', None); KP.KIT[:] = [it if it[0] != 'fountain' else ('planter',) + tuple(it[1:]) for it in KP.KIT]   # fountains exist only in the heritage family
     KP.PREFIX = 'FLORA_prop_'; plib = KP.build(); KP.PREFIX = 'PROP_'
     for k, e in plib.items(): e['kind'] = 'prop'; lib['prop_' + k] = e

@@ -137,10 +137,10 @@ def storefront(K, M, F, a, b, gf, rng, door=True, shop=None, extras=True):
     K.obj(F.box(a, b, 0.0, 0.3, zt + 0.1, gf - 0.1), fmat, fcol, 'box', 1.0, 0.02, 2)
     K.obj(F.box(a - 0.05, b + 0.05, 0.0, 0.42, gf - 0.12, gf + 0.05), M['stone'], (0.88, 0.86, 0.82), 'box', 1.2, 0.02, 2)
     sw = min(w - 2 * pw - 0.3, 6.5); sh_ = min(gf - 0.4 - zt, sw / 4); zc_ = (zt + gf) / 2; _cell_quad(K, M, F, uc - sh_ * 2, uc + sh_ * 2, 0.31, zc_ - sh_ / 2, zc_ + sh_ / 2, 'shopsign', shop, 4, 0.25)
-    for u in np.linspace(uc - sw / 2 + 0.4, uc + sw / 2 - 0.4, max(2, int(sw / 2.2) + 1)):           # gooseneck lamps over the sign
+    for u in ((uc - sh_ * 2 + 0.3, uc + sh_ * 2 - 0.3) if extras else ()):                          # gooseneck lamps over the sign
         K.obj(sweep([tuple(F.w(u, 0.3, gf - 0.12)), tuple(F.w(u, 0.7, gf + 0.15)), tuple(F.w(u, 0.85, gf - 0.05))], 0.018, 5), M['iron'], (0.08, 0.08, 0.08))
-        K.obj(lathe([(0.0, -0.1), (0.12, -0.12), (0.06, 0.0), (0.0, 0.0)], 10, *F.w(u, 0.85, 0)[:2], gf - 0.05), M['iron'], (0.08, 0.08, 0.08))
-        K.obj(lathe([(0.1, -0.13), (0.0, -0.12)], 10, *F.w(u, 0.85, 0)[:2], gf - 0.05), M['lens'], (1.0, 0.85, 0.55))
+        K.obj(lathe([(0.0, -0.1), (0.12, -0.12), (0.06, 0.0), (0.0, 0.0)], 6, *F.w(u, 0.85, 0)[:2], gf - 0.05), M['iron'], (0.08, 0.08, 0.08))
+        K.obj(lathe([(0.1, -0.13), (0.0, -0.12)], 6, *F.w(u, 0.85, 0)[:2], gf - 0.05), M['lens'], (1.0, 0.85, 0.55))
     # glazing bays, risers, mullions; door at one side or the middle
     du = (a + pw + 0.75) if (door and rng.random() < 0.5) else uc
     spans = [(a + pw, du - 0.75), (du + 0.75, b - pw)] if door else [(a + pw, b - pw)]
@@ -161,12 +161,12 @@ def storefront(K, M, F, a, b, gf, rng, door=True, shop=None, extras=True):
     # the lit room behind the glass: back wall picture, ceiling with light strips, floor, side walls
     ic = INTERIOR_OF[shop]; _cell_quad(K, M, F, a + pw, b - pw, -depth, 0.0, zt + 0.2, 'shopin', ic, 2)
     K.obj(F.box(a + pw, b - pw, -depth, -0.14, zt + 0.2, zt + 0.25), M['smooth'], (0.9, 0.88, 0.84))
-    for u in np.linspace(a + pw + 0.8, b - pw - 0.8, max(2, int(w / 2.5))): K.obj(F.box(u - 0.5, u + 0.5, -1.0, -0.6, zt + 0.17, zt + 0.19), M['lens'], (1.0, 0.92, 0.75))
+    K.obj(F.box(a + pw + 0.6, b - pw - 0.6, -1.0, -0.7, zt + 0.17, zt + 0.19), M['lens'], (1.0, 0.92, 0.75))
     K.obj(F.box(a + pw, b - pw, -depth, -0.14, -0.02, 0.0), M['planks'], (0.5, 0.4, 0.3), 'box', 1.0)
     for u0 in (a + pw, b - pw): K.obj(F.rect(-depth, -0.14, u0, 0, 0) if False else F.box(u0 - 0.01, u0 + 0.01, -depth, -0.14, 0.0, zt + 0.2), M['plaster'], (0.85, 0.8, 0.72))
     # awning, blade sign, pavement life
     if awn is not None:
-        c1, c2 = awn; ns = max(4, int((b - a - 2 * pw) / 0.5)); us = np.linspace(a + pw, b - pw, ns + 1)
+        c1, c2 = awn; ns = max(3, int((b - a - 2 * pw) / 0.85)); us = np.linspace(a + pw, b - pw, ns + 1)
         for i in range(ns):
             aw = prism([(0.32, zt + 0.08), (1.9, zt - 0.62), (1.9, zt - 0.66), (0.32, zt + 0.04)], us[i], us[i + 1], axis='x')
             for v in aw.verts: x_, y_, z_ = v.co; v.co = tuple(F.w(x_, y_, z_))
@@ -185,7 +185,7 @@ def storefront(K, M, F, a, b, gf, rng, door=True, shop=None, extras=True):
             for k in range(max(1, int((b - a) / 3.2))):
                 u = a + 1.6 + k * 3.2
                 if u > b - 1.2: break
-                c = F.w(u, 2.6, 0); K.obj(lathe([(0.32, 0.72), (0.32, 0.75), (0.0, 0.76)], 16, c[0], c[1]), M['smooth'], (0.92, 0.92, 0.9)); K.obj(lathe([(0.25, 0.0), (0.03, 0.04), (0.03, 0.72), (0.0, 0.72)], 10, c[0], c[1]), M['iron'], (0.12, 0.12, 0.12))
+                c = F.w(u, 2.6, 0); K.obj(lathe([(0.32, 0.72), (0.32, 0.75), (0.0, 0.76)], 10, c[0], c[1]), M['smooth'], (0.92, 0.92, 0.9)); K.obj(lathe([(0.25, 0.0), (0.03, 0.04), (0.03, 0.72), (0.0, 0.72)], 10, c[0], c[1]), M['iron'], (0.12, 0.12, 0.12))
                 for sg in (-1, 1):
                     q = F.w(u + sg * 0.6, 2.6, 0)
                     K.obj(bbox(q[0], q[1], 0.45, 0.42, 0.42, 0.04), M['pwood'], fcol if s_ != 'gelateria' else (0.95, 0.95, 0.95)); K.obj(F.box(u + sg * 0.6 + sg * 0.19, u + sg * 0.6 + sg * 0.21, 2.4, 2.8, 0.45, 0.95), M['pwood'], fcol if s_ != 'gelateria' else (0.95, 0.95, 0.95))
@@ -288,3 +288,32 @@ def register(M=None):
     M = M if M is not None else P.mats()
     import isle_roads_hq as RQ; RQ.materials(M); mats(M)
     for k, (fn, h) in ITEMS.items(): P.PROPS[k] = (fn, {}); P.HEIGHT[k] = h
+
+
+# ------------------------------------------------------------------ map prefabs: one prop per shop and width, placed as instances
+WIDTHS = (4.0, 5.0, 6.0, 7.0)
+
+
+def place(K, F, a, b, gf, rng):
+    """Records a storefront for bay a..b on wall frame F of the Part K (K.shops: name, local x, y, yaw); the caller turns these into
+    instances once the building is placed. The bay is filled by the widest prefab that fits, centred; the wall closes the rest."""
+    w = b - a; ws = [x for x in WIDTHS if x <= w + 0.05]
+    if not ws: return
+    wd = max(ws); uc = (a + b) / 2; p = F.w(uc, 0.0, 0.0); yaw = math.atan2(F.n[1], F.n[0])
+    shop = 'shut' if rng.random() < 0.12 else int(rng.integers(len(SHOPS)))
+    if not hasattr(K, 'shops'): K.shops = []
+    K.shops.append(('shop_%s_%d' % (shop, int(wd)), float(p[0]), float(p[1]), yaw, (uc - wd / 2, uc + wd / 2)))
+
+
+def _prefab(shop, wd):
+    def fn(K, M):
+        F = Frame((0, 0, 0), (0, 1, 0), (1, 0, 0)); rng = np.random.default_rng(int(wd) * 31 + (99 if shop == 'shut' else shop))
+        if shop == 'shut': shutter(K, M, F, -wd / 2, wd / 2, 4.6, rng)
+        else: storefront(K, M, F, -wd / 2, wd / 2, 4.6, rng, True, shop, extras=(shop + int(wd)) % 2 == 0)
+    return fn
+
+
+def register_kit(M=None):
+    if M is not None: mats(M)
+    for wd in WIDTHS:
+        for shop in list(range(len(SHOPS))) + ['shut']: P.PROPS['shop_%s_%d' % (shop, int(wd))] = (_prefab(shop, wd), {}); P.HEIGHT['shop_%s_%d' % (shop, int(wd))] = 5.0
