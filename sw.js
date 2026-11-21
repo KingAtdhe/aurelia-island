@@ -1,6 +1,6 @@
 // Keeps the game and its map on the phone after the first load, so later launches start fast and work offline.
 // Bump VERSION whenever the map or the game changes, so phones fetch the new files.
-const VERSION = 'aurelia-v9';
+const VERSION = 'aurelia-v10';
 self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(VERSION).then(c => c.addAll(['./', 'index.html', 'manifest.webmanifest']))); });
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', e => {

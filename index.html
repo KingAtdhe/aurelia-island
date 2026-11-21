@@ -76,7 +76,7 @@
     <p id="load">Loading the island…</p>
     <div class="menu" id="modes" hidden>
       <button type="button" id="bResume" hidden>Resume<small>Back to the road where you left it.</small></button>
-      <button type="button" id="bGarage">Garage<small id="gSub">Upgrades and paint for the Vortex.</small></button>
+      <button type="button" id="bGarage">Garage<small id="gSub">Cars, upgrades and paint.</small></button>
       <button type="button" data-mode="free">Free Roam<small>Drive anywhere and find every landmark.</small></button>
       <button type="button" data-mode="circuit">Circuit Time Trial<small>3 laps of the racing circuit. Beat your best lap.</small></button>
       <button type="button" data-mode="touge">Touge Drift<small>Drift down Summit Pass. Angle, speed and combos score.</small></button>
@@ -390,28 +390,37 @@ function standInCar() {
     w.add(s); w.position.set(p[0], 0.35, p[1]); g.add(w); wheels.push({ steer: k < 2 ? w : null, spin: s, r: 0.35 }); });
   return g;
 }
-function fitCar(obj, noseNegZ) {            // a loaded model: scale to 4.6 m, nose toward +Z, wheels found by name
+function fitCar(obj, noseNegZ, axis) {            // a loaded model: scale to 4.6 m, nose toward +Z, wheels found by name
   const box = new T3.Box3().setFromObject(obj), sz = box.getSize(new T3.Vector3());
   if (noseNegZ) obj.rotation.y = Math.PI; else if (sz.x > sz.z) { obj.rotation.y = -Math.PI / 2; }
   const holder = new T3.Group(); holder.add(obj);
-  let b2 = new T3.Box3().setFromObject(holder), s2 = b2.getSize(new T3.Vector3()); let saleCar = 0; obj.traverse(o => { if (/^(Front|Rear)_(Left|Right)$/.test(o.name)) saleCar++; });
+  let b2 = new T3.Box3().setFromObject(holder), s2 = b2.getSize(new T3.Vector3()); let saleCar = 0; obj.traverse(o => { if (/^(Wheel_)?(Front|Rear)_(Left|Right)$/.test(o.name)) saleCar++; });
   holder.scale.setScalar(saleCar === 4 ? 1 : 4.6 / s2.z);           // sale-pack cars are modelled at real size (metres): keep it
   b2 = new T3.Box3().setFromObject(holder); const c = b2.getCenter(new T3.Vector3()); holder.position.set(-c.x, -b2.min.y, -c.z);
   const g = new T3.Group(); g.add(holder); wheels = [];
-  const named = []; obj.traverse(o => { if (/^(Front|Rear)_(Left|Right)$/.test(o.name)) named.push(o); });
+  const named = []; obj.traverse(o => { if (/^(Wheel_)?(Front|Rear)_(Left|Right)$/.test(o.name)) named.push(o); });
   if (named.length === 4) {                 // sale-pack cars: wheels on their axles, front ones inside steering pivots
     for (const o of named) { const bb = new T3.Box3().setFromObject(o), s = bb.getSize(new T3.Vector3()); const st = o.parent && /^Steer_/.test(o.parent.name) ? o.parent : null;
-      wheels.push({ steer: st, spin: o, r: Math.max(s.y, 0.2) / 2 * holder.scale.x, model: true, sign: noseNegZ ? -1 : 1 }); }
-    obj.traverse(o => { if (o.isMesh && o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(m => { m.envMapIntensity = /glass|window/i.test(m.name) ? 1.6 : 1.25; m.userData.envI = m.envMapIntensity; CARM.push(m); }); } }); carEnv();
+      wheels.push({ steer: st, spin: o, r: Math.max(s.y, 0.2) / 2 * holder.scale.x, model: true, sign: axis === 'z' ? -1 : noseNegZ ? -1 : 1, axis: axis || 'x', front: /Front/.test(o.name) }); }
+    obj.traverse(o => { if (o.isMesh && o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(m => { m.envMapIntensity = /glass|window/i.test(m.name) ? 1.6 : 1.25; m.userData.envI = m.envMapIntensity; CARM.push(m);
+      if (/^(Glass|Glass_Tint|Lens_Clear|Lens_Red)$/.test(m.name)) { m.transparent = true; m.depthWrite = false; m.opacity = /Lens/.test(m.name) ? 0.35 : m.name === 'Glass_Tint' ? 0.55 : 0.28; m.roughness = Math.min(m.roughness, 0.06); m.metalness = 0; m.envMapIntensity = 1.8; m.userData.envI = 1.8; o.renderOrder = 2; } }); } }); carEnv();     // glass made with KHR transmission: shown as clear tinted glass here
     return g; }
   obj.traverse(o => { if (/wheel/i.test(o.name) && o.children.length + (o.isMesh ? 1 : 0) > 0 && !/wheels$/i.test(o.name) && !(o.parent && /wheel/i.test(o.parent.name) && !/wheels$/i.test(o.parent.name))) {
     const bb = new T3.Box3().setFromObject(o), s = bb.getSize(new T3.Vector3()); wheels.push({ steer: null, spin: o, r: Math.max(s.y, 0.2) / 2, model: true }); } });
   return g;
 }
-function loadCar(done) {
+const CARS = {
+  vortex: { name: 'Vortex', file: 'cars/vortex', noseNegZ: true, price: 0, blurb: 'Mid-engine hypercar. Light, sharp, drifts on command.',
+    veh: { m: 1380, Iz: 2350, a: 1.46, b: 1.26, h: 0.47, r: 0.345, gears: [3.20, 2.28, 1.74, 1.38, 1.12, 0.92], fd: 3.70, red: 8100, up: 7600, down: 3300, tqPeak: 660, tqRpm: 5900, cda: 0.40, dmax: 0.66 } },
+  calder: { name: 'Calder GT', file: 'cars/calder', noseNegZ: false, axis: 'z', price: 25000, blurb: 'Front-engine V8 grand tourer. Heavier, long and stable; big, slow drifts.',
+    veh: { m: 1650, Iz: 3550, a: 1.38, b: 1.49, h: 0.48, r: 0.35, gears: [3.00, 2.10, 1.60, 1.28, 1.03, 0.84], fd: 3.30, red: 7200, up: 6800, down: 3000, tqPeak: 640, tqRpm: 5200, cda: 0.38, dmax: 0.62 } } };
+let curCar = 'vortex';
+function setVeh(id) { Object.assign(VEH, CARS[id].veh); VBASE.m = VEH.m; VBASE.mu = 1.15; VEH.mu = 1.15; }
+function loadCar(done, id) {
+  id = id || (typeof PROG !== 'undefined' && PROG.car) || 'vortex'; const C = CARS[id] || CARS.vortex;
   const use = g => { while (carBody.children.length) carBody.remove(carBody.children[0]); g.traverse(o => { if (o.isMesh) o.castShadow = true; }); carBody.add(g); try { applyUpgrades(); } catch (e) { } done(); };
-  Promise.resolve(window.MeshoptDecoder && window.MeshoptDecoder.ready).then(() => getBin('cars/vortex')).then(buf => new Promise((res, rej) => { const L = new T3.GLTFLoader(); if (window.MeshoptDecoder) L.setMeshoptDecoder(window.MeshoptDecoder); L.parse(buf, '', res, rej); }))
-    .then(g => { carName = 'Vortex'; use(fitCar(g.scene, true)); })
+  Promise.resolve(window.MeshoptDecoder && window.MeshoptDecoder.ready).then(() => getBin(C.file)).then(buf => new Promise((res, rej) => { const L = new T3.GLTFLoader(); if (window.MeshoptDecoder) L.setMeshoptDecoder(window.MeshoptDecoder); L.parse(buf, '', res, rej); }))
+    .then(g => { carName = C.name; curCar = id; CARM.length = 0; setVeh(id); use(fitCar(g.scene, C.noseNegZ, C.axis)); })
     .catch(() => getBin('cars/aurelia_gt').then(buf => new Promise((res, rej) => new T3.GLTFLoader().parse(buf, '', res, rej))).then(g => { carName = 'Aurelia GT'; use(fitCar(g.scene)); }))
     .catch(() => { wheels = []; carName = 'Stand-in car'; use(standInCar()); });
 }
@@ -450,7 +459,7 @@ const MU = { road: 1.0, dirt: 0.72, grass: 0.62, sand: 0.52, snow: 0.45 }, RRS =
 let steerAssist = store.get('assist', true);
 const latF = a => Math.sin(VEH.C * Math.atan(VEH.B * a)), latR = a => Math.sin(VEH.C * Math.atan(VEH.Br * a));        // rear tyres are stiffer and grippier: a stable, slightly understeering base
 const tyreAngle = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; if (a > Math.PI / 2) a -= Math.PI; else if (a < -Math.PI / 2) a += Math.PI; return a; };
-function torqueAt(rpm) { if (rpm >= VEH.red) return 0; const x = (rpm - 5900) / 4300; return 660 * (VEH.tq || 1) * Math.max(0.5, 1 - x * x * 0.85); }
+function torqueAt(rpm) { if (rpm >= VEH.red) return 0; const x = (rpm - (VEH.tqRpm || 5900)) / 4300; return (VEH.tqPeak || 660) * (VEH.tq || 1) * Math.max(0.5, 1 - x * x * 0.85); }
 function drive(dt, G, fx, fz) {
   const V = VEH, L = V.a + V.b, g = 9.81, surf = G.surf in MU ? G.surf : 'grass', wet = typeof isWet === 'function' && isWet() && surf === 'road';
   const mu = V.mu * MU[surf] * (wet ? 0.8 : 1);
@@ -509,7 +518,7 @@ function drive(dt, G, fx, fz) {
     // equations of motion in the body frame
     const Fx = Fxr + Fxf * cd - Fyf * sd - Fd, Fy = Fyr + Fyf * cd + Fxf * sd, Mz = V.a * (Fyf * cd + Fxf * sd) - V.b * Fyr;
     const ax = Fx / V.m - g * Math.sin(car.pitch) * 0.9, ay = Fy / V.m;
-    wx += (ffx * ax + ffz * ay) * h; wz += (ffz * ax - ffx * ay) * h; r += Mz / (V.Iz * V.m / 1380) * h; hd += r * h;            // integrate in the world frame, heading follows the yaw rate
+    wx += (ffx * ax + ffz * ay) * h; wz += (ffz * ax - ffx * ay) * h; r += Mz / (V.Iz * V.m / (CARS[curCar] ? CARS[curCar].veh.m : 1380)) * h; hd += r * h;            // integrate in the world frame, heading follows the yaw rate
     if (vx < -0.3) { r *= Math.exp(-h * 3.5); const vxx = wx * ffx + wz * ffz, vyy = (wx * ffz - wz * ffx) * Math.exp(-h * 3); wx = ffx * vxx + ffz * vyy; wz = ffz * vxx - ffx * vyy; }      // reversing is directionally unstable; a driver keeps it straight without noticing
     if (spd < 1.2 && !thT) { const vxx = wx * ffx + wz * ffz; let vyy = wx * ffz - wz * ffx; vyy *= Math.exp(-h * 6); r *= Math.exp(-h * 6); const vk = Math.abs(vxx) < 0.15 && (brT || car.brk > 0.05) && !rev ? 0 : vxx; wx = ffx * vk + ffz * vyy; wz = ffz * vk - ffx * vyy; }       // standing still really stops
     car.axf += (ax - car.axf) * Math.min(1, h * 12); car.ayf += (ay - car.ayf) * Math.min(1, h * 12);
@@ -1086,7 +1095,7 @@ Promise.all([fetch('data/world.json').then(r => r.json()), getBin('data/height')
     loadEl.textContent = 'Car: ' + carName + '. Pick a mode.'; ['modes', 'opts', 'help'].forEach(id => $(id).hidden = false);
     W.regions.forEach(r => { const b = document.createElement('button'); b.type = 'button'; b.textContent = r.name; b.addEventListener('click', () => { if (race) { race = null; mode = 'free'; $('race').hidden = true; beacon.visible = false; car.frozen = false; } placeCar(nearestRoadPoint(r.x, r.z)); toggleMap(); }); $('travel').appendChild(b); });
     loadGLB('islandd').then(g => { setupMap(g, true); return loadGLB('florak'); }).then(g => { addKit(g); setupLife(); window.__detail = 1; }).catch(e => { console.warn('detail not loaded', e); window.__detail = 1; });
-    window.__game = { FLO, scene, camera, car, roads, W, ground, startMode, inp, placeCar, roadPoint, renderer, roadQuery, physics, obGrid, OG, hAt, LIFE, updateLife, VEH, FX, DS, setStarted: v => { started = v; paused = !v; }, setAssist: v => { steerAssist = v; }, get race() { return race; } };
+    window.__game = { CARS, setVeh, loadCar, FLO, scene, camera, car, roads, W, ground, startMode, inp, placeCar, roadPoint, renderer, roadQuery, physics, obGrid, OG, hAt, LIFE, updateLife, VEH, FX, DS, setStarted: v => { started = v; paused = !v; }, setAssist: v => { steerAssist = v; }, get race() { return race; } };
     requestAnimationFrame(frame); });
 }).catch(e => fail('Could not load the island: ' + (e && e.message ? e.message : e)));
 
@@ -1214,29 +1223,36 @@ function updateLife(dt) {
    Credits come from banked drifts (1 per 10 points), race finishes, best laps and landmarks. They buy upgrades that change the real
    vehicle parameters (torque, tyre grip, steering lock, mass) and paint. Everything is saved on the device. */
 const VBASE = { m: VEH.m, mu: VEH.mu, tq: 1 }; VEH.tq = 1; VEH.lockD = 0.87;
-const PROG = Object.assign({ cr: 0, eng: 0, tyre: 0, kit: 0, wt: 0, paint: 0 }, store.get('prog', {}));
+const PROG = Object.assign({ cr: 0, car: 'vortex', cars: ['vortex'], up: {} }, store.get('prog', {}));
+if (PROG.eng !== undefined && !PROG.up.vortex) { PROG.up.vortex = { eng: PROG.eng, tyre: PROG.tyre, kit: PROG.kit, wt: PROG.wt, paint: PROG.paint, owned: PROG.owned || [0] }; ['eng', 'tyre', 'kit', 'wt', 'paint', 'owned'].forEach(k => delete PROG[k]); }   // saves from before the second car
+const UP = id => PROG.up[id] || (PROG.up[id] = { eng: 0, tyre: 0, kit: 0, wt: 0, paint: 0, owned: [0] });
 const UPG = [
   { k: 'eng', name: 'Engine', d: ['Stock', 'Stage 1 +8% torque', 'Stage 2 +16% torque', 'Stage 3 +25% torque'], cost: [4000, 9000, 18000] },
   { k: 'tyre', name: 'Tyres', d: ['Street', 'Sport +4% grip', 'Semi-slick +8% grip'], cost: [5000, 12000] },
   { k: 'kit', name: 'Drift kit', d: ['Stock lock (50°)', 'Angle kit (55°)', 'Pro angle kit (60°)'], cost: [6000, 14000] },
-  { k: 'wt', name: 'Weight', d: ['1380 kg', 'Light 1330 kg', 'Stripped 1280 kg'], cost: [5000, 11000] } ];
+  { k: 'wt', name: 'Weight', d: ['Stock', 'Light −50 kg', 'Stripped −100 kg'], cost: [5000, 11000] } ];
 const PAINTS = [['Factory red', 0xa2000d], ['Pearl white', 0xe8e8e4], ['Midnight', 0x0f1420], ['Racing green', 0x0b4a2a], ['Sunset orange', 0xe2560c], ['Electric blue', 0x0a4fd6], ['Gold', 0xc89a2a], ['Graphite', 0x3a3d42], ['Violet', 0x5a1a8a]];
 const PAINT_COST = 1500;
-function applyUpgrades() { VEH.tq = [1, 1.08, 1.16, 1.25][PROG.eng]; VEH.mu = VBASE.mu * [1, 1.04, 1.08][PROG.tyre]; VEH.lockD = [0.87, 0.96, 1.05][PROG.kit]; VEH.m = VBASE.m - [0, 50, 100][PROG.wt]; applyPaint(); }
-function applyPaint() { const c = new T3.Color(PAINTS[PROG.paint][1]).convertSRGBToLinear();
-  carBody.traverse(o => { if (!o.isMesh) return; for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (m && /^paint/i.test(m.name)) { if (m.userData.map0 === undefined) m.userData.map0 = m.map || null; m.map = PROG.paint === 0 ? m.userData.map0 : null; m.color.copy(PROG.paint === 0 ? new T3.Color(1, 1, 1) : c); m.needsUpdate = true; } }); }
+function applyUpgrades() { const U = UP(curCar); VEH.tq = [1, 1.08, 1.16, 1.25][U.eng]; VEH.mu = VBASE.mu * [1, 1.04, 1.08][U.tyre]; VEH.lockD = [0.87, 0.96, 1.05][U.kit]; VEH.m = VBASE.m - [0, 50, 100][U.wt]; applyPaint(); }
+function applyPaint() { const U = UP(curCar), fac = curCar === 'calder' ? 0x123c4a : PAINTS[0][1], c = new T3.Color(U.paint === 0 ? fac : PAINTS[U.paint][1]).convertSRGBToLinear();
+  carBody.traverse(o => { if (!o.isMesh) return; for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (m && /^(paint|Paint_Body)$/.test(m.name)) { if (m.userData.map0 === undefined) m.userData.map0 = m.map || null; const fm = U.paint === 0 && m.userData.map0; m.map = fm ? m.userData.map0 : null; m.color.copy(fm ? new T3.Color(1, 1, 1) : c); m.needsUpdate = true; } }); }
 function saveProg() { store.set('prog', PROG); $('credits').textContent = PROG.cr.toLocaleString() + ' credits'; $('gSub').textContent = PROG.cr.toLocaleString() + ' credits · upgrades and paint'; }
 function earn(n, why) { n = Math.round(n); if (n <= 0) return; PROG.cr += n; saveProg(); toast('+' + n.toLocaleString() + ' credits' + (why ? '  ·  ' + why : ''), 2.4); }
-function drawGarage() { const g = $('gGrid'); g.innerHTML = '';
-  for (const u of UPG) { const lv = PROG[u.k], max = u.d.length - 1, el = document.createElement('div'); el.className = 'item';
-    el.innerHTML = '<b>' + u.name + '</b>' + u.d[lv] + '<div class="lv">' + u.d.map((_, i) => '<i class="' + (i <= lv ? 'on' : '') + '"></i>').join('') + '</div>';
-    if (lv < max) { const b = document.createElement('button'); b.type = 'button'; b.textContent = u.d[lv + 1].split(' ')[0] + ' ' + (u.d[lv + 1].split(' ')[1] || '') + ' · ' + u.cost[lv].toLocaleString(); b.disabled = PROG.cr < u.cost[lv];
-      b.onclick = () => { if (PROG.cr < u.cost[lv]) return; PROG.cr -= u.cost[lv]; PROG[u.k]++; applyUpgrades(); saveProg(); drawGarage(); }; el.appendChild(b); }
+function drawGarage() { const g = $('gGrid'); g.innerHTML = ''; const U = UP(curCar); $('garage').querySelector('h2').textContent = 'Garage · ' + CARS[curCar].name;
+  const cs = document.createElement('div'); cs.className = 'item'; cs.style.gridColumn = '1 / -1'; cs.innerHTML = '<b>Car</b>' + CARS[curCar].blurb; const row0 = document.createElement('div'); row0.className = 'row'; row0.style.justifyContent = 'flex-start'; row0.style.marginTop = '5px';
+  for (const id in CARS) { const b = document.createElement('button'); b.type = 'button'; const own = PROG.cars.includes(id); b.textContent = CARS[id].name + (id === curCar ? ' · driving' : own ? ' · owned' : ' · ' + CARS[id].price.toLocaleString()); b.disabled = id === curCar || (!own && PROG.cr < CARS[id].price);
+    b.onclick = () => { if (!own) { if (PROG.cr < CARS[id].price) return; PROG.cr -= CARS[id].price; PROG.cars.push(id); } PROG.car = id; saveProg(); b.textContent = 'Loading…'; loadCar(() => { applyUpgrades(); drawGarage(); }, id); }; row0.appendChild(b); }
+  cs.appendChild(row0); g.appendChild(cs);
+  for (const u of UPG) { const lv = U[u.k], max = u.d.length - 1, el = document.createElement('div'); el.className = 'item';
+    const desc = u.k === 'wt' ? Math.round(VBASE.m - [0, 50, 100][lv]) + ' kg' : u.d[lv];
+    el.innerHTML = '<b>' + u.name + '</b>' + desc + '<div class="lv">' + u.d.map((_, i) => '<i class="' + (i <= lv ? 'on' : '') + '"></i>').join('') + '</div>';
+    if (lv < max) { const b = document.createElement('button'); b.type = 'button'; b.textContent = (u.k === 'wt' ? ['Light', 'Stripped'][lv] : u.d[lv + 1].split(' ').slice(0, 2).join(' ')) + ' · ' + u.cost[lv].toLocaleString(); b.disabled = PROG.cr < u.cost[lv];
+      b.onclick = () => { if (PROG.cr < u.cost[lv]) return; PROG.cr -= u.cost[lv]; U[u.k]++; applyUpgrades(); saveProg(); drawGarage(); }; el.appendChild(b); }
     else el.insertAdjacentHTML('beforeend', '<small>Fully upgraded</small>'); g.appendChild(el); }
-  const p = document.createElement('div'); p.className = 'item'; p.style.gridColumn = '1 / -1'; p.innerHTML = '<b>Paint</b>' + PAINTS[PROG.paint][0] + (PROG.paint ? '' : '') + ' · new colour ' + PAINT_COST.toLocaleString() + ' credits';
+  const p = document.createElement('div'); p.className = 'item'; p.style.gridColumn = '1 / -1'; p.innerHTML = '<b>Paint</b>' + (U.paint === 0 ? 'Factory colour' : PAINTS[U.paint][0]) + ' · new colour ' + PAINT_COST.toLocaleString() + ' credits';
   const row = document.createElement('div'); row.className = 'paints';
-  PAINTS.forEach(([n, hex], i) => { const b = document.createElement('button'); b.type = 'button'; b.title = n; b.style.background = '#' + hex.toString(16).padStart(6, '0'); if (i === PROG.paint) b.className = 'on';
-    b.onclick = () => { if (i === PROG.paint) return; const owned = PROG.owned || (PROG.owned = [0]); if (!owned.includes(i)) { if (PROG.cr < PAINT_COST) { toast('Not enough credits', 1.6); return; } PROG.cr -= PAINT_COST; owned.push(i); } PROG.paint = i; applyPaint(); saveProg(); drawGarage(); };
+  PAINTS.forEach(([n, hex], i) => { const b = document.createElement('button'); b.type = 'button'; b.title = i === 0 ? 'Factory colour' : n; b.style.background = '#' + (i === 0 && curCar === 'calder' ? 0x123c4a : hex).toString(16).padStart(6, '0'); if (i === U.paint) b.className = 'on';
+    b.onclick = () => { if (i === U.paint) return; if (!U.owned.includes(i)) { if (PROG.cr < PAINT_COST) { toast('Not enough credits', 1.6); return; } PROG.cr -= PAINT_COST; U.owned.push(i); } U.paint = i; applyPaint(); saveProg(); drawGarage(); };
     row.appendChild(b); }); p.appendChild(row); g.appendChild(p); saveProg(); }
 $('bGarage').addEventListener('click', () => { drawGarage(); $('garage').hidden = false; $('menu').hidden = true; });
 $('gClose').addEventListener('click', () => { $('garage').hidden = true; $('menu').hidden = false; });
@@ -1330,7 +1346,7 @@ function frame(now) {
     car.sP += car.sPv * sd; car.sPv += (w * w * (gp - car.sP) - 2 * z * w * car.sPv) * sd; car.sR += car.sRv * sd; car.sRv += (w * w * (gr - car.sR) - 2 * z * w * car.sRv) * sd; }
   carRoot.position.set(car.x, car.y, car.z); carRoot.rotation.set(0, car.h, 0); carBody.rotation.set(-car.pitch + car.sP, 0, car.roll + car.sR, 'YXZ');
   wheelSpin += (car.vf || 0) * dt; rearSpin += ((car.vf || 0) + (car.spin ? 16 * car.thr : 0) - (inp.hand && Math.abs(car.vf || 0) > 1 ? car.vf : 0)) * dt;      // rear wheels flare in wheelspin and stop under the handbrake
-  for (const w of wheels) { const front = !!w.steer || /Front/.test(w.spin.name || ''), a = (front ? wheelSpin : rearSpin) / w.r; w.spin.rotation.x = (w.model ? (w.sign || 1) : 1) * a; if (w.steer) w.steer.rotation.y = car.delta; }
+  for (const w of wheels) { const front = w.front !== undefined ? w.front : (!!w.steer || /Front/.test(w.spin.name || '')), a = (front ? wheelSpin : rearSpin) / w.r; w.spin.rotation[w.axis || 'x'] = (w.model ? (w.sign || 1) : 1) * a; if (w.steer) w.steer.rotation.y = car.delta; }
   shadow.position.set(car.x, car.y + 0.06, car.z); shadow.rotation.z = car.h; shadow.visible = !car.air && qual === 0;
   updateCamera(dt);
   for (const s of SPIN) s.piv.rotation[s.axis] += s.speed * dt; for (const m of falls) m.offset.y += dt * 0.55;
