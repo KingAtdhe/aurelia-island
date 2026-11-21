@@ -1125,6 +1125,7 @@ function setupMap(g, detail) {
         sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vSh; uniform sampler2D uShade; uniform float uShadeOn;').replace('#include <map_fragment>', '#include <map_fragment>\n diffuseColor.rgb *= 0.66 + 0.62 * texture2D(map, vUv * 0.087).g; if (uShadeOn > 0.5) diffuseColor.rgb *= mix(1.0, texture2D(uShade, vSh).r, 0.5);       // baked shade at half strength: live shadows already darken' + (bl ? ' diffuseColor.a *= vBl;' : ''));
         if (bl) { sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec2 uv2; varying float vBl;').replace('#include <begin_vertex>', '#include <begin_vertex>\n vBl = uv2.x;'); sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vBl;'); } }; }
     if (/^Terrain/.test(nm)) look2Ground(m);
+    if (nm === 'Boulders' && !m.userData.lit) { m.userData.lit = 1; m.color.multiplyScalar(1.35); m.envMapIntensity = 0.8; }      // rocks read as stone, not dark lumps
     if (/^TerrainBlend/.test(o.name)) { o.renderOrder = 0.5; if (!o.geometry.attributes.uv2) o.visible = false; }
     { const t = /^Buildings(HD|LOD)[^_]*.*__t(-?\d+)_(-?\d+)/.exec(o.name); if (t) { const k = t[2] + '_' + t[3]; let b = FLO.bt.get(k); if (!b) { b = { x: (+t[2] + 0.5) * 200, z: -(+t[3] + 0.5) * 200, hd: [], far: [] }; FLO.bt.set(k, b); } (t[1] === 'HD' ? b.hd : b.far).push(o); if (t[1] === 'HD') o.visible = false; } }
     if (/^Terrain/.test(nm) || nm === 'Foliage') m.envMapIntensity = 0.8;
@@ -1171,11 +1172,53 @@ Promise.all([fetch('data/world.json').then(r => r.json()), getBin('data/height')
   loadCar(() => { placeCar(roadPoint(roads[W.ring], 388)); updateCamera(0.016);
     loadEl.textContent = 'Car: ' + carName + '. Pick a mode.'; ['modes', 'opts', 'help'].forEach(id => $(id).hidden = false);
     W.regions.forEach(r => { const b = document.createElement('button'); b.type = 'button'; b.textContent = r.name; b.addEventListener('click', () => { if (race) { race = null; mode = 'free'; $('race').hidden = true; beacon.visible = false; car.frozen = false; } placeCar(nearestRoadPoint(r.x, r.z)); toggleMap(); }); $('travel').appendChild(b); });
-    loadGLB('islandd').then(g => { setupMap(g, true); return loadGLB('florak'); }).then(g => loadTraffic().then(() => g)).then(g => { addKit(g); setupLife(); window.__detail = 1; try { renderer.compile(scene, camera); } catch (e) {} }).catch(e => { console.warn('detail not loaded', e); window.__detail = 1; });
+    loadGLB('islandd').then(g => { setupMap(g, true); return loadGLB('florak'); }).then(g => loadTraffic().then(() => g)).then(g => { addKit(g); setupLife(); try { setupGrass(); } catch (e) { console.warn('grass', e); } window.__detail = 1; try { renderer.compile(scene, camera); } catch (e) {} }).catch(e => { console.warn('detail not loaded', e); window.__detail = 1; });
     window.__game = { CARS, setVeh, loadCar, FLO, scene, camera, car, roads, W, ground, startMode, inp, placeCar, roadPoint, renderer, roadQuery, physics, obGrid, OG, hAt, LIFE, updateLife, VEH, FX, DS, setStarted: v => { started = v; paused = !v; }, setAssist: v => { steerAssist = v; }, get race() { return race; } };
     requestAnimationFrame(frame); });
 }).catch(e => fail('Could not load the island: ' + (e && e.message ? e.message : e)));
 
+
+/* ---------------------------------------------------------------- live grass round the camera (concept 13): clumps baked from the Blender blade models */
+const GRASS = { ms: [], cells: new Map(), t: 0, px: 1e9, pz: 1e9, ready: false };
+const GKIND = { lush: [0, 1], dry: [2, 3], verge: [4], short: [5], dune: [6, 7] }, GVAR = 8, GMAX = 2600;
+function setupGrass() {
+  const tex = new T3.TextureLoader().load('data/grass_atlas.png'); tex.encoding = T3.sRGBEncoding; tex.anisotropy = 4;
+  const m = new T3.MeshStandardMaterial({ map: tex, alphaTest: 0.42, side: T3.DoubleSide, roughness: 0.92, metalness: 0, color: new T3.Color(0.55, 0.6, 0.5) }); m.name = 'LeavesGrass'; m.envMapIntensity = 0.6;
+  noFlip(m, true, false); LEAFM.push(m); m.emissive = new T3.Color(0x0c1608); m.emissiveIntensity = night ? 0.15 : 1;
+  for (let v = 0; v < GVAR; v++) {
+    const P = [], U = [], N = [], I = []; let n = 0;
+    for (let k = 0; k < 3; k++) { const a = k * Math.PI / 3 + 0.3, c = Math.cos(a) * 0.31, s = Math.sin(a) * 0.31, u0 = v / GVAR, u1 = (v + 1) / GVAR;
+      P.push(-c, -0.02, -s, c, -0.02, s, c, 0.6, s, -c, 0.6, -s); U.push(u0, 0, u1, 0, u1, 1, u0, 1); for (let q = 0; q < 4; q++) N.push(0, 1, 0); I.push(n, n + 1, n + 2, n, n + 2, n + 3); n += 4; }
+    const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(U, 2)); g.setAttribute('normal', new T3.Float32BufferAttribute(N, 3)); g.setIndex(I);
+    const im = new T3.InstancedMesh(g, m, GMAX); im.count = 0; im.frustumCulled = false; im.castShadow = false; im.receiveShadow = true; im.name = 'grass' + v; im.instanceColor = new T3.InstancedBufferAttribute(new Float32Array(GMAX * 3), 3); scene.add(im); GRASS.ms.push(im); }
+  GRASS.ready = true;
+}
+const _gq = { y: 0, surf: 'grass', rq: null, water: false }, _gm = new T3.Matrix4(), _gp = new T3.Vector3(), _gs = new T3.Vector3(), _gr = new T3.Quaternion(), _gc = new T3.Color();
+function grassCell(cx, cz) {          // the clumps of one 3 m cell, placed once from a hash of the cell and the ground under each spot
+  const out = []; let h = ((cx * 73856093) ^ (cz * 19349663)) >>> 0; const rnd = () => { h = (h * 1664525 + 1013904223) >>> 0; return h / 4294967296; };
+  for (let k = 0; k < 9; k++) { const x = (cx + rnd()) * 3, z = (cz + rnd()) * 3, r1 = rnd(), r2 = rnd(), r3 = rnd(); const g = ground(x, z, 1e4, _gq);
+    if (g.water || g.surf === 'road' || g.surf === 'snow' || (g.rq && Math.abs(g.rq.d) < g.rq.road.hw + 0.4)) continue; const reg = regionAt(x, z); if (reg === 'City' || reg === 'Harbour' || reg === 'Heliport') continue;
+    let kind;
+    if (g.surf === 'sand') { if (reg === 'Desert') { if (r1 > 0.18) continue; kind = 'dry'; } else { if (r1 > 0.55) continue; kind = 'dune'; } }
+    else if (g.surf === 'dirt') { if (r1 > (g.rq ? 0.6 : 0.35)) continue; kind = 'verge'; }
+    else kind = reg === 'Coastal Highway' || reg === 'Desert' ? (r1 < 0.6 ? 'dry' : 'lush') : reg === 'Forest Trails' ? (r1 < 0.7 ? 'short' : 'lush') : reg === 'Mountain Roads' ? (r1 < 0.5 ? 'dry' : 'short') : (r1 < 0.8 ? 'lush' : r1 < 0.92 ? 'short' : 'dry');
+    const vs = GKIND[kind]; out.push(x, g.y, z, vs[Math.floor(r2 * vs.length)], r3 * 6.283, (kind === 'dune' ? 1.1 : 1.0) + r2 * 0.8, 0.82 + r1 * 0.3); }
+  return out;
+}
+function updateGrass(dt) {
+  if (!GRASS.ready) return; GRASS.t -= dt; const cx0 = camera.position.x, cz0 = camera.position.z;
+  if (GRASS.t > 0 && (cx0 - GRASS.px) ** 2 + (cz0 - GRASS.pz) ** 2 < 9) return; GRASS.t = 0.35; GRASS.px = cx0; GRASS.pz = cz0;
+  const R = MOBILE ? [0, 35, 45][qual] : [30, 45, 55][qual]; for (const im of GRASS.ms) im.count = 0; if (!R) return;
+  camera.getWorldDirection(_fw); const C = Math.ceil(R / 3), bx = Math.floor(cx0 / 3), bz = Math.floor(cz0 / 3); let built = 0;
+  for (let i = -C; i <= C; i++) for (let j = -C; j <= C; j++) { const x0 = (bx + i + 0.5) * 3 - cx0, z0 = (bz + j + 0.5) * 3 - cz0, d0 = Math.hypot(x0, z0); if (d0 > R + 3) continue;
+    if (x0 * _fw.x + z0 * _fw.z < -Math.max(6, d0 * 0.35)) continue;          // behind the camera
+    const key = (bx + i) + ',' + (bz + j); let c = GRASS.cells.get(key); if (!c) { if (built++ > (MOBILE ? 50 : 120)) continue; c = grassCell(bx + i, bz + j); GRASS.cells.set(key, c); }
+    for (let q = 0; q < c.length; q += 7) { const dx = c[q] - cx0, dz = c[q + 2] - cz0, d = Math.hypot(dx, dz); if (d > R) continue; const im = GRASS.ms[c[q + 3]]; if (im.count >= GMAX) continue;
+      const f = Math.min(1, (R - d) / (R * 0.25)), s = c[q + 5] * f; _gp.set(c[q], c[q + 1], c[q + 2]); _gr.setFromAxisAngle(_yAx, c[q + 4]); _gs.set(s, s * (0.85 + 0.3 * f), s);
+      im.setMatrixAt(im.count, _gm.compose(_gp, _gr, _gs)); const b = c[q + 6]; im.setColorAt(im.count, _gc.setRGB(b, b * (0.98 + 0.04 * (q % 3)), b * 0.95)); im.count++; } }
+  for (const im of GRASS.ms) { im.instanceMatrix.needsUpdate = true; im.instanceColor.needsUpdate = true; }
+  if (GRASS.cells.size > 6000) { let n = 0; for (const k of GRASS.cells.keys()) { GRASS.cells.delete(k); if (++n > 2000) break; } }
+}
 /* ---------------------------------------------------------------- traffic and people */
 const LIFE = window.__life = { cars: [], walkers: [], ready: false, t: 0 };
 function setupLife() {
@@ -1430,7 +1473,7 @@ function frame(now) {
   if (seaN) { seaN.offset.x += dt * 0.012; seaN.offset.y += dt * 0.007; }
   if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').style.opacity = 0; }
   miniT -= dt; if (miniT <= 0 && W) { miniT = 0.1; drawMini(); }
-  FX.update(dt); audioUpdate(); updateDetail(); frustumFlora(); updateLife(dt); WIND.t.value += dt;
+  FX.update(dt); audioUpdate(); updateDetail(); frustumFlora(); updateLife(dt); updateGrass(dt); WIND.t.value += dt;
   if (MOBILE) { frameN++; renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = (frameN & 1) === 0; dynRes(rawMs); }
   postRender();
 }
