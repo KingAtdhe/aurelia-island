@@ -584,7 +584,7 @@ function resetCar() { if (race && race.state === 'count') return; placeCar(car.s
 /* ---------------------------------------------------------------- camera */
 const camPos = new T3.Vector3(), look = new T3.Vector3(); let camMode = 0, shake = 0, camYaw = 0; const camRq = {}, camRq2 = {}; const CAMS = [[5.9, 2.05], [9.5, 3.6], [2.75, 0.62]];
 function nextCam() { camMode = (camMode + 1) % CAMS.length; }
-function updateCamera(dt) {
+function updateCamera(dt) { if (window.__camHold) return;             // tests and photo shots hold the camera
   const fx = Math.sin(car.h), fz = Math.cos(car.h), sp = car.speed, [dist, hgt] = CAMS[camMode];
   if (camMode === 2) { camPos.set(car.x + fx * dist, car.y + hgt + Math.sin(car.pitch) * dist, car.z + fz * dist); look.set(car.x + fx * 30, car.y + hgt * 0.9 + Math.sin(car.pitch) * 30, car.z + fz * 30); }     // bumper camera, just ahead of the nose
   else {
@@ -830,9 +830,18 @@ function noFlip(m, wind, lift) { m.side = T3.DoubleSide; m.onBeforeCompile = sh 
       float fl = sin(uWind * 6.5 + dot(position, vec3(3.1, 2.3, 4.7))) * 0.035 * min(hg, 1.5);
       transformed.x += sw * 0.014 * hg * min(hg, 4.0) / 4.0 * 3.0 + fl; transformed.z += sw * 0.006 * hg + fl * 0.7; }`); }
   sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', 'vec3 normal = normalize( vNormal ); vec3 geometryNormal = normal;'); }; m.needsUpdate = true; }
+const TMODELS = { prop_tcar_a: 'cars/mira' }, TLIB = {};        // modelled traffic cars replace the old ones of the same kind
+function loadTraffic() {
+  return Promise.all(Object.entries(TMODELS).map(([sp, f]) => Promise.resolve(window.MeshoptDecoder && window.MeshoptDecoder.ready).then(() => getBin(f))
+    .then(buf => new Promise((res, rej) => { const L = new T3.GLTFLoader(); if (window.MeshoptDecoder) L.setMeshoptDecoder(window.MeshoptDecoder); L.parse(buf, '', res, rej); }))
+    .then(g => { g.scene.updateMatrixWorld(true); const lib = {};
+      g.scene.traverse(o => { const m = /^LOD([01])$/.exec(o.name); if (!m) return; const pr = []; o.traverse(c => { if (c.isMesh) pr.push(c); }); lib[m[1]] = pr; });
+      for (const k in lib) for (const pm of lib[k]) { const m = pm.material; m.userData.envI = m.envMapIntensity = /Glass/.test(m.name) ? 1.4 : m.name === 'Paint' ? 0.8 : 1.0;
+        if (m.name === 'Glass') { m.transparent = true; m.depthWrite = false; m.opacity = 0.62; pm.renderOrder = 2; } }
+      if (lib[0] && lib[1]) TLIB[sp] = lib; }).catch(e => console.warn('traffic model', f, e)))); }
 function floraLib(g) {
   g.scene.updateMatrixWorld(true);
-  g.scene.traverse(o => { const m = /^FLORA_(.+)_LOD([01])$/.exec(o.name); if (!m) return; const pr = []; o.traverse(c => { if (c.isMesh) pr.push(c); }); (FLO.lib[m[1]] = FLO.lib[m[1]] || {})[m[2]] = pr; });
+  g.scene.traverse(o => { const m = /^FLORA_(.+)_LOD([01])$/.exec(o.name); if (!m) return; const pr = []; o.traverse(c => { if (c.isMesh) pr.push(c); }); (FLO.lib[m[1]] = FLO.lib[m[1]] || {})[m[2]] = pr; }); Object.assign(FLO.lib, TLIB);
   g.scene.traverse(o => { if (!o.isMesh || !/^Leaves/.test(o.material.name) || o.geometry.userData.soft) return; { const gg = o.geometry; gg.userData.soft = 1; gg.computeBoundingBox(); const c = new T3.Vector3(); gg.boundingBox.getCenter(c);   // canopy lit as one soft volume
       const sz = new T3.Vector3(); gg.boundingBox.getSize(sz); const P = gg.attributes.position, N = gg.attributes.normal, v = new T3.Vector3(), n = new T3.Vector3(), flat = sz.y < 1.2;
       if (N) { const NF = new Float32Array(P.count * 3); for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).sub(c); if (flat) v.y = Math.abs(v.y) + sz.y; v.x /= sz.x || 1; v.y /= sz.y || 1; v.z /= sz.z || 1; v.normalize(); n.fromBufferAttribute(N, i); v.multiplyScalar(0.8).addScaledVector(n, 0.2).normalize(); NF[i * 3] = v.x; NF[i * 3 + 1] = v.y; NF[i * 3 + 2] = v.z; } gg.setAttribute('normal', new T3.Float32BufferAttribute(NF, 3)); } } });
@@ -1094,7 +1103,7 @@ Promise.all([fetch('data/world.json').then(r => r.json()), getBin('data/height')
   loadCar(() => { placeCar(roadPoint(roads[W.ring], 388)); updateCamera(0.016);
     loadEl.textContent = 'Car: ' + carName + '. Pick a mode.'; ['modes', 'opts', 'help'].forEach(id => $(id).hidden = false);
     W.regions.forEach(r => { const b = document.createElement('button'); b.type = 'button'; b.textContent = r.name; b.addEventListener('click', () => { if (race) { race = null; mode = 'free'; $('race').hidden = true; beacon.visible = false; car.frozen = false; } placeCar(nearestRoadPoint(r.x, r.z)); toggleMap(); }); $('travel').appendChild(b); });
-    loadGLB('islandd').then(g => { setupMap(g, true); return loadGLB('florak'); }).then(g => { addKit(g); setupLife(); window.__detail = 1; }).catch(e => { console.warn('detail not loaded', e); window.__detail = 1; });
+    loadGLB('islandd').then(g => { setupMap(g, true); return loadGLB('florak'); }).then(g => loadTraffic().then(() => g)).then(g => { addKit(g); setupLife(); window.__detail = 1; }).catch(e => { console.warn('detail not loaded', e); window.__detail = 1; });
     window.__game = { CARS, setVeh, loadCar, FLO, scene, camera, car, roads, W, ground, startMode, inp, placeCar, roadPoint, renderer, roadQuery, physics, obGrid, OG, hAt, LIFE, updateLife, VEH, FX, DS, setStarted: v => { started = v; paused = !v; }, setAssist: v => { steerAssist = v; }, get race() { return race; } };
     requestAnimationFrame(frame); });
 }).catch(e => fail('Could not load the island: ' + (e && e.message ? e.message : e)));
@@ -1194,7 +1203,7 @@ function updateLife(dt) {
     if (dd < 2.6 * 2.6) { const d = Math.sqrt(dd) || 1; car.vx -= dx / d * 4; car.vz -= dz / d * 4; c.v *= 0.98; }   // a nudge when the player hits it
     const far = (ox - cx) ** 2 + (oz - cz) ** 2 > FARL * FARL;
     _lq.setFromAxisAngle(_yAx, c.sa - Math.PI / 2); _lp.set(c.sx, y + 0.05, c.sz); _lm.compose(_lp, _lq, far ? _l0 : _ls);
-    { const near = !far && (c.sx - cx) ** 2 + (c.sz - cz) ** 2 < 70 * 70, nf = LIFE.carFar[c.k].length > 0;
+    { const near = !far && (c.sx - cx) ** 2 + (c.sz - cz) ** 2 < (MOBILE ? 2025 : 4900), nf = LIFE.carFar[c.k].length > 0;
       if (!far && (near || !nf)) { const s = NC[c.k]++; for (const im of LIFE.carMesh[c.k]) { im.setMatrixAt(s, _m4.copy(_lm).multiply(im.userData.pm.matrixWorld)); if (/Paint|Smooth/.test(im.material.name)) im.setColorAt(s, c.col); } }      // only drawn cars are packed in: hidden ones cost nothing
       else if (!far) { const s = NF[c.k]++; for (const im of LIFE.carFar[c.k]) { im.setMatrixAt(s, _m4.copy(_lm).multiply(im.userData.pm.matrixWorld)); if (/Paint|Smooth/.test(im.material.name)) im.setColorAt(s, c.col); } } }
     if (LIFE.glow && night) LIFE.glow.setMatrixAt(c.gi, _lm); }
