@@ -132,10 +132,14 @@ const skyGeo = new T3.SphereGeometry(3000, 24, 12);
 { const c = [], p = skyGeo.attributes.position, top = new T3.Color(0x2f74c4), hor = new T3.Color(0xc3dcee), t = new T3.Color();
   for (let i = 0; i < p.count; i++) { const h = clamp(p.getY(i) / 3000, 0, 1); t.copy(hor).lerp(top, Math.pow(h, 0.55)); c.push(t.r, t.g, t.b); }
   skyGeo.setAttribute('color', new T3.Float32BufferAttribute(c, 3)); }
+const tlc = new T3.Color();
 function buildEnv(warm) { // image-based light: the sky dome plus a ground bounce, so glass, paint and water pick up reflections
-  const eg = new T3.SphereGeometry(50, 24, 16), c = [], p = eg.attributes.position, t = new T3.Color(), top = new T3.Color(warm ? 0x35588f : 0x3f86cf), hor = new T3.Color(warm ? 0xf0b98a : 0xdfeaf2), gnd = new T3.Color(warm ? 0x5a4b3a : 0x5d6b45), sw = new T3.Color(0xffa860), v = new T3.Vector3();
+  const eg = new T3.SphereGeometry(50, 96, 48), c = [], p = eg.attributes.position, t = new T3.Color(), top = new T3.Color(warm ? 0x35588f : 0x3f86cf), hor = new T3.Color(warm ? 0xf0b98a : 0xdfeaf2), gnd = new T3.Color(warm ? 0x5a4b3a : 0x5d6b45), sw = new T3.Color(0xffa860), v = new T3.Vector3();
   for (let i = 0; i < p.count; i++) { const h = p.getY(i) / 50; if (h >= 0) t.copy(hor).lerp(top, Math.pow(h, warm ? 0.45 : 0.55)); else t.copy(hor).lerp(gnd, Math.min(1, -h * 6));
-    if (warm) { v.set(p.getX(i), p.getY(i), p.getZ(i)).normalize(); t.lerp(sw, Math.pow(Math.max(0, v.dot(SUND)), 3) * 0.7 * (1 - Math.min(1, Math.abs(h) * 2))); } c.push(t.r, t.g, t.b); }
+    if (warm) { v.set(p.getX(i), p.getY(i), p.getZ(i)).normalize(); t.lerp(sw, Math.pow(Math.max(0, v.dot(SUND)), 3) * 0.7 * (1 - Math.min(1, Math.abs(h) * 2))); }
+    { const az = Math.atan2(p.getZ(i), p.getX(i)), tl = 0.035 + 0.045 * (0.5 + 0.5 * Math.sin(az * 7.0) * Math.sin(az * 3.0 + 1.3)) + 0.02 * Math.sin(az * 23.0);   // tree line and hills along the horizon: paint and glass show a real horizon
+      if (h > -0.02 && h < tl) t.lerp(tlc.set(warm ? 0x2c3020 : 0x34462a), 0.85); else if (h <= -0.02) t.lerp(tlc.set(warm ? 0x3a3128 : 0x44473a), 0.6); }
+    c.push(t.r, t.g, t.b); }
   eg.setAttribute('color', new T3.Float32BufferAttribute(c, 3));
   const es = new T3.Scene(); es.add(new T3.Mesh(eg, new T3.MeshBasicMaterial({ vertexColors: true, side: T3.BackSide })));
   const sd = new T3.Mesh(new T3.SphereGeometry(4, 12, 8), new T3.MeshBasicMaterial({ color: warm ? 0xffc890 : 0xfff4e0 })); sd.position.copy(SUND).multiplyScalar(44); es.add(sd);
@@ -227,7 +231,7 @@ const mComp = new T3.ShaderMaterial({ uniforms: { t: { value: null }, bl: { valu
         for (int i = 1; i <= 6; i++) a += texture2D(t, vU - d * k * float(i) / 6.0).rgb;
         c = a / 7.0;
         float ca = spd * smoothstep(0.3, 0.8, r) * 0.004; c.r = mix(c.r, texture2D(t, vU - d * ca).r, 0.8); c.b = mix(c.b, texture2D(t, vU + d * ca).b, 0.8); }
-      vec3 b = texture2D(bl, vU).rgb; c += b * (0.42 + 0.5 * night);              // bloom
+      vec3 b = texture2D(bl, vU).rgb; c += b * (0.34 + 0.5 * night);              // bloom
       if (wet > 0.0 && texture2D(t, vU).a < 0.5) {                                   // wet road: lights above smear down into long reflections, the road darkens and shines
         vec3 r = vec3(0.0); float wsum = 0.0;
         for (int i = 1; i <= 32; i++) { float k = float(i); vec2 q = vU + vec2(sin(k * 1.7) * 0.0012, k * 0.0125); if (q.y > 1.0) break; float wt = (1.0 - k / 33.0); r += texture2D(bl, q).rgb * wt; wsum += wt; }
@@ -236,7 +240,7 @@ const mComp = new T3.ShaderMaterial({ uniforms: { t: { value: null }, bl: { valu
         vec2 s = sunP.xy; float vis = 0.0;
         for (int i = 0; i < 5; i++) { vec2 o = vec2(float(i - 2) * 0.012, float(i - 2) * 0.012 * float(1 - 2 * (i - i / 2 * 2))); vis += step(0.93, max(max(texture2D(t, s + o).r, texture2D(t, s + o).g), texture2D(t, s + o).b)); }
         vis = vis / 5.0 * sunP.z;
-        vec2 ds = (vU - s) * vec2(asp, 1.0); float g = exp(-length(ds) * 3.6) * 0.2 + exp(-length(ds) * 20.0) * 0.42;      // softer sun glow: less wash-out at sunset
+        vec2 ds = (vU - s) * vec2(asp, 1.0); float g = exp(-length(ds) * 3.6) * 0.14 + exp(-length(ds) * 20.0) * 0.36;      // softer sun glow: less wash-out at sunset
         float st = pow(abs(cos(atan(ds.y, ds.x) * 3.0)), 30.0) * exp(-length(ds) * 5.0) * 0.25;
         c += vec3(1.0, 0.9, 0.72) * (g + st) * vis;
         vec2 ax = 0.5 - s;
@@ -481,7 +485,7 @@ function readPad() {                 // gamepad: left stick steers (analogue), r
 const VEH = { m: 1380, Iz: 2350, a: 1.46, b: 1.26, h: 0.47, r: 0.345, B: 11.5, Br: 14.5, C: 1.42, mu: 1.15, muF: 0.96, muR: 1.10, dmax: 0.66, sigma: 0.45,
   gears: [3.20, 2.28, 1.74, 1.38, 1.12, 0.92], fd: 3.70, eff: 0.88, idle: 950, red: 8100, up: 7600, down: 3300,
   brake: 1.18, bias: 0.63, cda: 0.40, down_: 0.10, rr: 0.012 };
-const MU = { road: 1.0, dirt: 0.72, grass: 0.62, sand: 0.52, snow: 0.45 }, RRS = { road: 1, dirt: 2.5, grass: 4, sand: 6, snow: 3 };
+const MU = { road: 1.0, dirt: 0.72, grass: 0.6, sand: 0.5, snow: 0.45 }, RRS = { road: 1, dirt: 2.5, grass: 10, sand: 13, snow: 6 };     // off the road the car drags hard, like CarX
 let steerAssist = store.get('assist', true);
 const latF = a => Math.sin(VEH.C * Math.atan(VEH.B * a)), latR = a => Math.sin(VEH.C * Math.atan(VEH.Br * a));        // rear tyres are stiffer and grippier: a stable, slightly understeering base
 const tyreAngle = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; if (a > Math.PI / 2) a -= Math.PI; else if (a < -Math.PI / 2) a += Math.PI; return a; };
@@ -833,7 +837,7 @@ function applyTime() {
   SUND.copy(dusk ? SUN_DUSK : SUN_DAY); SKYU.uSun.value.copy(SUND); SKYU.uWarm.value = dusk ? 1 : 0; bounce.position.set(-SUND.x, 0.3, -SUND.z);
   if (dusk && !ENV.dusk) ENV.dusk = buildEnv(true); envTex = dusk ? ENV.dusk : ENV.day;
   SKYU.uNight.value = night ? 1 : 0; scene.fog.color.set(night ? 0x0d1522 : dusk ? 0xd8a98a : 0xbccbd6); clouds.material.opacity = night ? 0.12 : 0.95; clouds.material.color.set(dusk ? 0xffbf96 : 0xffffff);
-  hemi.intensity = night ? 0.16 : dusk ? 0.44 : 0.34; hemi.color.set(night ? 0xdfeeff : dusk ? 0x7f9ad8 : 0xb6d0f5); hemi.groundColor.set(night ? 0x6b7a55 : dusk ? 0x8a6448 : 0x8c7552); bounce.intensity = night ? 0.03 : dusk ? 0.2 : 0.2;
+  hemi.intensity = night ? 0.2 : dusk ? 0.7 : 0.55; hemi.color.set(night ? 0xdfeeff : dusk ? 0x7f9ad8 : 0xb6d0f5); hemi.groundColor.set(night ? 0x6b7a55 : dusk ? 0x8a6448 : 0x8c7552); bounce.intensity = night ? 0.03 : dusk ? 0.2 : 0.2;
   sun.intensity = night ? 0.28 : dusk ? 3.6 : 2.85; sun.color.set(night ? 0x9db4e8 : dusk ? 0xffa462 : 0xffd9a8); renderer.toneMappingExposure = night ? 1.0 : dusk ? 0.86 : 0.78; document.body.classList.toggle('night', night);
   scene.environment = night ? null : envTex; if (lampGlow) lampGlow.visible = night; if (typeof applyWet === 'function') applyWet(); if (typeof carEnv === 'function') carEnv(); headL.intensity = night ? 3.2 : 0; headPool.visible = night;
   for (const m of FAC) m.emissiveIntensity = night ? (/Glass/.test(m.name) ? 0.55 : 0.9) : 0;
@@ -845,6 +849,41 @@ function applyTime() {
 const FLO = { sup: new Map(), want: new Set(), cells: new Map(), bt: new Map(), cardU: { value: 100 }, size: 80, cardMat: null, lib: {}, n: 0, ready: false };
 const LODR = [{ t0: 0, t1: 55, s0: 0, s1: 22, far: 400, b: 0 }, { t0: 35, t1: 120, s0: 25, s1: 60, far: 800, b: 110 }, { t0: 60, t1: 170, s0: 40, s1: 90, far: 1300, b: 220 }];   // full trees out to t1, cheaper LOD from t0, impostor cards beyond
 const LEAF_LIFT = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#ifdef USE_MAP\n vec4 texelColor = texture2D( map, vUv ); texelColor = mapTexelToLinear( texelColor ); texelColor.rgb = pow(max(texelColor.rgb, vec3(0.0)), vec3(0.62)) * 0.92; diffuseColor *= texelColor;\n#endif'); };      // the leaf atlas is painted far too dark (about 1.5% albedo): lift its darks into a believable green, keep bright colours
+// LOOK2: ground variation, canopy light and per-tree tint. Chained onto each material's existing onBeforeCompile.
+const L2N = `
+float l2h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float l2n(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(l2h(i), l2h(i + vec2(1.0, 0.0)), f.x), mix(l2h(i + vec2(0.0, 1.0)), l2h(i + vec2(1.0, 1.0)), f.x), f.y); }`;
+function look2Ground(m) {           // grass, field and forest ground: lush and dry patches, worn spots, fine grain; other ground types get grain only
+  if (m.userData.l2) return; m.userData.l2 = 1; const prev = m.onBeforeCompile, nm = m.name.replace(/^TerrainBlend_/, ''), grassy = /^(Terrain|TerrainField|TerrainForest)$/.test(nm), forest = nm === 'TerrainForest';
+  m.onBeforeCompile = (sh, r) => { if (prev) prev.call(m, sh, r);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vL2W;').replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vL2W = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vL2W;' + L2N).replace('#include <map_fragment>', `#include <map_fragment>
+      { vec2 q = vL2W.xz; float big = l2n(q * 0.021) * 0.6 + l2n(q * 0.067) * 0.4, mid = l2n(q * 0.29), fine = l2n(q * 2.3) * 0.5 + l2n(q * 7.1) * 0.5;
+        float dz = length(vL2W - cameraPosition), near = 1.0 - smoothstep(25.0, 90.0, dz);
+        ${grassy ? `vec3 lush = vec3(0.78, 1.04, 0.72), dry = vec3(1.28, 1.12, 0.70), worn = vec3(1.12, 0.94, 0.74);
+        vec3 tint = mix(lush, dry, smoothstep(0.38, 0.72, big)); tint = mix(tint, worn, smoothstep(0.66, 0.88, mid) * 0.7);
+        diffuseColor.rgb *= tint${forest ? ' * vec3(1.45, 1.32, 1.15)' : ''};` : ''}
+        diffuseColor.rgb *= mix(1.0, 0.78 + 0.44 * fine, near); diffuseColor.rgb *= 0.88 + 0.24 * mid; }`).replace('gl_FragColor = vec4( outgoingLight, diffuseColor.a );', 'outgoingLight += diffuseColor.rgb * vec3(0.13, 0.15, 0.19) * (1.0 - 0.8 * uL2N);\ngl_FragColor = vec4( outgoingLight, diffuseColor.a );').replace('#include <common>', '#include <common>\nuniform float uL2N;'); sh.uniforms.uL2N = NIGHTU;
+  }; m.needsUpdate = true;
+}
+function look2Leaves(m) {          // canopy: darker toward the trunk and the bottom, brighter crown, each tree a slightly different green
+  if (m.userData.l2) return; m.userData.l2 = 1; const prev = m.onBeforeCompile;
+  m.onBeforeCompile = (sh, r) => { if (prev) prev.call(m, sh, r);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vL2T;' + L2N).replace('#include <begin_vertex>', `#include <begin_vertex>
+      { vec3 ip = vec3(0.0);
+        #ifdef USE_INSTANCING
+        ip = instanceMatrix[3].xyz;
+        #endif
+        float rnd = l2h(ip.xz * 0.37 + 1.7); float hy = position.y, rad = length(position.xz);
+        vL2T = vec3(rnd, smoothstep(0.4, 7.5, hy), smoothstep(0.3, 3.2, rad)); }`);
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vL2T;').replace('#include <map_fragment>', `#include <map_fragment>
+      { float ao = mix(0.5, 1.18, max(vL2T.y, vL2T.z * 0.85)); vec3 hue = mix(vec3(0.86, 1.0, 0.78), vec3(1.16, 1.08, 0.80), vL2T.x);
+        diffuseColor.rgb *= hue * ao * (0.94 + 0.12 * fract(vL2T.x * 7.0)); }`).replace('gl_FragColor = vec4( outgoingLight, diffuseColor.a );', 'outgoingLight += diffuseColor.rgb * vec3(0.12, 0.15, 0.14) * (1.0 - 0.8 * uL2N);\ngl_FragColor = vec4( outgoingLight, diffuseColor.a );').replace('#include <common>', '#include <common>\nuniform float uL2N;'); sh.uniforms.uL2N = NIGHTU;
+  }; m.needsUpdate = true;
+}
+function look2All(root) { root.traverse(o => { if (!o.isMesh) return; for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+  if (!m) continue; if (/^(TerrainBlend_)?Terrain/.test(m.name)) look2Ground(m); else if (/^Leaves/.test(m.name)) look2Leaves(m); } }); }
 function noFlip(m, wind, lift) { m.side = T3.DoubleSide; m.onBeforeCompile = sh => { if (lift) LEAF_LIFT(sh);
   sh.fragmentShader = sh.fragmentShader.replace('#include <alphatest_fragment>', '#include <alphatest_fragment>\n { float dn_ = length(vViewPosition), th_ = fract(52.9829 * fract(dot(gl_FragCoord.xy, vec2(0.06711, 0.00584)))); if (dn_ < 2.2 + 2.4 * th_) discard; }');
   if (wind) { sh.uniforms.uWind = WIND.t; sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uWind;').replace('#include <begin_vertex>', `#include <begin_vertex>
@@ -874,8 +913,8 @@ function floraLib(g) {
       if (N) { const NF = new Float32Array(P.count * 3); for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).sub(c); if (flat) v.y = Math.abs(v.y) + sz.y; v.x /= sz.x || 1; v.y /= sz.y || 1; v.z /= sz.z || 1; v.normalize(); n.fromBufferAttribute(N, i); v.multiplyScalar(0.8).addScaledVector(n, 0.2).normalize(); NF[i * 3] = v.x; NF[i * 3 + 1] = v.y; NF[i * 3 + 2] = v.z; } gg.setAttribute('normal', new T3.Float32BufferAttribute(NF, 3)); } } });
   const seen = new Set();
   g.scene.traverse(o => { if (!o.isMesh || seen.has(o.material)) return; const m = o.material; seen.add(m);
-    if (/^Leaves/.test(m.name)) { m.transparent = false; m.alphaTest = 0.38; m.roughness = 1; m.envMapIntensity = 0.45; m.color.setRGB(1.0, 1.0, 0.94); m.emissive = new T3.Color(0x0c1608); m.userData.leafE = 1; LEAFM.push(m); m.emissiveIntensity = night ? 0.15 : 1;       // a little light through the leaves in shade
-      noFlip(m, true, true); if (m.map) m.map.anisotropy = 4; }
+    if (/^Leaves/.test(m.name)) { m.transparent = false; m.alphaTest = 0.38; m.roughness = 1; m.envMapIntensity = 0.8; m.color.setRGB(1.0, 1.0, 0.94); m.emissive = new T3.Color(0x0c1608); m.userData.leafE = 1; LEAFM.push(m); m.emissiveIntensity = night ? 0.15 : 1;       // a little light through the leaves in shade
+      noFlip(m, true, true); look2Leaves(m); if (m.map) m.map.anisotropy = 4; }
     else if (m.name === 'PaintedFlora') { m.envMapIntensity = 0.3; noFlip(m); } else if (m.name === 'KitWindow') interior(m); else if (/^Kit/.test(m.name)) { sharpen(m); m.envMapIntensity = 1.0; if (m.name === 'KitLens') m.emissiveIntensity = 0.35; if (m.name === 'KitGlass' || m.name === 'KitShopGlass') { m.transparent = true; m.depthWrite = false; } if (m.name === 'KitShopInterior') { m.emissiveIntensity = 0.85; m.envMapIntensity = 0.2; } } else m.envMapIntensity = 0.4; });
 }
 function floraAssign(data, only) {
@@ -1083,11 +1122,12 @@ function setupMap(g, detail) {
       if (bl) { m.transparent = true; m.depthWrite = false; m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -1; }
       m.onBeforeCompile = sh => { sh.uniforms.uShade = SHADE.tex; sh.uniforms.uShadeOn = SHADE.on;
         sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vSh;').replace('#include <begin_vertex>', '#include <begin_vertex>\n { vec4 wp_ = modelMatrix * vec4(transformed, 1.0); vSh = vec2((wp_.x - (-2400.0)) / 4800.0, (-wp_.z - (-1680.0)) / 3360.0); }');
-        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vSh; uniform sampler2D uShade; uniform float uShadeOn;').replace('#include <map_fragment>', '#include <map_fragment>\n diffuseColor.rgb *= 0.66 + 0.62 * texture2D(map, vUv * 0.087).g; if (uShadeOn > 0.5) diffuseColor.rgb *= mix(1.0, texture2D(uShade, vSh).r, 0.85);' + (bl ? ' diffuseColor.a *= vBl;' : ''));
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vSh; uniform sampler2D uShade; uniform float uShadeOn;').replace('#include <map_fragment>', '#include <map_fragment>\n diffuseColor.rgb *= 0.66 + 0.62 * texture2D(map, vUv * 0.087).g; if (uShadeOn > 0.5) diffuseColor.rgb *= mix(1.0, texture2D(uShade, vSh).r, 0.5);       // baked shade at half strength: live shadows already darken' + (bl ? ' diffuseColor.a *= vBl;' : ''));
         if (bl) { sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec2 uv2; varying float vBl;').replace('#include <begin_vertex>', '#include <begin_vertex>\n vBl = uv2.x;'); sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vBl;'); } }; }
+    if (/^Terrain/.test(nm)) look2Ground(m);
     if (/^TerrainBlend/.test(o.name)) { o.renderOrder = 0.5; if (!o.geometry.attributes.uv2) o.visible = false; }
     { const t = /^Buildings(HD|LOD)[^_]*.*__t(-?\d+)_(-?\d+)/.exec(o.name); if (t) { const k = t[2] + '_' + t[3]; let b = FLO.bt.get(k); if (!b) { b = { x: (+t[2] + 0.5) * 200, z: -(+t[3] + 0.5) * 200, hd: [], far: [] }; FLO.bt.set(k, b); } (t[1] === 'HD' ? b.hd : b.far).push(o); if (t[1] === 'HD') o.visible = false; } }
-    if (/^Terrain/.test(nm) || nm === 'Foliage') m.envMapIntensity = 0.45;
+    if (/^Terrain/.test(nm) || nm === 'Foliage') m.envMapIntensity = 0.8;
     if (/^Facade/.test(nm) && FAC.indexOf(m) < 0) FAC.push(m);
     if (nm === 'HeroSigns' && !m.userData.hs) { m.userData.hs = 1; m.emissive = new T3.Color(0xffffff); m.emissiveMap = m.map; m.emissiveIntensity = 0; HSIGN.push(m); }     // shop signs light up at night
     if (nm === 'HeroCurtain') { m.side = T3.DoubleSide; interior(m); }
@@ -1317,7 +1357,7 @@ const DS = { cur: 0, mul: 1, total: 0, t: 0, gap: 99, active: false, show: 0, ms
     if (ab > 110 && this.cur > 0) this.fail('SPUN OUT');
     if (ok) { if (!this.active) { this.active = true; if (this.gap < 1.6) this.mul = Math.min(5, this.mul + 0.5); } this.gap = 0; this.t += dt;
       this.mul = Math.min(5, Math.max(this.mul, 1 + Math.floor(this.t / 2.5) * 0.5));
-      const af = clamp((ab - 12) / 33, 0, 1.25), sf = car.surf === 'road' ? 1 : 0.5; this.cur += dt * kmh * 1.1 * af * sf * this.mul; }
+      const af = clamp((ab - 12) / 33, 0, 1.25), sf = car.surf === 'road' ? 1 : car.surf === 'dirt' ? 0.5 : 0; this.cur += dt * kmh * 1.1 * af * sf * this.mul; }
     else if (this.active) { this.gap += dt; if (this.gap > 1.6) this.bank(); }
     else this.gap += dt;
     const el = $('drift'); if (this.show > 0) { this.show -= dt; el.className = 'hud ' + this.cls; $('dPts').textContent = this.msg; $('dMul').textContent = ''; $('dSub').textContent = this.cls === 'bank' ? 'DRIFT' : 'DRIFT LOST'; el.style.opacity = 1; }

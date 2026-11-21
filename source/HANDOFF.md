@@ -226,3 +226,14 @@ curve Rw = hw + 1.3, Ht = 7) replaces portal_masonry (6 portals). Lookouts (isle
   the detail map loads (no shader hitches on first sight).
 - Leaves (noFlip materials) dissolve within ~2-4.5 m of the camera: no screen-filling leaf cards when passing a tree.
 - Not changed: Vortex diffuser fins (long, read as spikes from the chase camera) - Saba's design, ask before shortening.
+
+## Look pass toward CarX (21 Nov, "do all the things that get us closer to CarX")
+- look2Ground (Terrain*, chained after the shade patch): world-space value noise -> lush/dry/worn patches on grass ground, fine grain
+  close up, forest floor lifted; sky-fill floor (outgoingLight += albedo * 0.13-0.19, scaled down at night via NIGHTU).
+- look2Leaves (Leaves*, after noFlip): canopy darker at the bottom/inside, brighter crown, per-tree tint from the instance position; sky fill.
+- Baked shade map at half strength (live shadows already darken). Hemi: day 0.55, dusk 0.7, night 0.2. Terrain/leaf envMapIntensity 0.8.
+- Reflection env (buildEnv): 96x48 dome with a broken tree line / hills band and darker ground at the horizon.
+- Bloom 0.42 -> 0.34, sun glow softer. Off-road: RRS grass 10, sand 13, snow 6 (was 4/6/3); drift points 0 on grass/sand/snow, half on dirt.
+- r128 here has no output_fragment chunk: anchor on 'gl_FragColor = vec4( outgoingLight, diffuseColor.a );'.
+- Perf unchanged (phone Medium: city 721 draws, coast 363, forest 259). Live artifact 1795xxxxxx (see artifact history).
+- Not done / needs assets: dense close-up grass, hand-made rocks and ground textures, real-time car reflections (too expensive on phones).
