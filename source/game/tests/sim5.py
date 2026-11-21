@@ -1,0 +1,27 @@
+import json
+pg.set_viewport_size({'width': 844, 'height': 390})
+pg.evaluate("localStorage.setItem('aurelia_qual','0'); localStorage.setItem('aurelia_mob','1')"); pg.reload(); pg.wait_for_function('window.__game !== undefined', timeout=400000); pg.wait_for_function('window.__detail === 1', timeout=500000)
+pg.click('button[data-mode="free"]'); time.sleep(8)
+SIM = '''([name, secs, wantK])=>{const g=__game,c=g.car,R=g.roads.find(r=>r.name===name);g.placeCar(g.roadPoint(R,Math.floor(R.n*0.1)));
+ const log=[],dt=1/60;let max=0,stuck=0,dist=0,px=c.x,pz=c.z,resets=0,maxOff=0;
+ for(let s=0;s<secs*60;s++){const q=g.roadQuery(c.x,c.z,c.y,{});
+  if(q.ok&&q.road===R){const st=Math.max(1,Math.ceil(16/(R.step||4)));let j=R.closed?(q.i+st)%R.n:Math.min(R.n-1,q.i+st);if(!R.closed&&j>=R.n-2)break;
+   const p=R.p,tx=p[j*3]-c.x,tz=p[j*3+2]-c.z;let dh=Math.atan2(tx,tz)-c.h;while(dh>Math.PI)dh-=2*Math.PI;while(dh<-Math.PI)dh+=2*Math.PI;
+   g.inp.left=dh>0.03?1:0;g.inp.right=dh<-0.03?1:0;let want=38*wantK;{let s0=q.i;for(let k2=1;k2<=Math.ceil(70/(R.step||4));k2++){const a=R.closed?(s0+k2)%R.n:Math.min(R.n-1,s0+k2),b=R.closed?(a+2)%R.n:Math.min(R.n-1,a+2),c0=R.closed?(a+R.n-2)%R.n:Math.max(0,a-2);
+     const h1=Math.atan2(p[a*3]-p[c0*3],p[a*3+2]-p[c0*3+2]),h2=Math.atan2(p[b*3]-p[a*3],p[b*3+2]-p[a*3+2]);let dd=h2-h1;while(dd>Math.PI)dd-=2*Math.PI;while(dd<-Math.PI)dd+=2*Math.PI;const kap=Math.abs(dd)/(2*(R.step||4))+1e-4;
+     const vmax=Math.sqrt(0.75*9.81/kap),dist=k2*(R.step||4);want=Math.min(want,Math.sqrt(vmax*vmax+2*6*dist))}}g.inp.gas=c.speed<want?1:0;g.inp.brake=c.speed>want+3?1:0;window.__w=want;maxOff=Math.max(maxOff,Math.abs(q.d)-q.road.hw);}
+  else{g.inp.gas=0;g.inp.brake=1;g.inp.left=g.inp.right=0;if(!q.ok||q.road!==R){log.push(['lost',c.x|0,c.z|0,q.ok?q.road.name:'-']);break}}
+  if(s%15==0&&window.__trace)window.__trace.push([+(s/60).toFixed(2),c.speed*3.6|0,(window.__w||0)*3.6|0,+(c.beta*57.3).toFixed(0),+(c.ar*57.3).toFixed(1),+(c.delta*57.3).toFixed(0),q.ok?+(Math.abs(q.d)-q.road.hw).toFixed(1):99,g.inp.left-g.inp.right,g.inp.brake]);const y0=c.y; g.physics(dt); const G=g.ground(c.x,c.z,c.y+1);
+  if(c.sink>0){log.push(['sink',c.x|0,c.z|0]);break}
+  if(Math.hypot(c.x-px,c.z-pz)>5){resets++;log.push(['jump',c.x|0,c.z|0])}
+  dist+=Math.hypot(c.x-px,c.z-pz);px=c.x;pz=c.z;max=Math.max(max,c.speed*3.6);
+  if(!c.air&&c.y<G.y-0.3)log.push(['below',c.x|0,c.z|0]);
+  if(c.air&&c.vy<-12)log.push(['fall',c.x|0,c.z|0,c.vy|0]);
+  if(Math.abs(c.pitch)>0.5||Math.abs(c.roll)>0.5)log.push(['tilt',c.x|0,c.z|0,+c.pitch.toFixed(2),+c.roll.toFixed(2)]);
+  if(g.inp.gas&&c.speed<0.4&&s>120){if(++stuck==120)log.push(['stuck',c.x|0,c.z|0])}else stuck=0;}
+ g.inp.gas=g.inp.brake=g.inp.left=g.inp.right=0;const cnt={};for(const e of log)cnt[e[0]]=(cnt[e[0]]||0)+1;
+ return {dist:dist|0,max:max|0,maxOff:+maxOff.toFixed(1),cnt,first:log.slice(0,3)}}'''
+pg.evaluate("window.__trace=[]")
+r = pg.evaluate(SIM, ['Circuit', 60, 0.75]); print('R', json.dumps(r))
+tr = pg.evaluate("window.__trace"); 
+for x in tr[-40:]: print('T', x)

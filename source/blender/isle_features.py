@@ -306,7 +306,15 @@ def build(C):
     apex = [i for i in range(n) if tight[i] and abs(curv[i]) >= abs(curv[(i - 1) % n]) and abs(curv[i]) > abs(curv[(i + 1) % n])]
     for k, i in enumerate(apex[:6]):
         side = -1 if curv[i] > 0 else 1; Fa, ha = frame(r, i)
-        if k % 2 == 0: grandstand(Fa, ha, 0, hw + 26, 70, side, 7)
+        if k % 2 == 0:
+            ctr = Fa(0, side * (hw + 26 + 1.25 * 7 / 2)); fw_ = np.array([math.cos(ha), math.sin(ha)]); lf_ = np.array([-fw_[1], fw_[0]]); clash = False    # never on top of another road
+            for rr in C.roads:
+                if clash: break
+                for j in range(0, rr['n'], 2):
+                    if rr is r and min(abs(j - i), rr['n'] - abs(j - i)) * rr['step'] < 70: continue
+                    dv = rr['xy'][j] - ctr[:2]; a_ = abs(float(dv @ fw_)) - 35; b_ = abs(float(dv @ lf_)) - (1.25 * 7 + 1) / 2
+                    if max(a_, 0) ** 2 + max(b_, 0) ** 2 < (rr['w'] / 2 + 4) ** 2: clash = True; break
+            if not clash: grandstand(Fa, ha, 0, hw + 26, 70, side, 7)
     for i in np.where(np.roll(tight, 2) | np.roll(tight, -2) | tight)[0]:
         side = -1 if curv[i] > 0 else 1; p = P(r, i, side * (hw + 19)); zb = H(p[0], p[1])
         S.add(box(p[0], p[1], zb - 0.2, r['step'] * 1.02, 1.5, 1.3, r['head'][i]), RED if i % 2 else WHITE)

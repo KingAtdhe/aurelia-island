@@ -1,0 +1,11 @@
+import json
+errs=[]; pg.on('pageerror', lambda e: errs.append(str(e)[:200]))
+pg.evaluate("localStorage.setItem('aurelia_mob','1'); localStorage.setItem('aurelia_qual','1'); localStorage.setItem('aurelia_tod','0'); localStorage.setItem('aurelia_prog', JSON.stringify({cr: 40000, eng:1, tyre:0, kit:0, wt:0, paint:5, owned:[0,5]}))"); pg.reload(); pg.wait_for_function('window.__game !== undefined', timeout=400000); pg.wait_for_function('window.__detail === 1', timeout=500000)
+print('MIGRATED', pg.evaluate("localStorage.getItem('aurelia_prog')"))
+pg.click('#bGarage'); time.sleep(1); shot('c_0')
+b = [x for x in pg.query_selector_all('#gGrid button') if 'Calder' in x.inner_text()][0]; print('BTN', b.inner_text()); b.click()
+pg.wait_for_function("document.querySelector('#garage h2').textContent.includes('Calder')", timeout=300000); time.sleep(2); shot('c_1')
+print('PROG', pg.evaluate("localStorage.getItem('aurelia_prog')"), 'VEH', pg.evaluate("[__game.VEH.m, __game.VEH.tqPeak, __game.VEH.a, __game.VEH.b]"))
+pg.click('#gClose'); pg.click('button[data-mode="free"]'); time.sleep(6); pg.evaluate("document.querySelectorAll('#toast').forEach(e=>e.style.display='none')"); shot('c_2')
+pg.keyboard.down('ArrowUp'); time.sleep(5); print('DRIVE', st()); shot('c_3'); pg.keyboard.down('ArrowLeft'); time.sleep(1.2); shot('c_4'); pg.keyboard.up('ArrowLeft'); pg.keyboard.up('ArrowUp'); time.sleep(1)
+print("WHEEL", pg.evaluate("(()=>{const r=[];__game.scene.traverse(o=>{if(/^Wheel_(Front|Rear)_Left$/.test(o.name))r.push(o.name,+o.rotation.z.toFixed(2))});return r})()")); print("ERRS", errs)

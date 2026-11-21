@@ -1,0 +1,6 @@
+pg.set_viewport_size({'width': 844, 'height': 390})
+pg.evaluate("localStorage.setItem('aurelia_mob','1'); localStorage.setItem('aurelia_qual','1'); localStorage.setItem('aurelia_tod','2'); localStorage.setItem('aurelia_cam','0')"); pg.reload(); pg.wait_for_function('window.__game !== undefined', timeout=400000); pg.wait_for_function('window.__detail === 1', timeout=500000)
+pg.click('button[data-mode="free"]'); time.sleep(10); pg.evaluate("document.querySelectorAll('#toast').forEach(e=>e.style.display='none')")
+pg.evaluate('''()=>{const R=__game.roads.find(r=>r.name==='Street N0');__game.placeCar(__game.roadPoint(R,40))}'''); time.sleep(6); shot('u2_night')
+pg.click('#bCam'); pg.click('#bCam'); time.sleep(3); shot('u2_bumper')
+pg.click('#bMap'); time.sleep(3); shot('u2_map')

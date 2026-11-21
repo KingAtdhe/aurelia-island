@@ -1,0 +1,7 @@
+errs=[]; pg.on('pageerror', lambda e: errs.append(str(e)[:200]))
+pg.evaluate("localStorage.setItem('aurelia_mob','1'); localStorage.setItem('aurelia_qual','1'); localStorage.setItem('aurelia_tod','0'); localStorage.setItem('aurelia_prog', JSON.stringify({cr:20000,car:'calder',cars:['vortex','calder'],up:{}}))"); pg.reload(); pg.wait_for_function('window.__game !== undefined', timeout=400000); pg.wait_for_function('window.__detail === 1', timeout=500000)
+print('START', pg.evaluate("[__game.VEH.m, document.getElementById('gSub').textContent]"))
+pg.click('#bGarage'); time.sleep(1); pg.query_selector_all('#gGrid .paints button')[3].click(); time.sleep(1); pg.click('#gClose'); pg.click('button[data-mode="free"]'); time.sleep(6); pg.evaluate("document.querySelectorAll('#toast').forEach(e=>e.style.display='none')"); pg.keyboard.press('c'); time.sleep(1.5); shot('c2_paint')
+pg.click('#bMenu'); time.sleep(0.5); pg.click('#bGarage'); time.sleep(1)
+b=[x for x in pg.query_selector_all('#gGrid button') if 'Vortex' in x.inner_text()][0]; b.click(); pg.wait_for_function("document.querySelector('#garage h2').textContent.includes('Vortex')", timeout=300000)
+print('BACK', pg.evaluate("[__game.VEH.m, __game.VEH.tqPeak, localStorage.getItem('aurelia_prog')]")); print('ERRS', errs)

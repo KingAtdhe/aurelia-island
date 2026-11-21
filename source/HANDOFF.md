@@ -107,3 +107,111 @@ curve Rw = hw + 1.3, Ht = 7) replaces portal_masonry (6 portals). Lookouts (isle
   curve_mirror, guard_pipe, road_light, spillway, delineators, road scenes touge_straight / touge_hairpin; trees are flora instances
   (TREES dict filled by the scenes). sheet11_render.py, art/sheet11.py.
 - App repo: github.com/KingAtdhe/aurelia-island (full textures, PWA, Pages workflow; pack_app.py FULL=1 SITE=<repo>)
+
+## Touge and storefronts built (20 Nov 2026; artifact 1795182802-9a82, GitHub 2f30490)
+- isle_roads_build.touge(): on the 4 passes, where the ground 31 m out is >4 m above the road, a retaining wall + U-ditch at the edge and
+  a built cut face (TougeLattice cutout / TougeShotcrete) rising to the hill's height within 10 m, then a grassed terrace (TougeTerrace)
+  with conifers; curve mirrors + sodium lights at bends tighter than R45; ~3,100 conifers along the open sides; double yellow line;
+  white guard pipe instead of W-beam on the passes. (Built ~2.3 km of cut.)
+- Storefronts are instanced prefabs: isle_city.building()/tower_base() call isle_shops_hq.place() which records K.shops; emit_model()
+  turns them into KP.KIT 'shop_<n>_<width>' (16 shops + shutter, widths 4-7 m); register_kit in place_flora. 1,542 placed.
+  The bay is closed with ashlar either side of the prefab. NOSHOPS=1 env builds the old shopfronts.
+- Memory: the build peaks ~5.8 GB of the ~6 GB cgroup here. Do not load kit materials (KP.mats()) before place_flora, and keep
+  heavy per-building geometry out of the city Parts (use prefabs/instances).
+
+## Traffic cars, second generation: NOT shipped (20 Nov 2026)
+- blender/isle_traffic_hq.py + sheet12_render.py: lofted bodies with material zones on the cage (glass, pillars, lamp bands, grille),
+  boolean arches, five-spoke wheels, ~29k tris. Tested three rounds; the shapes still read dated and the fronts are heavy black zones,
+  so no sheet was sent (Saba's rule: no unfinished cars). Not used by the game; the game still uses isle_traffic (tcar_a..e).
+- Recommended route: model each traffic car as its own script the way car_vortex.py was made (reference picture, several passes),
+  then export game copies with game/car_opt.mjs and place them as tcar_* props.
+
+## Wet roads (Nov 20)
+- index.html: Options → "Road: Auto/Dry/Wet" (store 'wet'; Auto = wet at night). Asphalt/Setts materials kept in ROADM; applyWet() darkens them, lowers roughness, flattens normals (no glitter).
+- Road pixels write alpha 0.25 (onBeforeCompile); mComp `wet` uniform smears the bloom buffer down over those pixels for light reflections (capped at 0.45, faded at the screen bottom).
+- Puddles get roughness 0.3 at night to avoid hard headlight hotspots. App sw.js is now aurelia-v3.
+
+## Vortex mesh audit (Nov 20)
+- Tools in /home/claude/meshcheck: mesh_audit.py (transforms, topology, UVs, textures), island_audit.py (faces only ever seen from behind, per connected part), patch_glb.py (reverses winding + normals + tangent.w on listed parts; gives shared index lists a private copy), fix_blend.py (same on the .blend, custom normals kept), fbx_export.py.
+- Found and fixed: front tyres inside-out, left brake-disc hole inserts, exhaust surrounds, door jamb/seal pieces, taillight housing, bumper carbon inserts, cabin tub. Positions/UVs/transforms/materials byte-identical.
+- Game copies rebuilt: browser car_opt 0.75 1024 82, app car_opt 1 4096 92. fitCar keeps sale-pack cars at real size (no 4.6 m rescale).
+- Fixed pack: /home/claude/vortex_sale_pack_fixed.zip
+
+## Glitch pass (Nov 21)
+- Merged far blocks: quantized attributes are de-normalised (QN/rd) — this caused sky triangles, grey slabs, speckled leaves.
+- Colliders generated in-game from flora data (floraColliders): poles/lamps/signals = 0.22 m circle, trees = trunk circle, rocks/parked cars/kiosks = boxes or circles from bbox, KNOCK list = knock-away (hidden + group rebuilt). SOFT list never collides (bushes, shop fronts, tunnels/portals/bridges, hay field, jetty). No box is ever placed across a carriageway.
+- Car collision uses 3 circles (nose/middle/tail, r 1.0).
+- r.lim per road side: touge cut retaining walls (hw+0.25) and guard rails on the drop side (hw+1.6), computed from the heightmap with the builder's rules.
+- Camera kept inside the road corridor when the car is on the road. Cam 3 is now a bumper camera. Car paint keeps a dim dusk env map at night (carEnv).
+- Traffic: gives way to crossing cars in junctions, only turns into clear streets (4 min sim: 0 overlaps, no jams).
+- isle_features: apex grandstands skipped when they would overlap a road (one sat on Pit Access). Map rebuilt and republished.
+- Test scripts: tests/sim3.py (autopilot physics on every road), coll.py, hit.py, wall.py, rail.py, traffic2.py, walk.py, ui.py, sweep.py.
+
+## Vehicle dynamics and drifting (Nov 21)
+- physics() now calls drive(): two-axle model, 4 substeps per 120 Hz fixed step, world-frame integration. Left = (cos h, -sin h); heading grows turning left.
+- Tyres: lat = sin(C*atan(B*alpha)), front B 11.5 / rear Br 14.5, C 1.42, mu 1.15 x muF 0.96 / muR 1.10 (stable, slightly understeering base), relaxation length 0.45 m.
+- Friction circle on the rear with drive force; wheelspin/lock keeps 60% side grip. Load transfer from filtered ax. Downforce, drag, rolling resistance per surface (MU/RRS tables).
+- Engine torque curve (peak 660 Nm ~5900 rpm, limiter 8100), 6-speed auto, holds gear when sideways; ABS front/rear bias 0.63; handbrake locks rear; reverse by holding brake.
+- Steering: speed-sensitive range (~5 deg at 100 km/h), extra drift lock (to 50 deg) only for counter-steer while the rear slides. Steering assist (option, default on): wheels follow travel when sliding, yaw-rate limiter, throttle feathering around 30-40 deg.
+- Traction control for grip driving (car.drift timer): released by handbrake, big angle, or full lock + full throttle (power oversteer).
+- Measured (tests/lab.py, drift.py, edge.py): 0-100 3.9 s, 0-200 9.5 s, top ~238 km/h, 100-0 37 m; steady drift ~42 deg on throttle; transitions without spin; release recovers in ~1.2 s.
+- FX: smoke/dust points + skid ribbons from car.slipR. DS: drift scoring (12-100 deg, >25 km/h, combo up to x5, crash/spin loses). Touge Drift mode on Summit Pass. HUD gear + RPM. Audio from rpm + tyre squeal noise.
+- Camera: follows travel direction in drifts; pulled in front of buildings. Gamepad: left stick, RT/LT, A/X handbrake, Y camera, Start menu. Menu now has Resume.
+- Leaf atlas is painted very dark (sRGB ~22,33,9): LEAF_LIFT shader curve on all leaf/card materials.
+
+## Progression (Nov 21)
+- PROG (store 'prog'): credits cr, upgrade levels eng/tyre/kit/wt, paint index + owned list. applyUpgrades() sets VEH.tq (torque factor), VEH.mu, VEH.lockD (drift lock), VEH.m (Iz scales with mass).
+- Credits: banked drift points /10, circuit finish 1500, ring 2500, best lap 400, touge 600 + score/12, landmark 250.
+- Garage overlay from the menu; paint replaces the solid-red livery map with a colour (Factory restores the map).
+- Steering option: Buttons / Tilt / Tilt (reversed); tilt zeroes at start of each run, ±24° full lock, 2° dead zone.
+- Aurelia GT (cars/aurelia_gt.json) is a 6k-triangle placeholder — not offered in the garage. A second real car needs modelling.
+
+## Second car: Calder GT (Nov 21)
+- Source: Saba's calder-gt-sale.zip. Audit: transforms, UVs, textures fine; 43 materials. Fixed only: 740 zero-area/duplicate faces in the .blend (2,522 sliver + 33 same-facing duplicate triangles in the GLB): badge, console, dashboard, door panels, headlights, mirrors, interior tub, steering wheel, wheels. No vertex moved. Grille faces reversed but its material is double-sided, left as is. Fixed pack: /home/claude/calder_fixed (blend, glb, fbx without the hidden COL_ proxies).
+- Scripts: meshcheck/clean_glb.py (drops zero-area and same-facing duplicate triangles), clean_blend.py, calder_export.py. car_opt.mjs now takes DROP= (attributes to strip) and PLAIN_PAINT= (material whose base texture is removed so the game can paint it).
+- Game: CARS table (vortex, calder) with per-car VEH (mass, axle split, gears, torque peak). PROG now {cr, car, cars[], up:{id:{eng,tyre,kit,wt,paint,owned}}}; old saves migrate to up.vortex. Garage has a car row (buy 25,000 / switch). fitCar accepts Wheel_(Front|Rear)_(Left|Right) under Steer_Front_*, wheel axis 'z' with sign −1. KHR transmission glass shown as transparent tinted glass.
+- Calder bench: 0–100 4.33 s, 0–200 11.7 s, 100–0 38.1 m, drifts hold ~40°, transitions without spin. Tests: tests/calder.py, calder2.py, lab_c.py, drift_c.py.
+
+## Traffic car 01: Mira compact hatchback (Nov 21)
+- Sheet approved ("Continue"): art/traffic_01_mira_design_sheet.jpg (blender/traffic/sheet_mira.py draws it).
+- Model pipeline (blender/traffic/): mira_sdf.py = body as a signed distance field (side + plan silhouettes from the sheet, smooth intersection,
+  tumblehome, crowns, shoulder crease, door sculpt, arches with lip). build_body.py: marching cubes (12 mm) → pre-decimate → zone cuts along exact
+  isolines (meshcut.py; zones in mira_zones.py: clad, arch liners, glass, pillars, lamps, LED, tail, band, grille, intake…) → decimate with zone borders
+  protected (vertex group, invert) → project back onto the field → lamp/grille/intake recesses with walls. build_parts.py: gap lines as surface
+  ribbons, wheels (lathe tyre with grooves, five twin-spoke rim, disc, caliper), mirrors, handles, spoiler, aerial, slats, badge, plates, interior,
+  far LOD from a coarse field surface with cut zones; exports /tmp/mira.glb (LOD0 = Mira_Body + Mira_Parts, LOD1 = Mira_Far).
+  patch_normals.py writes exact field normals into the body (smooth shading on a light mesh). shoot.py + view/ render it in three.js.
+- Counts: near 26.8k body + 12.2k parts, far 3.9k. Game: cars/mira (car_opt 1 512 82). index.html TMODELS/loadTraffic() replaces FLO.lib.prop_tcar_a
+  (traffic and parked hatchbacks) before addKit; near model within 45 m on phones, 70 m otherwise. 'Paint' takes the instance colour; 'Glass' is
+  see-through. __camHold freezes the game camera for photo tests (tests/mira.py, mira2.py).
+- Next traffic sheets: 02 saloon, 03 SUV, 04 van, 05 taxi (saloon livery). Reuse the pipeline with new silhouettes and zones.
+
+## Traffic car 02: Vela family saloon (Nov 21) — sheet sent, awaiting approval
+- art/traffic_02_vela_design_sheet.jpg drawn by blender/traffic/sheet_saloon.py (imports helpers from sheet_mira.py).
+- 4,700 × 1,840 × 1,450, wheelbase 2,800, 17" 215/55, R 0.335, axles at 0.93 / 3.73 from the nose. Three-box, six-light glasshouse with
+  satin chrome DLO, sharp feature line through flush chrome handles, slim headlamps joined by a lit grille bar, full-width tail bar,
+  lip spoiler, ten-spoke two-tone alloy. Paints: slate blue, burgundy, moon silver, midnight, sandstone, pine green. Taxi 05 = Vela in livery.
+- After approval: vela_sdf.py / vela_zones.py on the Mira pipeline (build_body, build_parts), car_opt 1 512 82, replace prop_tcar_b in TMODELS.
+- APPROVED ("Continue", 21 Nov) and BUILT. blender/traffic: vela_sdf.py, vela_zones.py (zones, recess GROUPS, GAPS with explicit side, FUEL),
+  vela_parts.py (generic parts script: CAR env; ten-spoke two-tone wheels with lug nuts, flush chrome handles, slim lip spoiler, DRL strips,
+  slats + intake fins, V badge, chrome pipe trims, interior). build_body.py and patch_normals.py now take CAR=mira|vela (default mira).
+  Build: CAR=vela python3 build_body.py && CAR=vela FPRE=0.05 python3 vela_parts.py && CAR=vela python3 patch_normals.py /tmp/vela.glb /tmp/vela_n.glb
+  Far LOD (new method): field surface at 24 mm, pre-decimated evenly, cut along the zone curves, each piece labelled by the closest point
+  on the finished near body (BVH), so no saw-teeth where zone masks switch. Counts: body 32.7k, parts 15.4k, far 9.0k.
+  Game: car_opt 1 512 82 -> 0.58 MB, site/cars/vela.json + p0.wasm; index.html TMODELS adds prop_tcar_b: 'cars/vela' (old saloon kind).
+  Live artifact version 1795286482-5241. NOT yet in the GitHub repo/APK (push access was refused this session): copy
+  game/app/cars/vela.json + vela.p0.bin and the TMODELS line into KingAtdhe/aurelia-island.
+- Viewer shadows show dark slivers on the doors (shadow-map artefact, gone with ?ns=1); geometry is clean.
+- Next: traffic sheet 03 SUV (prop_tcar_d), then 04 van (tcar_c), 05 taxi = Vela + livery (tcar_e).
+
+## Traffic car fix pass (21 Nov, after Saba: "fix the cars, what is this?")
+- Both Vela and Mira rebuilt; live artifact 1795288530-f1d7 (cars/vela + cars/mira). APK copies in game/app/cars (repo push still not done).
+- Glass is single-sided (backface culling) and darker (alpha 0.74): no more hatching where both window layers overlapped. Interior darker,
+  Vela seats rounded (bevelled) in dark leather; rear headrests smaller. Headlamp housing dark smoked chrome instead of flat grey.
+- Mirrors: shaped housing (flat glass face, tapered tip) + glass + slim arm, on both cars. Plates carry printed text (AU · V3LA / AU · M1RA,
+  PlateText material with a packed PNG); game copy needs KEEPATTR=1 node car_opt.mjs ... (prune otherwise drops the plate UVs).
+- Vela light lines (headlamp DRL, tail bars, grille bar, reverse lamps, reflectors) are separate parts laid on the surface, not body zones:
+  clean edges instead of saw-teeth. Wheel flange no longer stands proud of the spokes.
+- Viewer (blender/traffic/view): soft shadows, views nose/wing/quarter, ?ns=1 no shadows, ?nsm=<mats> exclude materials from shadow casting.
+  The dark door patches in the first renders were the mirror's hard shadow, not geometry.
+- Known still: soft fold on the Vela rear quarter below the C-pillar; Mira body untouched (only materials, mirrors, plates).

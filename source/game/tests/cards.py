@@ -1,0 +1,7 @@
+pg.set_viewport_size({'width': 844, 'height': 390})
+pg.evaluate("localStorage.setItem('aurelia_qual','1'); localStorage.setItem('aurelia_mob','1'); localStorage.setItem('aurelia_tod','1')"); pg.reload(); pg.wait_for_function('window.__game !== undefined', timeout=400000); pg.wait_for_function('window.__detail === 1', timeout=500000)
+pg.click('button[data-mode="free"]'); time.sleep(5)
+pg.evaluate('''([n])=>{const R=__game.roads.find(r=>r.name===n);__game.placeCar(__game.roadPoint(R,Math.floor(R.n*0.35)))}''', ['Serpentine']); time.sleep(7); shot('cd_a')
+print('CU', pg.evaluate("__game.FLO.cardU.value"))
+pg.evaluate("__game.scene.traverse(o=>{if(o.isMesh&&o.material&&o.material.name==='TreeCards')o.visible=false})"); time.sleep(3); shot('cd_b')
+pg.evaluate("__game.scene.traverse(o=>{if(o.isMesh&&o.material&&o.material.name==='TreeCards')o.visible=true});__game.scene.traverse(o=>{if(o.material&&/Leaves/.test(o.material.name))o.visible=false})"); time.sleep(3); shot('cd_c')

@@ -830,7 +830,7 @@ function noFlip(m, wind, lift) { m.side = T3.DoubleSide; m.onBeforeCompile = sh 
       float fl = sin(uWind * 6.5 + dot(position, vec3(3.1, 2.3, 4.7))) * 0.035 * min(hg, 1.5);
       transformed.x += sw * 0.014 * hg * min(hg, 4.0) / 4.0 * 3.0 + fl; transformed.z += sw * 0.006 * hg + fl * 0.7; }`); }
   sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', 'vec3 normal = normalize( vNormal ); vec3 geometryNormal = normal;'); }; m.needsUpdate = true; }
-const TMODELS = { prop_tcar_a: 'cars/mira' }, TLIB = {};        // modelled traffic cars replace the old ones of the same kind
+const TMODELS = { prop_tcar_a: 'cars/mira', prop_tcar_b: 'cars/vela' }, TLIB = {};        // modelled traffic cars replace the old ones of the same kind
 function loadTraffic() {
   return Promise.all(Object.entries(TMODELS).map(([sp, f]) => Promise.resolve(window.MeshoptDecoder && window.MeshoptDecoder.ready).then(() => getBin(f))
     .then(buf => new Promise((res, rej) => { const L = new T3.GLTFLoader(); if (window.MeshoptDecoder) L.setMeshoptDecoder(window.MeshoptDecoder); L.parse(buf, '', res, rej); }))
