@@ -25,6 +25,13 @@
   #drift { left: 50%; top: 84px; transform: translateX(-50%); text-align: center; font-weight: 900; font-variant-numeric: tabular-nums; transition: opacity .25s; }
   #drift .pts { font-size: 34px; letter-spacing: .02em; } #drift .mul { font-size: 15px; color: #ffd23c; margin-left: 6px; } #drift .sub { font-size: 12px; font-weight: 700; opacity: .9; letter-spacing: .08em; }
   #drift.bank .pts { color: #7dff9a; } #drift.fail .pts { color: #ff5a4a; }
+  #garage { background: rgba(8,16,24,.97); justify-content: flex-start; z-index: 5; gap: 8px; padding-top: 12px; }
+  #garage .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: min(620px, 94vw); }
+  #garage .item { background: rgba(255,255,255,.08); border-radius: 10px; padding: 8px 10px; font-size: 13px; } #garage .item b { display: block; font-size: 14px; }
+  #garage .lv { display: flex; gap: 4px; margin: 5px 0; } #garage .lv i { flex: 1; height: 5px; border-radius: 3px; background: rgba(255,255,255,.18); } #garage .lv i.on { background: #ffd23c; }
+  #garage .item button { margin-top: 3px; padding: 6px 10px; font-size: 12px; } #garage .paints { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+  #garage .paints button { width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 2px solid rgba(255,255,255,.3); } #garage .paints button.on { border-color: #fff; box-shadow: 0 0 0 2px #ffd23c; }
+  #credits { font-weight: 800; color: #ffd23c; font-size: 15px; }
   #big { left: 50%; top: 38%; transform: translate(-50%,-50%); font-size: 90px; font-weight: 900; }
   #mini { position: absolute; left: 10px; top: 10px; width: 132px; height: 132px; border-radius: 14px; border: 2px solid rgba(255,255,255,.55); background: #1c5d78; }
   .tb { position: absolute; left: 150px; top: 10px; display: flex; gap: 6px; flex-wrap: wrap; max-width: 150px; }
@@ -40,7 +47,7 @@
   .menu button { padding: 14px; font-size: 17px; background: #1d6f8f; text-align: left; } .menu button small { display: block; font-weight: 500; opacity: .85; font-size: 12px; }
   .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
   #mapWrap { position: relative; width: min(94vw, calc((100vh - 96px) * 1.4286)); }
-  #mapOv { gap: 8px; padding: 8px; justify-content: flex-start; } #mapClose { position: absolute; top: 8px; right: 8px; z-index: 2; } #travel button { padding: 6px 10px; font-size: 12px; } #bigMap { width: 100%; border-radius: 12px; display: block; background: #1c5d78; }
+  #mapOv { gap: 8px; padding: 8px; justify-content: flex-start; } #mapClose, #gClose { position: absolute; top: 8px; right: 8px; z-index: 2; } #travel button { padding: 6px 10px; font-size: 12px; } #bigMap { width: 100%; border-radius: 12px; display: block; background: #1c5d78; }
   #load { font-size: 15px; }
   #note { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font-size: 11px; opacity: .7; pointer-events: none; white-space: nowrap; }
 </style>
@@ -69,15 +76,21 @@
     <p id="load">Loading the island…</p>
     <div class="menu" id="modes" hidden>
       <button type="button" id="bResume" hidden>Resume<small>Back to the road where you left it.</small></button>
+      <button type="button" id="bGarage">Garage<small id="gSub">Upgrades and paint for the Vortex.</small></button>
       <button type="button" data-mode="free">Free Roam<small>Drive anywhere and find every landmark.</small></button>
       <button type="button" data-mode="circuit">Circuit Time Trial<small>3 laps of the racing circuit. Beat your best lap.</small></button>
       <button type="button" data-mode="touge">Touge Drift<small>Drift down Summit Pass. Angle, speed and combos score.</small></button>
       <button type="button" data-mode="ring">Island Lap<small>One timed lap of the 10 km coastal ring highway.</small></button>
     </div>
     <div class="row" id="opts" hidden>
-      <button type="button" id="oQual">Graphics: Medium</button><button type="button" id="oSound">Sound: On</button><button type="button" id="oAuto">Auto gas: Off</button><button type="button" id="oTime">Time: Day</button><button type="button" id="oWet">Road: Auto</button><button type="button" id="oAssist">Steering assist: On</button>
+      <button type="button" id="oQual">Graphics: Medium</button><button type="button" id="oSound">Sound: On</button><button type="button" id="oAuto">Auto gas: Off</button><button type="button" id="oTime">Time: Day</button><button type="button" id="oWet">Road: Auto</button><button type="button" id="oAssist">Steering assist: On</button><button type="button" id="oSteer">Steering: Buttons</button>
     </div>
     <p id="help" hidden>Touch: arrows steer, right pedals for gas and brake, DRIFT for the handbrake. Keyboard: arrows or WASD, Space handbrake, R reset, C camera, M map.</p>
+  </div>
+  <div class="overlay" id="garage" hidden>
+    <h2 style="margin:0">Garage · Vortex</h2><div id="credits">0 credits</div>
+    <div class="grid" id="gGrid"></div>
+    <button type="button" id="gClose">Done</button>
   </div>
   <div class="overlay" id="mapOv" hidden>
     <div id="mapWrap"><canvas id="bigMap" width="1200" height="840"></canvas></div>
@@ -396,7 +409,7 @@ function fitCar(obj, noseNegZ) {            // a loaded model: scale to 4.6 m, n
   return g;
 }
 function loadCar(done) {
-  const use = g => { while (carBody.children.length) carBody.remove(carBody.children[0]); g.traverse(o => { if (o.isMesh) o.castShadow = true; }); carBody.add(g); done(); };
+  const use = g => { while (carBody.children.length) carBody.remove(carBody.children[0]); g.traverse(o => { if (o.isMesh) o.castShadow = true; }); carBody.add(g); try { applyUpgrades(); } catch (e) { } done(); };
   Promise.resolve(window.MeshoptDecoder && window.MeshoptDecoder.ready).then(() => getBin('cars/vortex')).then(buf => new Promise((res, rej) => { const L = new T3.GLTFLoader(); if (window.MeshoptDecoder) L.setMeshoptDecoder(window.MeshoptDecoder); L.parse(buf, '', res, rej); }))
     .then(g => { carName = 'Vortex'; use(fitCar(g.scene, true)); })
     .catch(() => getBin('cars/aurelia_gt').then(buf => new Promise((res, rej) => new T3.GLTFLoader().parse(buf, '', res, rej))).then(g => { carName = 'Aurelia GT'; use(fitCar(g.scene)); }))
@@ -437,7 +450,7 @@ const MU = { road: 1.0, dirt: 0.72, grass: 0.62, sand: 0.52, snow: 0.45 }, RRS =
 let steerAssist = store.get('assist', true);
 const latF = a => Math.sin(VEH.C * Math.atan(VEH.B * a)), latR = a => Math.sin(VEH.C * Math.atan(VEH.Br * a));        // rear tyres are stiffer and grippier: a stable, slightly understeering base
 const tyreAngle = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; if (a > Math.PI / 2) a -= Math.PI; else if (a < -Math.PI / 2) a += Math.PI; return a; };
-function torqueAt(rpm) { if (rpm >= VEH.red) return 0; const x = (rpm - 5900) / 4300; return 660 * Math.max(0.5, 1 - x * x * 0.85); }
+function torqueAt(rpm) { if (rpm >= VEH.red) return 0; const x = (rpm - 5900) / 4300; return 660 * (VEH.tq || 1) * Math.max(0.5, 1 - x * x * 0.85); }
 function drive(dt, G, fx, fz) {
   const V = VEH, L = V.a + V.b, g = 9.81, surf = G.surf in MU ? G.surf : 'grass', wet = typeof isWet === 'function' && isWet() && surf === 'road';
   const mu = V.mu * MU[surf] * (wet ? 0.8 : 1);
@@ -451,7 +464,7 @@ function drive(dt, G, fx, fz) {
     const spd = Math.hypot(vx, vy), beta = spd > 2 ? Math.atan2(vy, Math.abs(vx)) : 0, slide = spd > 4 ? clamp((Math.abs(car.ar) - 0.15) / 0.15, 0, 1) : 0;      // sliding = the rear tyres are past their grip peak
     // steering: speed-sensitive range for grip driving; while sliding the range opens up and (with the assist on) the wheels follow the
     // direction of travel, which is the counter-steer a driver holds in a drift
-    const lock = V.dmax + (0.87 - V.dmax) * slide;            // drift lock: up to 50 degrees of counter-steer while sliding
+    const lock = V.dmax + ((V.lockD || 0.87) - V.dmax) * slide;            // drift lock: up to 50 degrees of counter-steer while sliding
     const align = vx > 2 ? clamp(Math.atan2(vy + V.a * r, vx), -lock, lock) : 0;
     let range = Math.max(0.075, V.dmax / (1 + Math.pow(Math.max(vx, 0) / 12, 2) * 1.2));          // about 5 degrees at 100 km/h, 14 at 50, full lock when parking
     if (car.stIn * align > 0) range += (lock - range) * slide;                                     // the extra drift lock is for counter-steer only
@@ -496,7 +509,7 @@ function drive(dt, G, fx, fz) {
     // equations of motion in the body frame
     const Fx = Fxr + Fxf * cd - Fyf * sd - Fd, Fy = Fyr + Fyf * cd + Fxf * sd, Mz = V.a * (Fyf * cd + Fxf * sd) - V.b * Fyr;
     const ax = Fx / V.m - g * Math.sin(car.pitch) * 0.9, ay = Fy / V.m;
-    wx += (ffx * ax + ffz * ay) * h; wz += (ffz * ax - ffx * ay) * h; r += Mz / V.Iz * h; hd += r * h;            // integrate in the world frame, heading follows the yaw rate
+    wx += (ffx * ax + ffz * ay) * h; wz += (ffz * ax - ffx * ay) * h; r += Mz / (V.Iz * V.m / 1380) * h; hd += r * h;            // integrate in the world frame, heading follows the yaw rate
     if (vx < -0.3) { r *= Math.exp(-h * 3.5); const vxx = wx * ffx + wz * ffz, vyy = (wx * ffz - wz * ffx) * Math.exp(-h * 3); wx = ffx * vxx + ffz * vyy; wz = ffz * vxx - ffx * vyy; }      // reversing is directionally unstable; a driver keeps it straight without noticing
     if (spd < 1.2 && !thT) { const vxx = wx * ffx + wz * ffz; let vyy = wx * ffz - wz * ffx; vyy *= Math.exp(-h * 6); r *= Math.exp(-h * 6); const vk = Math.abs(vxx) < 0.15 && (brT || car.brk > 0.05) && !rev ? 0 : vxx; wx = ffx * vk + ffz * vyy; wz = ffz * vk - ffx * vyy; }       // standing still really stops
     car.axf += (ax - car.axf) * Math.min(1, h * 12); car.ayf += (ay - car.ayf) * Math.min(1, h * 12);
@@ -635,7 +648,7 @@ function startMode(m) {
   else { const ri = m === 'circuit' ? W.circuit.road : W.ring, r = roads[ri], st = m === 'circuit' ? W.circuit.start : 60, laps = m === 'circuit' ? 3 : 1;
     placeCar(roadPoint(r, st - 4)); race = { r, st, laps, idx: st - 4, prog: -4, lap: 1, t: 0, lapT: 0, best: store.get('best_' + m, null), last: null, state: 'count', count: 3.2, key: m, gap: m === 'circuit' ? 60 : 90, beacon: true, bx: 0, bz: 0 };
     car.frozen = true; $('race').hidden = false; }
-  $('menu').hidden = true; paused = false; started = true;
+  $('menu').hidden = true; paused = false; started = true; tiltZero = null;
   ['tb', 'speed', 'gearbar', 'region', 'padL', 'padR'].forEach(id => $(id).hidden = false); DS.reset();
 }
 function updateRace(dt) {
@@ -643,12 +656,12 @@ function updateRace(dt) {
   if (R.state === 'count') { R.count -= dt; const b = $('big'); b.hidden = false; b.textContent = R.count > 0.2 ? Math.ceil(R.count - 0.2) : 'GO'; if (R.count <= 0) { R.state = 'run'; car.frozen = false; setTimeout(() => { $('big').hidden = true; }, 600); } }
   if (R.state === 'run') { R.t += dt; R.lapT += dt;
     if (R.drift) { let bi = 0, bd = 55 * 55; for (let k = -3; k <= 36; k++) { const i = Math.min(n - 1, Math.max(0, R.idx + k)), d = (r.p[i * 3] - car.x) ** 2 + (r.p[i * 3 + 2] - car.z) ** 2; if (d < bd) { bd = d; bi = k; } } if (bi > 0) R.idx += bi;
-      if (R.idx >= n - 4) { DS.bank(); R.state = 'done'; const sc = DS.total; if (!R.best || sc > R.best) { R.best = sc; store.set('best_touge', sc); toast('New best run: ' + sc.toLocaleString(), 3.5); } const b = $('big'); b.hidden = false; b.style.fontSize = '40px'; b.textContent = 'FINISH ' + sc.toLocaleString(); setTimeout(() => { b.hidden = true; b.style.fontSize = ''; }, 4000); }
+      if (R.idx >= n - 4) { DS.bank(); R.state = 'done'; const sc = DS.total; earn(600 + sc / 12, 'touge run'); if (!R.best || sc > R.best) { R.best = sc; store.set('best_touge', sc); toast('New best run: ' + sc.toLocaleString(), 3.5); } const b = $('big'); b.hidden = false; b.style.fontSize = '40px'; b.textContent = 'FINISH ' + sc.toLocaleString(); setTimeout(() => { b.hidden = true; b.style.fontSize = ''; }, 4000); }
       $('race').textContent = 'Score ' + DS.total.toLocaleString() + '  ·  ' + Math.round(R.idx / n * 100) + '%' + (R.best ? '  ·  Best ' + R.best.toLocaleString() : ''); return; }
     let bi = -1, bd = 55 * 55; for (let k = -3; k <= 36; k++) { const i = (((R.idx + k) % n) + n) % n, d = (r.p[i * 3] - car.x) ** 2 + (r.p[i * 3 + 2] - car.z) ** 2; if (d < bd) { bd = d; bi = k; } }
     if (bi > 0) { R.idx += bi; R.prog += bi; }
-    if (R.prog >= R.lap * n) { R.last = R.lapT; if (!R.best || R.lapT < R.best) { R.best = R.lapT; store.set('best_' + R.key, R.best); toast('New best lap ' + fmt(R.lapT), 3); } else toast('Lap ' + fmt(R.lapT), 2.5);
-      R.lapT = 0; R.lap++; if (R.lap > R.laps) { R.state = 'done'; R.beacon = false; beacon.visible = false; const b = $('big'); b.hidden = false; b.style.fontSize = '44px'; b.textContent = 'FINISH ' + fmt(R.t); setTimeout(() => { b.hidden = true; b.style.fontSize = ''; }, 4000); } }
+    if (R.prog >= R.lap * n) { R.last = R.lapT; if (!R.best || R.lapT < R.best) { R.best = R.lapT; earn(400, 'best lap'); store.set('best_' + R.key, R.best); toast('New best lap ' + fmt(R.lapT), 3); } else toast('Lap ' + fmt(R.lapT), 2.5);
+      R.lapT = 0; R.lap++; if (R.lap > R.laps) { R.state = 'done'; earn(R.key === 'circuit' ? 1500 : 2500, 'race finished'); R.beacon = false; beacon.visible = false; const b = $('big'); b.hidden = false; b.style.fontSize = '44px'; b.textContent = 'FINISH ' + fmt(R.t); setTimeout(() => { b.hidden = true; b.style.fontSize = ''; }, 4000); } }
     const tgt = Math.min(Math.ceil((R.prog + 12) / R.gap) * R.gap, R.laps * n), p = roadPoint(r, R.st + tgt + 4 - 4);
     R.bx = r.p[((((R.st - 4 + tgt + 4) % n) + n) % n) * 3]; const bi2 = (((R.st + tgt) % n) + n) % n; R.bx = r.p[bi2 * 3]; R.bz = r.p[bi2 * 3 + 2]; beacon.position.set(R.bx, r.p[bi2 * 3 + 1] + 28, R.bz); beacon.visible = R.beacon; }
   if (R.drift) { if (R.state === 'count') $('race').textContent = 'Touge Drift  ·  drift to score' + (R.best ? '  ·  Best ' + R.best.toLocaleString() : ''); return; }
@@ -1196,12 +1209,54 @@ function updateLife(dt) {
 
 
 
+
+/* ---------------------------------------------------------------- progression: credits and the garage
+   Credits come from banked drifts (1 per 10 points), race finishes, best laps and landmarks. They buy upgrades that change the real
+   vehicle parameters (torque, tyre grip, steering lock, mass) and paint. Everything is saved on the device. */
+const VBASE = { m: VEH.m, mu: VEH.mu, tq: 1 }; VEH.tq = 1; VEH.lockD = 0.87;
+const PROG = Object.assign({ cr: 0, eng: 0, tyre: 0, kit: 0, wt: 0, paint: 0 }, store.get('prog', {}));
+const UPG = [
+  { k: 'eng', name: 'Engine', d: ['Stock', 'Stage 1 +8% torque', 'Stage 2 +16% torque', 'Stage 3 +25% torque'], cost: [4000, 9000, 18000] },
+  { k: 'tyre', name: 'Tyres', d: ['Street', 'Sport +4% grip', 'Semi-slick +8% grip'], cost: [5000, 12000] },
+  { k: 'kit', name: 'Drift kit', d: ['Stock lock (50°)', 'Angle kit (55°)', 'Pro angle kit (60°)'], cost: [6000, 14000] },
+  { k: 'wt', name: 'Weight', d: ['1380 kg', 'Light 1330 kg', 'Stripped 1280 kg'], cost: [5000, 11000] } ];
+const PAINTS = [['Factory red', 0xa2000d], ['Pearl white', 0xe8e8e4], ['Midnight', 0x0f1420], ['Racing green', 0x0b4a2a], ['Sunset orange', 0xe2560c], ['Electric blue', 0x0a4fd6], ['Gold', 0xc89a2a], ['Graphite', 0x3a3d42], ['Violet', 0x5a1a8a]];
+const PAINT_COST = 1500;
+function applyUpgrades() { VEH.tq = [1, 1.08, 1.16, 1.25][PROG.eng]; VEH.mu = VBASE.mu * [1, 1.04, 1.08][PROG.tyre]; VEH.lockD = [0.87, 0.96, 1.05][PROG.kit]; VEH.m = VBASE.m - [0, 50, 100][PROG.wt]; applyPaint(); }
+function applyPaint() { const c = new T3.Color(PAINTS[PROG.paint][1]).convertSRGBToLinear();
+  carBody.traverse(o => { if (!o.isMesh) return; for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (m && /^paint/i.test(m.name)) { if (m.userData.map0 === undefined) m.userData.map0 = m.map || null; m.map = PROG.paint === 0 ? m.userData.map0 : null; m.color.copy(PROG.paint === 0 ? new T3.Color(1, 1, 1) : c); m.needsUpdate = true; } }); }
+function saveProg() { store.set('prog', PROG); $('credits').textContent = PROG.cr.toLocaleString() + ' credits'; $('gSub').textContent = PROG.cr.toLocaleString() + ' credits · upgrades and paint'; }
+function earn(n, why) { n = Math.round(n); if (n <= 0) return; PROG.cr += n; saveProg(); toast('+' + n.toLocaleString() + ' credits' + (why ? '  ·  ' + why : ''), 2.4); }
+function drawGarage() { const g = $('gGrid'); g.innerHTML = '';
+  for (const u of UPG) { const lv = PROG[u.k], max = u.d.length - 1, el = document.createElement('div'); el.className = 'item';
+    el.innerHTML = '<b>' + u.name + '</b>' + u.d[lv] + '<div class="lv">' + u.d.map((_, i) => '<i class="' + (i <= lv ? 'on' : '') + '"></i>').join('') + '</div>';
+    if (lv < max) { const b = document.createElement('button'); b.type = 'button'; b.textContent = u.d[lv + 1].split(' ')[0] + ' ' + (u.d[lv + 1].split(' ')[1] || '') + ' · ' + u.cost[lv].toLocaleString(); b.disabled = PROG.cr < u.cost[lv];
+      b.onclick = () => { if (PROG.cr < u.cost[lv]) return; PROG.cr -= u.cost[lv]; PROG[u.k]++; applyUpgrades(); saveProg(); drawGarage(); }; el.appendChild(b); }
+    else el.insertAdjacentHTML('beforeend', '<small>Fully upgraded</small>'); g.appendChild(el); }
+  const p = document.createElement('div'); p.className = 'item'; p.style.gridColumn = '1 / -1'; p.innerHTML = '<b>Paint</b>' + PAINTS[PROG.paint][0] + (PROG.paint ? '' : '') + ' · new colour ' + PAINT_COST.toLocaleString() + ' credits';
+  const row = document.createElement('div'); row.className = 'paints';
+  PAINTS.forEach(([n, hex], i) => { const b = document.createElement('button'); b.type = 'button'; b.title = n; b.style.background = '#' + hex.toString(16).padStart(6, '0'); if (i === PROG.paint) b.className = 'on';
+    b.onclick = () => { if (i === PROG.paint) return; const owned = PROG.owned || (PROG.owned = [0]); if (!owned.includes(i)) { if (PROG.cr < PAINT_COST) { toast('Not enough credits', 1.6); return; } PROG.cr -= PAINT_COST; owned.push(i); } PROG.paint = i; applyPaint(); saveProg(); drawGarage(); };
+    row.appendChild(b); }); p.appendChild(row); g.appendChild(p); saveProg(); }
+$('bGarage').addEventListener('click', () => { drawGarage(); $('garage').hidden = false; $('menu').hidden = true; });
+$('gClose').addEventListener('click', () => { $('garage').hidden = true; $('menu').hidden = false; });
+saveProg();
+// steering by tilt: the phone is the wheel. Calibrated to the angle it is held at when tilt is switched on or a run starts.
+let steerMode = store.get('steerMode', 0), tiltZero = null, tiltRaw = 0;
+function steerLabel() { $('oSteer').textContent = 'Steering: ' + ['Buttons', 'Tilt', 'Tilt (reversed)'][steerMode]; const tilt = steerMode > 0; $('padL').style.visibility = tilt ? 'hidden' : ''; }
+window.addEventListener('deviceorientation', e => { const a = (screen.orientation && screen.orientation.angle) ?? window.orientation ?? 0; tiltRaw = a === 90 ? e.beta : (a === 270 || a === -90) ? -e.beta : e.gamma; if (tiltZero === null) tiltZero = tiltRaw; });
+function tiltSteer() { if (!steerMode || tiltRaw === null) return; const v = (tiltRaw - (tiltZero || 0)) * (steerMode === 2 ? -1 : 1), d = Math.abs(v) < 2 ? 0 : (v - Math.sign(v) * 2) / 22; inp.ax = clamp(d, -1, 1); }
+$('oSteer').addEventListener('click', () => { steerMode = (steerMode + 1) % 3; store.set('steerMode', steerMode); tiltZero = null;
+  if (steerMode && window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') DeviceOrientationEvent.requestPermission().catch(() => {});
+  if (!steerMode) inp.ax = undefined; steerLabel(); });
+steerLabel();
+
 /* ---------------------------------------------------------------- drift scoring
    Points flow while the car slides forward above 25 km/h at 12-100 degrees: rate = speed x angle factor x multiplier. The multiplier grows with
    a long drift and with drifts linked within 1.6 s (up to x5). Straightening out banks the points; a crash or a spin loses them. */
 const DS = { cur: 0, mul: 1, total: 0, t: 0, gap: 99, active: false, show: 0, msg: '', cls: '',
   reset() { this.cur = 0; this.mul = 1; this.total = 0; this.t = 0; this.gap = 99; this.active = false; this.show = 0; },
-  bank() { if (this.cur > 0) { const p = Math.round(this.cur); this.total += p; this.flash('+' + p.toLocaleString(), 'bank'); } this.cur = 0; this.mul = 1; this.t = 0; this.active = false; },
+  bank() { if (this.cur > 0) { const p = Math.round(this.cur); this.total += p; this.flash('+' + p.toLocaleString(), 'bank'); if (p >= 50) { PROG.cr += Math.round(p / 10); saveProg(); } } this.cur = 0; this.mul = 1; this.t = 0; this.active = false; },
   fail(why) { if (this.cur > 50) this.flash(why, 'fail'); this.cur = 0; this.mul = 1; this.t = 0; this.active = false; this.gap = 99; },
   flash(m, c) { this.msg = m; this.cls = c; this.show = 1.6; },
   update(dt) {
@@ -1261,12 +1316,12 @@ const PHYS_DT = 1 / 120; let physAcc = 0, rearSpin = 0, frameN = 0, last = perfo
 function frame(now) {
   requestAnimationFrame(frame);
   const rawMs = now - last, dt = Math.min(0.05, rawMs / 1000); last = now;
-  readPad();
+  readPad(); tiltSteer();
   if (!paused) {
     physAcc = Math.min(physAcc + dt, 0.1); let ns = 0; while (physAcc >= PHYS_DT && ns < 12) { physics(PHYS_DT); physAcc -= PHYS_DT; ns++; }     // fixed 120 Hz: the car behaves the same on every phone
     if (race) updateRace(dt); bumpT -= dt;
     regT -= dt; if (regT <= 0) { regT = 0.5; const rg = regionAt(car.x, car.z); if (rg !== curRegion) { curRegion = rg; $('region').textContent = rg; }
-      if (mode === 'free') for (const l of W.landmarks) if (!found[l.name] && (l.pos[0] - car.x) ** 2 + (l.pos[2] - car.z) ** 2 < 110 * 110) { found[l.name] = 1; store.set('found', found); toast('Discovered: ' + l.name + '  (' + Object.keys(found).length + '/' + W.landmarks.length + ')', 3.2); } }
+      if (mode === 'free') for (const l of W.landmarks) if (!found[l.name] && (l.pos[0] - car.x) ** 2 + (l.pos[2] - car.z) ** 2 < 110 * 110) { found[l.name] = 1; store.set('found', found); PROG.cr += 250; saveProg(); toast('+250 credits  ·  Discovered: ' + l.name + '  (' + Object.keys(found).length + '/' + W.landmarks.length + ')', 3.2); } }
     $('speed').firstChild.nodeValue = Math.round(car.speed * 3.6); DS.update(dt);
     $('gearN').textContent = (car.vf || 0) < -0.5 && inp.brake ? 'R' : car.gear + 1; $('rpmBar').style.width = Math.round(clamp((car.rpm - 800) / (VEH.red - 800), 0, 1) * 100) + '%';
   }
