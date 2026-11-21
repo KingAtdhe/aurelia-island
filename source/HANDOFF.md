@@ -215,3 +215,14 @@ curve Rw = hw + 1.3, Ht = 7) replaces portal_masonry (6 portals). Lookouts (isle
 - Viewer (blender/traffic/view): soft shadows, views nose/wing/quarter, ?ns=1 no shadows, ?nsm=<mats> exclude materials from shadow casting.
   The dark door patches in the first renders were the mirror's hard shadow, not geometry.
 - Known still: soft fold on the Vela rear quarter below the C-pillar; Mira body untouched (only materials, mirrors, plates).
+
+## Phone performance pass (21 Nov, after Saba's video: laggy)
+- Measured with tests in a mobile profile (aurelia_mob=1, Medium): draws per frame city 1045 -> 718, coast road 525 (+240 shadow) -> 352 (+91),
+  forest 428 -> 265; city triangles 1.6M -> 1.1M.
+- mergeCar(): the player car (sale-pack Vortex/Calder, ~190 meshes) is joined by material at load; wheels and steering pivots stay separate
+  (~31 meshes). Quantized attributes are de-normalised while merging.
+- Phones: tiny/solid props do not cast shadows below High; far grass layer only on High; bFar 0.9 x far, sFar 0.22 x far; at most 3 new
+  flora groups built per tick (re-check every 60 ms while some are pending) so new ground does not stall a frame; renderer.compile after
+  the detail map loads (no shader hitches on first sight).
+- Leaves (noFlip materials) dissolve within ~2-4.5 m of the camera: no screen-filling leaf cards when passing a tree.
+- Not changed: Vortex diffuser fins (long, read as spikes from the chase camera) - Saba's design, ask before shortening.
