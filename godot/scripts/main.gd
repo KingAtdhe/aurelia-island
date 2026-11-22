@@ -5,6 +5,7 @@ var cam: Camera3D
 var car: Car
 var roads = {}
 var shake = 0.0
+var menu: Menu; var menu_on = false; var orbit = 0.0
 var cam_pos = Vector3.ZERO; var cam_yaw = 0.0; var cam_mode = 0
 const CAMS = [[5.9, 2.05], [9.5, 3.6], [2.75, 0.62]]
 var hud: CanvasLayer; var speed_lbl: Label; var gear_lbl: Label
@@ -34,6 +35,8 @@ func _ready():
 	car.crashed.connect(func(): shake = 0.35)
 	spawn("Peninsula Road", 30)
 	make_hud()
+	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == ""
+	if menu_on or OS.get_environment("SHOTS") == "menu": open_menu()
 	if OS.get_environment("SHOTS") != "": run_shots()
 	if OS.get_environment("PERF") != "": perf_test()
 	if OS.get_environment("DRIVETEST") != "": drive_test()
@@ -67,6 +70,11 @@ func _process(dt):
 	if speed_lbl: speed_lbl.text = "%d" % int(car.speed * 3.6); gear_lbl.text = "R" if car.vf < -0.5 and car.in_brake > 0 else str(car.gear + 1)
 
 func update_camera(dt: float):          # port of the web chase camera: swings round the car, follows the slide in a drift
+	if menu_on:            # garage: slow orbit round the parked car, framed to the right of the panel
+		orbit += dt * 0.25; var c0 = Vector3(car.px, car.py, car.pz)
+		cam.position = c0 + Vector3(sin(orbit) * 7.0, 2.2, cos(orbit) * 7.0); cam.look_at(c0 + Vector3(0, 0.6, 0)); cam.h_offset = -1.6
+		return
+	cam.h_offset = 0.0
 	var fx = sin(car.hd); var fz = cos(car.hd); var sp = car.speed; var dist: float = CAMS[cam_mode][0]; var hgt: float = CAMS[cam_mode][1]
 	var c = Vector3(car.px, car.py, car.pz)
 	if cam_mode == 2:
@@ -108,11 +116,14 @@ func make_hud():
 	speed_lbl = Label.new(); speed_lbl.add_theme_font_size_override("font_size", 56); speed_lbl.position = Vector2(vs.x - 190, 20); hud.add_child(speed_lbl)
 	gear_lbl = Label.new(); gear_lbl.add_theme_font_size_override("font_size", 28); gear_lbl.position = Vector2(vs.x - 70, 40); hud.add_child(gear_lbl)
 	var cb = Button.new(); cb.text = "Cam"; cb.position = Vector2(20, 20); cb.add_theme_font_size_override("font_size", 24); cb.pressed.connect(func(): cam_mode = (cam_mode + 1) % 3); hud.add_child(cb)
+	var mb = Button.new(); mb.text = "Menu"; mb.position = Vector2(200, 20); mb.add_theme_font_size_override("font_size", 24); mb.pressed.connect(func(): open_menu()); hud.add_child(mb)
 	var rb = Button.new(); rb.text = "Reset"; rb.position = Vector2(100, 20); rb.add_theme_font_size_override("font_size", 24); rb.pressed.connect(func(): car.place(Vector3(car.safe.x, car.safe.y, car.safe.z), car.safe.w)); hud.add_child(rb)
 
 func run_shots():          # test: drive with full throttle and a few steering inputs, screenshot along the way
 	var plan = [[0.0, 1.0, 0.0, 2.5], [0.0, 1.0, 0.0, 3.0], [0.0, 1.0, 0.0, 3.0], [0.0, 1.0, 0.0, 3.0], [0.0, 1.0, 0.0, 3.0], [0.0, 0.0, 1.0, 1.0]]
 	if OS.get_environment("SHOTS") == "trees": plan = [[0.0, 0.0, 0.0, 1.0]]; car.place(Vector3(-1405, 58, 862), 0.9)
+	if OS.get_environment("CAR") != "": car.setup(OS.get_environment("CAR")); spawn("Peninsula Road", 30)
+	if OS.get_environment("SHOTS") == "menu": plan = [[0.0, 0.0, 0.0, 1.5]]
 	if OS.get_environment("SHOTS") == "car": plan = [[0.0, 0.0, 0.0, 1.0]]; cam_mode = 0; car.place(Vector3(-1405, 58, 862), 2.6)
 	var i = 0
 	for st in plan:
@@ -162,3 +173,11 @@ func perf_test():           # draw calls and triangles with each group switched 
 	var keys = by.keys(); keys.sort_custom(func(a, b): return by[a] > by[b])
 	for k in keys.slice(0, 12): print("FLORA %s ~%d tris (cells near)" % [k, by[k]])
 	get_tree().quit()
+
+func open_menu():
+	menu_on = true; hud.visible = false; touch = { left = false, right = false, gas = false, brake = false, hand = false }
+	menu = Menu.new(); add_child(menu)
+	menu.drive.connect(func(id):
+		if id.begins_with("preview:"): car.setup(id.substr(8)); spawn("Peninsula Road", 30); return
+		if car.car_id != id: car.setup(id); spawn("Peninsula Road", 30)
+		menu.queue_free(); menu = null; menu_on = false; hud.visible = true)

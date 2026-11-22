@@ -24,14 +24,27 @@ var coll: Coll
 var bump_t := 0.0
 var body: Node3D; var wheels = []; var wheel_spin = 0.0; var rear_spin = 0.0
 
-func _ready():
-	var s = load("res://assets/vortex.glb").instantiate()
-	body = Node3D.new(); add_child(body); body.add_child(s); s.rotation.y = PI          # model nose is -Z: turn it to face +Z, the heading direction
+const CARS = {
+	vortex = { name = "Vortex", file = "res://assets/vortex.glb", yaw = PI, axis = "x", sgn = -1.0, blurb = "Mid-engine hypercar. Light, sharp, drifts on command.",
+		veh = { m = 1380.0, Iz = 2350.0, a = 1.46, b = 1.26, h = 0.47, r = 0.345, gears = [3.20, 2.28, 1.74, 1.38, 1.12, 0.92], fd = 3.70, red = 8100.0, up = 7600.0, down = 3300.0, tqPeak = 660.0, tqRpm = 5900.0, cda = 0.40, dmax = 0.66 } },
+	calder = { name = "Calder GT", file = "res://assets/calder.glb", yaw = 0.0, axis = "z", sgn = -1.0, blurb = "Front-engine V8 grand tourer. Heavier, long and stable; big, slow drifts.",
+		veh = { m = 1650.0, Iz = 3550.0, a = 1.38, b = 1.49, h = 0.48, r = 0.35, gears = [3.00, 2.10, 1.60, 1.28, 1.03, 0.84], fd = 3.30, red = 7200.0, up = 6800.0, down = 3000.0, tqPeak = 640.0, tqRpm = 5200.0, cda = 0.38, dmax = 0.62 } } }
+var car_id = "vortex"; var spin_axis = "x"; var spin_sgn = -1.0
+
+func _ready(): setup(car_id)
+
+func setup(id: String):
+	car_id = id; var C = CARS[id]
+	for k in C.veh: V[k] = C.veh[k]
+	spin_axis = C.axis; spin_sgn = C.sgn; wheels = []
+	if body: body.queue_free()
+	var s = load(C.file).instantiate()
+	body = Node3D.new(); add_child(body); body.add_child(s); s.rotation.y = C.yaw          # every model turned to face +Z, the heading direction
 	for nm in ["Front_Left", "Front_Right", "Rear_Left", "Rear_Right"]:
 		var w: Node3D = s.find_child(nm, true, false)
 		if w: wheels.append({ n = w, steer = (w.get_parent() if w.get_parent().name.begins_with("Steer_") else null), front = nm.begins_with("Front") })
 	merge_body(s)
-	for mi in s.find_children("*", "MeshInstance3D", true, false):
+	for mi in s.find_children("BodyMerged", "MeshInstance3D", true, false):
 		for i in mi.mesh.get_surface_count():
 			var m = mi.mesh.surface_get_material(i)
 			if m is BaseMaterial3D and (m.resource_name in ["Glass", "Glass_Tint", "Lens_Clear", "Lens_Red"]):
@@ -166,7 +179,9 @@ func _physics_process(dt):
 	body.rotation = Vector3(-pitch, 0, roll)
 	wheel_spin += vf * dt; rear_spin += (vf + (16 * thr if spin else 0.0) - (vf if in_hand and abs(vf) > 1 else 0.0)) * dt
 	for w in wheels:
-		w.n.rotation.x = -(wheel_spin if w.front else rear_spin) / V.r
+		var a = spin_sgn * (wheel_spin if w.front else rear_spin) / V.r
+		if spin_axis == "x": w.n.rotation.x = a
+		else: w.n.rotation.z = a
 		if w.steer: w.steer.rotation.y = delta_
 
 func bump():
