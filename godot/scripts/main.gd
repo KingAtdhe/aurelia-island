@@ -38,6 +38,6 @@ func _ready():
 
 func _process(dt):          # until the car is in: a slow drive along the coast road
 	if path.size() < 4 or OS.get_environment("SHOTS") != "": return
-	t += dt * 3.0; var i := int(t) % (path.size() - 3); var f := t - floor(t)
+	t += dt * 3.0; var i: int = int(t) % (path.size() - 3); var f: float = t - floor(t)
 	var a: Vector3 = path[i].lerp(path[i + 1], f); var b: Vector3 = path[i + 2].lerp(path[i + 3], f)
 	cam.position = a + Vector3(0, 3.2, 0); cam.look_at(b + Vector3(0, 2.2, 0))
