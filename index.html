@@ -904,7 +904,52 @@ function loadTraffic() {
       g.scene.traverse(o => { const m = /^LOD([01])$/.exec(o.name); if (!m) return; const pr = []; o.traverse(c => { if (c.isMesh) pr.push(c); }); lib[m[1]] = pr; });
       for (const k in lib) for (const pm of lib[k]) { const m = pm.material; m.userData.envI = m.envMapIntensity = /Glass/.test(m.name) ? 1.4 : m.name === 'Paint' ? 0.8 : 1.0;
         if (m.name === 'Glass') { m.transparent = true; m.depthWrite = false; m.opacity = 0.62; pm.renderOrder = 2; } }
-      if (lib[0] && lib[1]) TLIB[sp] = lib; }).catch(e => console.warn('traffic model', f, e)))); }
+      if (lib[0] && lib[1]) TLIB[sp] = lib; }).catch(e => console.warn('traffic model', f, e)))).then(loadTProps); }
+const TPROPS = new Set();          // Saba's Tripo models (rocks, cliffs, buildings): textured and shaded in Blender, so no per-instance tint
+function loadTProps() {
+  return Promise.resolve(window.MeshoptDecoder && window.MeshoptDecoder.ready).then(() => getBin('props/tprops'))
+    .then(buf => new Promise((res, rej) => { const L = new T3.GLTFLoader(); if (window.MeshoptDecoder) L.setMeshoptDecoder(window.MeshoptDecoder); L.parse(buf, '', res, rej); }))
+    .then(g => { g.scene.updateMatrixWorld(true);
+      g.scene.traverse(o => { const m = /^T_(.+)_LOD([01])$/.exec(o.name); if (!m) return; const pr = []; o.traverse(c => { if (c.isMesh) pr.push(c); }); (TLIB[m[1]] = TLIB[m[1]] || {})[m[2]] = pr; TPROPS.add(m[1]); });
+      const seen = new Set(); g.scene.traverse(o => { if (!o.isMesh || seen.has(o.material)) return; const m = o.material; seen.add(m); m.envMapIntensity = 0.55; m.roughness = Math.max(m.roughness, 0.75); m.metalness = 0;
+        if (m.map) m.map.anisotropy = Math.min(4, MAXANI); if (m.normalMap) m.normalScale.set(0.8, 0.8); }); })
+    .catch(e => console.warn('tripo props', e)); }
+function tripoPlace(D) {           // coast road first: houses, café, barn, petrol stop, slabs and cliff faces beside Peninsula Road, Lighthouse Road and the west end of West Avenue
+  if (!TPROPS.size || D.tplaced) return; D.tplaced = 1; const I = D.instances, S = D.species, gq = { y: 0 }, put = [];
+  const add = (sp, x, y, z, s, ya) => { (I[sp] = I[sp] || []).push(x, y, z, s, ya, 0.91, 0.91, 0.91); if (!S[sp]) S[sp] = { height: 1, kind: 'prop', card: -1 }; put.push([x, z, sp]); };
+  if (I.prop_farmhouse && TPROPS.has('prop_house_t_village')) { I.prop_house_t_village = (I.prop_house_t_village || []).concat(I.prop_farmhouse); delete I.prop_farmhouse;
+    for (let i = 0; i < I.prop_house_t_village.length; i += 8) I.prop_house_t_village[i + 3] = 1; S.prop_house_t_village = { height: 8.5, kind: 'prop', card: -1 }; }
+  if (TPROPS.has('prop_house_t_light')) { const lm = W.landmarks.find(l => l.name === 'Lighthouse'); if (lm) { const ya = 0.96, ox = -1.5, x = lm.pos[0] - ox * Math.cos(ya), z = lm.pos[2] + ox * Math.sin(ya);
+    add('prop_house_t_light', x, ground(lm.pos[0], lm.pos[2], 1e4, gq).y - 0.15, z, 1, ya); const old = scene.getObjectByName('Landmark_Lighthouse'); if (old) old.visible = false; } }
+  let h = 0x9e3779b9; const rnd = () => { h = (h * 1664525 + 1013904223) >>> 0; return h / 4294967296; };
+  const busy = (x, z, r) => { for (const q of put) if (Math.hypot(q[0] - x, q[1] - z) < r + 9) return true;
+    for (const sp in I) { if (!/^prop_/.test(sp)) continue; const a = I[sp]; for (let i = 0; i < a.length; i += 8) if (Math.abs(a[i] - x) < r + 8 && Math.abs(a[i + 2] - z) < r + 8) return true; }
+    const c = obGrid.get(Math.floor(x / OG) + ',' + Math.floor(z / OG)); if (!c) return false;
+    for (const o of c.o) if (Math.hypot(o[0] - x, o[1] - z) < r + Math.hypot(o[2], o[3]) + 2) return true;
+    for (const o of c.c) if (Math.hypot(o[0] - x, o[1] - z) < r + o[2] + 2) return true; return false; };
+  const site = (x, z, r, flat) => { let lo = 1e9, hi = -1e9; for (let k = 0; k < 9; k++) { const a = k * 0.785, rr = k ? r : 0, px = x + Math.cos(a) * rr, pz = z + Math.sin(a) * rr, g = ground(px, pz, 1e4, gq);
+      if (g.water || g.surf === 'road' || g.surf === 'sand' || (g.rq && Math.abs(g.rq.d) < g.rq.road.hw + 2.5)) return null; lo = Math.min(lo, g.y); hi = Math.max(hi, g.y); }
+    return hi - lo < flat ? lo : null; };
+  const want = { prop_house_t_village: 7, prop_house_t_cafe: 2, prop_barn_hq: 1, prop_house_t_canopy_petrol: 1, rock_t_slab: 70, rock_t_cliff: 26 }, got = {};
+  const R = { prop_house_t_village: 6, prop_house_t_cafe: 5.5, prop_barn_hq: 9.5, prop_house_t_canopy_petrol: 8, rock_t_slab: 2, rock_t_cliff: 4.5 };
+  const ok = sp => TPROPS.has(sp) && (got[sp] || 0) < want[sp], why = {}; const no = k => { why[k] = (why[k] || 0) + 1; };
+  for (const r of roads) { const coast = /^(Peninsula Road|Lighthouse Road|West Avenue)$/.test(r.name) || r.name === 'Ring'; if (!coast) continue;
+    for (let i = 4; i < r.n - 4; i += 2) { const rp = roadPoint(r, i); if (regionAt(rp.x, rp.z) !== 'Coastal Highway' || r.wall[i]) continue;
+      const nx = Math.cos(rp.h), nz = -Math.sin(rp.h);          // across the road
+      for (const side of [-1, 1]) { const u = rnd();
+        let sp = u < 0.1 ? 'prop_house_t_village' : u < 0.13 ? 'prop_house_t_cafe' : u < 0.145 ? 'prop_barn_hq' : u < 0.155 ? 'prop_house_t_canopy_petrol' : u < 0.42 ? 'rock_t_slab' : 'rock_t_cliff';
+        if (!got.prop_house_t_canopy_petrol && u > 0.9) sp = 'prop_house_t_canopy_petrol'; else if (!got.prop_barn_hq && u > 0.85) sp = 'prop_barn_hq';
+        if (!ok(sp)) { no('full'); continue; } const bld = /^prop_/.test(sp), rad = R[sp], off = r.hw + rad + (bld ? 3 + rnd() * 4 : sp === 'rock_t_cliff' ? 6 + rnd() * 22 : 3 + rnd() * 18);
+        const x = rp.x + nx * side * off, z = rp.z + nz * side * off; if (busy(x, z, rad)) { no('busy'); continue; }
+        let y;
+        if (sp === 'rock_t_cliff') { const g0 = ground(x, z, 1e4, gq).y, g1 = ground(x + nx * side * 6, z + nz * side * 6, 1e4, gq).y, g2 = ground(x - nx * side * 6, z - nz * side * 6, 1e4, gq).y;
+          if (Math.abs(g1 - g2) < 5 || site(x, z, 0.5, 99) === null) { no('flat'); continue; } y = Math.min(g0, g1, g2) - 1.0; }
+        else { y = site(x, z, rad, bld ? 1.6 : 1.2); if (y === null) { no('site'); continue; } if (bld) y -= 0.12; else y -= 0.05; }
+        const face = Math.atan2(-nx * side, -nz * side), ya = bld ? face : sp === 'rock_t_cliff' ? face + (rnd() - 0.5) * 0.6 : rnd() * 6.283;
+        const s = bld ? 1 : sp === 'rock_t_cliff' ? 0.8 + rnd() * 0.6 : 0.6 + rnd() * 0.9;
+        add(sp, x, y, z, s, ya); got[sp] = (got[sp] || 0) + 1; } } }
+  console.log('tripo props placed', JSON.stringify(got), JSON.stringify(why));
+}
 function floraLib(g) {
   g.scene.updateMatrixWorld(true);
   g.scene.traverse(o => { const m = /^FLORA_(.+)_LOD([01])$/.exec(o.name); if (!m) return; const pr = []; o.traverse(c => { if (c.isMesh) pr.push(c); }); (FLO.lib[m[1]] = FLO.lib[m[1]] || {})[m[2]] = pr; }); Object.assign(FLO.lib, TLIB);
@@ -957,6 +1002,7 @@ function knock(o) {                  // a cone, post, bin or sign flies off: hid
   floraTick = 0;
 }
 function addKit(g) {               // street furniture and buildings arrive after the start: add them to the cells and rebuild the affected groups
+  try { tripoPlace(FLO.data); } catch (e) { console.warn('tripo place', e); }
   const before = new Set(Object.keys(FLO.lib)); floraLib(g); const only = new Set(Object.keys(FLO.lib).filter(k => !before.has(k))); floraAssign(FLO.data, only); floraColliders();
   for (const c of [...FLO.cells.values(), ...FLO.sup.values()]) for (const k of Object.keys(c.g)) if (/^(solid|bld|tiny)/.test(k)) { scene.remove(c.g[k]); FLO.want.delete(c.g[k]); delete c.g[k]; }
   floraTick = 0;
@@ -1005,9 +1051,9 @@ function mergedMat(m) { let mm = MERGEM.get(m); if (!mm) { mm = m.clone(); mm.ve
 function mergedGroup(c, grp, lod) {          // far buildings and props: every instance baked into one mesh per material (a dozen draws per block instead of hundreds)
   const G = new T3.Group(), data = FLO.data, B = new Map(), _n3 = new T3.Matrix3(), v = new T3.Vector3();
   for (const sp in c.it[grp]) { const L = FLO.lib[sp], prims = L[lod] || L[1 - lod], a = data.instances[sp], idx = c.it[grp][sp]; if (!prims) continue;
-    const isCar = /^prop_tcar/.test(sp);
+    const isCar = /^prop_tcar/.test(sp), tp = TPROPS.has(sp);
     for (const pm of prims) { const g = pm.geometry, P = g.attributes.position, N = g.attributes.normal, U = g.attributes.uv; if (!P || !N) continue;
-      const mat = isCar && pm.material.name === 'KitWindow' ? carGlass() : pm.material, tint = !isCar || pm.material.name === 'KitSmooth', key = mat.uuid + (U ? 'u' : '');
+      const mat = isCar && pm.material.name === 'KitWindow' ? carGlass() : pm.material, tint = !tp && (!isCar || pm.material.name === 'KitSmooth'), key = mat.uuid + (U ? 'u' : '');
       let b = B.get(key); if (!b) { b = { mat, P: [], N: [], U: U ? [] : null, C: [], I: [], n: 0 }; B.set(key, b); }
       const ix = g.index ? g.index.array : null, nv = P.count;
       for (const i of idx) { _q.setFromAxisAngle(_yAx, a[i + 4]); _p.set(a[i], a[i + 1], a[i + 2]); _s.setScalar(a[i + 3]); _m4.compose(_p, _q, _s).multiply(pm.matrixWorld); _n3.getNormalMatrix(_m4);
@@ -1024,8 +1070,8 @@ function floraGroup(c, grp, lod) {          // instanced meshes for one cell, ma
   const key = grp + lod; if (c.g[key]) return c.g[key]; const merge = grp === 'bld' || (lod === 1 && grp === 'solid'); const G = merge ? mergedGroup(c, grp, lod) : new T3.Group(), data = FLO.data;
   if (!merge)
   for (const sp in c.it[grp]) { const L = FLO.lib[sp], prims = L[lod] || L[1 - lod], a = data.instances[sp], idx = c.it[grp][sp]; if (!prims) continue;
-    const isCar = /^prop_tcar/.test(sp);
-    for (const pm of prims) { const im = new T3.InstancedMesh(pm.geometry, isCar && pm.material.name === 'KitWindow' ? carGlass() : pm.material, idx.length), tint = !isCar || pm.material.name === 'KitSmooth';
+    const isCar = /^prop_tcar/.test(sp), tp = TPROPS.has(sp);
+    for (const pm of prims) { const im = new T3.InstancedMesh(pm.geometry, isCar && pm.material.name === 'KitWindow' ? carGlass() : pm.material, idx.length), tint = !tp && (!isCar || pm.material.name === 'KitSmooth');
       idx.forEach((i, k) => { if (!tint) { _q.setFromAxisAngle(_yAx, a[i + 4]); _p.set(a[i], a[i + 1], a[i + 2]); _s.setScalar(a[i + 3]); im.setMatrixAt(k, _m4.compose(_p, _q, _s).multiply(pm.matrixWorld)); im.setColorAt(k, _col.setRGB(1, 1, 1)); return; } _q.setFromAxisAngle(_yAx, a[i + 4]); _p.set(a[i], a[i + 1], a[i + 2]); _s.setScalar(a[i + 3]); _m4.compose(_p, _q, _s).multiply(pm.matrixWorld); im.setMatrixAt(k, _m4); im.setColorAt(k, _col.setRGB(Math.min(1.25, a[i + 5] * 1.1), Math.min(1.25, a[i + 6] * 1.1), Math.min(1.25, a[i + 7] * 1.1))); });
       im.name = sp + ':' + grp + lod; im.frustumCulled = false; im.castShadow = lod === 0 && grp !== 'small' && !(MOBILE && qual < 2 && (grp === 'tiny' || grp === 'solid')); im.receiveShadow = grp !== 'small'; G.add(im); FLO.n += idx.length; } }
   const r = c.r || FLO.size * 0.71, yc = ((c.y0 ?? c.y ?? 0) + (c.y1 ?? c.y ?? 0)) / 2 + 8; G.userData.sph = new T3.Sphere(new T3.Vector3(c.x, yc, c.z), Math.hypot(r, ((c.y1 ?? 0) - (c.y0 ?? 0)) / 2 + 22) + 6);

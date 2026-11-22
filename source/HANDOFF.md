@@ -237,3 +237,16 @@ curve Rw = hw + 1.3, Ht = 7) replaces portal_masonry (6 portals). Lookouts (isle
 - r128 here has no output_fragment chunk: anchor on 'gl_FragColor = vec4( outgoingLight, diffuseColor.a );'.
 - Perf unchanged (phone Medium: city 721 draws, coast 363, forest 259). Live artifact 1795xxxxxx (see artifact history).
 - Not done / needs assets: dense close-up grass, hand-made rocks and ground textures, real-time car reflections (too expensive on phones).
+
+## Tripo props (22 Nov 2026)
+Saba made 12 models in Tripo (Smart Mesh, untextured FBX) and 47 textures in ChatGPT. Inspected all 12: clean (no doubles/loose),
+open shells; DO NOT recalc normals (flips open shells). Pipeline in source/tripo:
+- tlib.py: load FBX at real size; procedural per-part materials from the ChatGPT tiles (box projection); bake() decimates to the game
+  budget, smart-UVs, and bakes colour+AO+normal from the high mesh onto the low one (selected-to-active).
+- rocks.py (boulder, slab, stones, cliff, corner), bld.py (cafe, house, barn, lighthouse, petrol, bridge, pine) classify faces by island
+  size/position/normal into parts (`-- <name> debug` renders the part colours).
+- lods.py sets sizes and names T_<species>_LOD0; tprops_pack.mjs merges, makes LOD1 with meshopt simplify, textures 1024 colour / 512 normal.
+- Game: props/tprops (loadTProps after traffic cars). Replaces rock, rock_b, rock_c, prop_barn_hq and prop_farmhouse (moved to
+  prop_house_t_village), hides Landmark_Lighthouse for the new one, and tripoPlace() adds houses, cafe, barn, petrol canopy, slabs and
+  cliffs beside Peninsula Road / Lighthouse Road / West Avenue / Ring in the Coastal Highway region. No per-instance tint (TPROPS).
+- Not placed yet: the bridge (no free crossing) and the pine (Tripo gave it broad fan leaves, not needles).
