@@ -11,7 +11,8 @@ os.makedirs(OUT, exist_ok=True)
 def load(fname, height=None, scale=None):
     """Import a Tripo FBX, apply transforms, set real size (metres), base at z=0, centred."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    bpy.ops.import_scene.fbx(filepath=IN + fname + '.fbx')
+    import tlib as _t
+    bpy.ops.import_scene.fbx(filepath=_t.IN + fname + '.fbx')
     o = [o for o in bpy.data.objects if o.type == 'MESH'][0]
     for x in list(bpy.data.objects):
         if x != o:

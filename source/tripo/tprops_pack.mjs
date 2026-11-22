@@ -18,12 +18,12 @@ await doc.transform(weld({ tolerance: 0.0001 }));
 for (const n of root.listNodes()) { const m = /^T_(.+)_LOD0$/.exec(n.getName()); if (!m || !n.getMesh()) continue;
   const tgt = (n.getExtras() || {}).lod1 || 800, mesh = n.getMesh().clone(), n1 = doc.createNode('T_' + m[1] + '_LOD1').setMesh(mesh).setTranslation(n.getTranslation()).setRotation(n.getRotation()).setScale(n.getScale());
   scene.addChild(n1);
-  for (const p of mesh.listPrimitives()) { const tri = p.getIndices().getCount() / 3; simplifyPrimitive(p, { simplifier: MeshoptSimplifier, ratio: Math.min(1, tgt / tri), error: /^rock/.test(m[1]) ? 0.12 : 0.03, lockBorder: false });
+  for (const p of mesh.listPrimitives()) { const tri = p.getIndices().getCount() / 3; simplifyPrimitive(p, { simplifier: MeshoptSimplifier, ratio: Math.min(1, tgt / tri), error: /^rock/.test(m[1]) ? 0.12 : /^tree/.test(m[1]) ? 0.25 : 0.03, lockBorder: false });
     console.log(m[1], tri, '->', p.getIndices().getCount() / 3); } }
 // texture sizes: building colour 1024, rock colour 512, all normal maps 512
 for (const t of root.listTextures()) t.setName((t.getName() || '') + '');
 const big = new Set();
-for (const m of root.listMaterials()) { const bld = /prop_|rock/.test(m.getName()); const c = m.getBaseColorTexture(); if (c) c.setName(bld ? 'col_big' : 'col_small'); const n = m.getNormalTexture(); if (n) n.setName('nrm'); }
+for (const m of root.listMaterials()) { const bld = /prop_|rock|tree/.test(m.getName()); const c = m.getBaseColorTexture(); if (c) c.setName(bld ? 'col_big' : 'col_small'); const n = m.getNormalTexture(); if (n) n.setName('nrm'); }
 await doc.transform(dedup(), unpartition(), weld({ tolerance: 0.0001 }),
   textureCompress({ encoder: sharp, targetFormat: 'jpeg', resize: [1024, 1024], pattern: /^col_big/, quality: 84 }),
   textureCompress({ encoder: sharp, targetFormat: 'jpeg', resize: [512, 512], pattern: /^(col_small|nrm)/, quality: 84 }),

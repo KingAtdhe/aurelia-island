@@ -49,6 +49,7 @@ def debug_render(o, cls, name):
         sc.render.filepath = f'/home/claude/tripo/dbg_{name}_{k}.png'; bpy.ops.render.render(write_still=True)
 
 
+TREE_KW = {}
 LO = {'bld_cafe': 5200, 'bld_house': 5000, 'bld_barn': 5200, 'bld_lighthouse': 6500, 'bld_petrol': 5200, 'bld_bridge': 5000, 'tree_pine': 5000}
 def build(o, cls, recipes, name, res=2048, **kw):
     names = [k for k in recipes if k in set(cls)]
@@ -336,11 +337,49 @@ def pine_recipes():
         return m.out(col, rough=0.8, bump=0.4)
     return dict(bark=bark, needle=needle)
 
+
+def tree_generic(fn, height):
+    global IN_OVERRIDE
+    import tlib; tlib.IN = '/home/claude/tripo/in2/'
+    o = load(fn, height=height)
+    c, n, ar, fid, bmin, bmax, main, ia = ctx(o)
+    ext = bmax - bmin; es = np.sort(ext, 1); H = height
+    r = np.hypot(c[:, 0], c[:, 1])
+    cls = np.array(['leaf'] * len(c), dtype=object)
+    thin = (es[:, 1] < 0.03 * H) & (es[:, 2] > 0.2 * H)           # long thin branch islands
+    cls[per_island(fid, thin)] = 'bark'
+    tz = 0.1 if fn == 'tree_cypress' else 0.3
+    trunk = (c[:, 2] < tz * H) | ((r < 0.07 * H) & (c[:, 2] < 0.55 * H) & (fn != 'tree_cypress'))
+    cls[((fid == main) | (bmax[fid, 2] < 0.35 * H)) & trunk] = 'bark'
+    if fn == 'tree_pine2': cls[c[:, 2] < 0.45 * H] = 'bark'
+    return o, cls
+
+def tree_recipes(bark_img, leaf_img, base, tint=(1, 1, 1), bark_tile=(0.8, 0.8, 1.6)):
+    def bark():
+        m = M('bark'); return m.out(m.tex(bark_img, bark_tile, blend=0.4), bump=0.6)
+    def leaf():
+        m = M('leaf'); t = m.tex(leaf_img, 0.7, blend=0.5)
+        g = m.n.new('ShaderNodeRGBToBW'); m.l.new(t, g.inputs[0])
+        col = m.mix(m.ramp(g.outputs[0], 0.04, 0.16), m.rgb(base), m.tint(t, tint))
+        col = m.mix(m.ramp(m.noise(0.5), 0.35, 0.65), col, m.tint(col, (0.82, 0.92, 0.72)))
+        return m.out(col, rough=0.8, bump=0.35)
+    return lambda: dict(bark=bark, leaf=leaf)
+
+TREES = {
+  'pine2':   ('tree_pine2', 12, 'pine_bark', 'pine_needles', (0.09, 0.17, 0.07), (1.0, 1.05, 0.95), (0.8, 0.8, 1.6)),
+  'oak':     ('tree_oak', 10, 'oak_bark', 'oak_leaf', (0.08, 0.16, 0.06), (1.0, 1.0, 1.0), (0.9, 0.9, 1.5)),
+  'olive':   ('tree_olive', 5.5, 'oak_bark', 'olive_leaf', (0.16, 0.2, 0.15), (1.05, 1.08, 1.05), (0.7, 0.7, 1.0)),
+  'cypress': ('tree_cypress', 14, 'pine_bark', 'olive_leaf', (0.04, 0.1, 0.04), (0.55, 0.75, 0.5), (0.6, 0.6, 1.2)),
+}
 B = {'cafe': (cafe, cafe_recipes, 'bld_cafe'), 'house': (house, house_recipes, 'bld_house'), 'barn': (barn, barn_recipes, 'bld_barn'), 'lighthouse': (lighthouse, lighthouse_recipes, 'bld_lighthouse'), 'petrol': (petrol, petrol_recipes, 'bld_petrol'), 'bridge': (bridge, bridge_recipes, 'bld_bridge'), 'pine': (pine, pine_recipes, 'tree_pine')}
+if which in TREES:
+    t = TREES[which]; B[which] = (lambda t=t: tree_generic(t[0], t[1]), tree_recipes(*t[2:]), 'tree_' + which)
+    LO['tree_' + which] = 6500; TREE_KW.update(ao_strength=0.4, ao_dist=0.8)
 fn, rec, name = B[which]
 o, cls = fn()
 print('CLASSES', {k: int((cls == k).sum()) for k in set(cls)})
 if debug:
     debug_render(o, list(cls), which)
 else:
-    build(o, list(cls), rec(), name, res=2048, ao_dist=1.2, ao_samples=16)
+    kw = dict(ao_dist=1.2, ao_samples=16); kw.update(TREE_KW)
+    build(o, list(cls), rec(), name, res=2048, **kw)

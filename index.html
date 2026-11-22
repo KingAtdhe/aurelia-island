@@ -906,14 +906,16 @@ function loadTraffic() {
       for (const k in lib) for (const pm of lib[k]) { const m = pm.material; m.userData.envI = m.envMapIntensity = /Glass/.test(m.name) ? 1.4 : m.name === 'Paint' ? 0.8 : 1.0;
         if (m.name === 'Glass') { m.transparent = true; m.depthWrite = false; m.opacity = 0.62; pm.renderOrder = 2; } }
       if (lib[0] && lib[1]) TLIB[sp] = lib; }).catch(e => console.warn('traffic model', f, e)))).then(loadTProps); }
-const TPROPS = new Set();          // Saba's Tripo models (rocks, cliffs, buildings): textured and shaded in Blender, so no per-instance tint
+const TPROPS = new Set(), TTREE = { pine: 'tree_t_pine', oak: 'tree_t_oak', oak_b: 'tree_t_oak', plane: 'tree_t_oak', plane_b: 'tree_t_oak', fruit: 'tree_t_olive', cypress: 'tree_t_cypress' };          // Saba's Tripo models (rocks, cliffs, buildings): textured and shaded in Blender, so no per-instance tint
 function loadTProps() {
   return Promise.resolve(window.MeshoptDecoder && window.MeshoptDecoder.ready).then(() => getBin('props/tprops'))
     .then(buf => new Promise((res, rej) => { const L = new T3.GLTFLoader(); if (window.MeshoptDecoder) L.setMeshoptDecoder(window.MeshoptDecoder); L.parse(buf, '', res, rej); }))
     .then(g => { g.scene.updateMatrixWorld(true);
       g.scene.traverse(o => { const m = /^T_(.+)_LOD([01])$/.exec(o.name); if (!m) return; const pr = []; o.traverse(c => { if (c.isMesh) pr.push(c); }); (TLIB[m[1]] = TLIB[m[1]] || {})[m[2]] = pr; TPROPS.add(m[1]); });
+      for (const [old, nw] of Object.entries(TTREE)) if (TLIB[nw]) { TLIB[old] = TLIB[nw]; }          // Saba's trees replace the old ones of the same kind
       const seen = new Set(); g.scene.traverse(o => { if (!o.isMesh || seen.has(o.material)) return; const m = o.material; seen.add(m); m.envMapIntensity = 0.55; m.roughness = Math.max(m.roughness, 0.75); m.metalness = 0;
-        if (m.map) m.map.anisotropy = Math.min(4, MAXANI); if (m.normalMap) m.normalScale.set(0.8, 0.8); }); })
+        if (m.map) m.map.anisotropy = Math.min(4, MAXANI); if (m.normalMap) m.normalScale.set(0.8, 0.8);
+        if (/^T_tree/.test(m.name)) { m.color.setRGB(0.8, 0.82, 0.78); m.envMapIntensity = 0.35; m.side = T3.DoubleSide; } }); })
     .catch(e => console.warn('tripo props', e)); }
 /* ---------------------------------------------------------------- tunnels: dark tiled bores lit by rows of ceiling lamps, light pools on the road, eyes adjust inside */
 var TUN = { list: [], f: 0, base: null };
@@ -1066,7 +1068,7 @@ function knock(o) {                  // a cone, post, bin or sign flies off: hid
 function addKit(g) {               // street furniture and buildings arrive after the start: add them to the cells and rebuild the affected groups
   try { tripoPlace(FLO.data); } catch (e) { console.warn('tripo place', e); }
   const before = new Set(Object.keys(FLO.lib)); floraLib(g); for (const k of Object.keys(FLO.lib)) if (DROP.test(k)) delete FLO.lib[k]; const only = new Set(Object.keys(FLO.lib).filter(k => !before.has(k))); floraAssign(FLO.data, only); dropUgly(); floraColliders();
-  for (const c of [...FLO.cells.values(), ...FLO.sup.values()]) for (const k of Object.keys(c.g)) if (/^(solid|bld|tiny)/.test(k)) { scene.remove(c.g[k]); FLO.want.delete(c.g[k]); delete c.g[k]; }
+  for (const c of [...FLO.cells.values(), ...FLO.sup.values()]) for (const k of Object.keys(c.g)) if (/^(solid|bld|tiny|tree)/.test(k)) { scene.remove(c.g[k]); FLO.want.delete(c.g[k]); delete c.g[k]; }
   floraTick = 0;
 }
 function setupFlora(g, data) {

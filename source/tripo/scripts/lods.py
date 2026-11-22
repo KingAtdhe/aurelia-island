@@ -18,6 +18,10 @@ SPEC = {
     'prop_house_t_cafe':     ('bld_cafe', 'h', 5.4, 5000, 1600),
     'prop_house_t_light':    ('bld_lighthouse', 'h', 30.0, 6500, 2000),
     'prop_house_t_canopy_petrol': ('bld_petrol', 'h', 5.8, 5000, 1500),
+    'tree_t_pine':    ('tree_pine2', 'h', 17.0, 7000, 1400),
+    'tree_t_oak':     ('tree_oak', 'h', 13.0, 7000, 1400),
+    'tree_t_olive':   ('tree_olive', 'h', 6.5, 7000, 1400),
+    'tree_t_cypress': ('tree_cypress', 'h', 15.0, 7000, 1200),
 }
 which = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else list(SPEC)
 
@@ -36,7 +40,9 @@ for sp in which:
     c = np.array([(mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2, mn[2]])
     if sp.startswith('rock'):
         c[2] = mn[2] + 0.08 * ext[2]        # sink rocks a little so they sit in the ground
-    o.data.vertices.foreach_set('co', ((co - c) * s).ravel()); o.data.update()
+    nc = (co - c) * s
+    if sp.startswith('tree'): nc[:, 2] -= 0.35          # roots a little into the ground
+    o.data.vertices.foreach_set('co', nc.ravel()); o.data.update()
     tris = sum(len(p.vertices) - 2 for p in o.data.polygons)
     o.name = f'T_{sp}_LOD0'
     # LOD1 is made in the pack step (meshopt keeps texture seams)
