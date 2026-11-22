@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://wyc1ai1g6tkr"
-path="res://.godot/imported/flora_coast_tex_bark_rough.jpg-885221eaca579e09d0c52c2578655b33.ctex"
+path.s3tc="res://.godot/imported/flora_coast_tex_bark_rough.jpg-885221eaca579e09d0c52c2578655b33.s3tc.ctex"
+path.etc2="res://.godot/imported/flora_coast_tex_bark_rough.jpg-885221eaca579e09d0c52c2578655b33.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "b682e3af2fe0d421046b26cf3d780200"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/flora_coast_tex_bark_rough.jpg"
-dest_files=["res://.godot/imported/flora_coast_tex_bark_rough.jpg-885221eaca579e09d0c52c2578655b33.ctex"]
+dest_files=["res://.godot/imported/flora_coast_tex_bark_rough.jpg-885221eaca579e09d0c52c2578655b33.s3tc.ctex", "res://.godot/imported/flora_coast_tex_bark_rough.jpg-885221eaca579e09d0c52c2578655b33.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=1024
 detect_3d/compress_to=1

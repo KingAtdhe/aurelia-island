@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://hxvwb5mfqg4f"
-path="res://.godot/imported/coast_base_tex_photo_Rock051.jpg-b51886a1f39d0310a665d7560a84fbff.ctex"
+path.s3tc="res://.godot/imported/coast_base_tex_photo_Rock051.jpg-b51886a1f39d0310a665d7560a84fbff.s3tc.ctex"
+path.etc2="res://.godot/imported/coast_base_tex_photo_Rock051.jpg-b51886a1f39d0310a665d7560a84fbff.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "2371632f1f65ef977ecc7894a24e9ae5"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/map/coast_base_tex_photo_Rock051.jpg"
-dest_files=["res://.godot/imported/coast_base_tex_photo_Rock051.jpg-b51886a1f39d0310a665d7560a84fbff.ctex"]
+dest_files=["res://.godot/imported/coast_base_tex_photo_Rock051.jpg-b51886a1f39d0310a665d7560a84fbff.s3tc.ctex", "res://.godot/imported/coast_base_tex_photo_Rock051.jpg-b51886a1f39d0310a665d7560a84fbff.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=1024
 detect_3d/compress_to=1

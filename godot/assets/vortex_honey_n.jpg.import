@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bm1nghq4skpxy"
-path="res://.godot/imported/vortex_honey_n.jpg-4f083025b5e57c2596cd6096b9b099ad.ctex"
+path.s3tc="res://.godot/imported/vortex_honey_n.jpg-4f083025b5e57c2596cd6096b9b099ad.s3tc.ctex"
+path.etc2="res://.godot/imported/vortex_honey_n.jpg-4f083025b5e57c2596cd6096b9b099ad.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "50a905f2da8e77c08163a57284547a6c"
@@ -14,17 +16,17 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/vortex_honey_n.jpg"
-dest_files=["res://.godot/imported/vortex_honey_n.jpg-4f083025b5e57c2596cd6096b9b099ad.ctex"]
+dest_files=["res://.godot/imported/vortex_honey_n.jpg-4f083025b5e57c2596cd6096b9b099ad.s3tc.ctex", "res://.godot/imported/vortex_honey_n.jpg-4f083025b5e57c2596cd6096b9b099ad.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
-compress/normal_map=0
+compress/normal_map=1
 compress/channel_pack=0
 mipmaps/generate=true
 mipmaps/limit=-1
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=512
 detect_3d/compress_to=1

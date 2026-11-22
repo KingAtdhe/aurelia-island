@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dd6cjqihdnqhw"
-path="res://.godot/imported/vortex_display_e.jpg-4f14b5300332e8f01352bc06b8312f86.ctex"
+path.s3tc="res://.godot/imported/vortex_display_e.jpg-4f14b5300332e8f01352bc06b8312f86.s3tc.ctex"
+path.etc2="res://.godot/imported/vortex_display_e.jpg-4f14b5300332e8f01352bc06b8312f86.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "5ceb5ba5cd7cca7e4d073cf77bb5118d"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/vortex_display_e.jpg"
-dest_files=["res://.godot/imported/vortex_display_e.jpg-4f14b5300332e8f01352bc06b8312f86.ctex"]
+dest_files=["res://.godot/imported/vortex_display_e.jpg-4f14b5300332e8f01352bc06b8312f86.s3tc.ctex", "res://.godot/imported/vortex_display_e.jpg-4f14b5300332e8f01352bc06b8312f86.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=1024
 detect_3d/compress_to=1

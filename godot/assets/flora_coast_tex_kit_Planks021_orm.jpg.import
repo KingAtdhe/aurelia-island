@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://hkrjxebd1kvo"
-path="res://.godot/imported/flora_coast_tex_kit_Planks021_orm.jpg-aabb926ab20ce28eb1e746faa7eab931.ctex"
+path.s3tc="res://.godot/imported/flora_coast_tex_kit_Planks021_orm.jpg-aabb926ab20ce28eb1e746faa7eab931.s3tc.ctex"
+path.etc2="res://.godot/imported/flora_coast_tex_kit_Planks021_orm.jpg-aabb926ab20ce28eb1e746faa7eab931.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "425155de9beb5021bbad217211c8d27c"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/flora_coast_tex_kit_Planks021_orm.jpg"
-dest_files=["res://.godot/imported/flora_coast_tex_kit_Planks021_orm.jpg-aabb926ab20ce28eb1e746faa7eab931.ctex"]
+dest_files=["res://.godot/imported/flora_coast_tex_kit_Planks021_orm.jpg-aabb926ab20ce28eb1e746faa7eab931.s3tc.ctex", "res://.godot/imported/flora_coast_tex_kit_Planks021_orm.jpg-aabb926ab20ce28eb1e746faa7eab931.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=512
 detect_3d/compress_to=1

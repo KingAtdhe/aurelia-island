@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://vtxbhpuhjxi7"
-path="res://.godot/imported/flora_coast_tex_kit_Wood049.jpg-fd4a47e5047b5a58fde5a59ea6630d50.ctex"
+path.s3tc="res://.godot/imported/flora_coast_tex_kit_Wood049.jpg-fd4a47e5047b5a58fde5a59ea6630d50.s3tc.ctex"
+path.etc2="res://.godot/imported/flora_coast_tex_kit_Wood049.jpg-fd4a47e5047b5a58fde5a59ea6630d50.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "8d92bb8136ce951ddad5a2ec851b807a"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/flora_coast_tex_kit_Wood049.jpg"
-dest_files=["res://.godot/imported/flora_coast_tex_kit_Wood049.jpg-fd4a47e5047b5a58fde5a59ea6630d50.ctex"]
+dest_files=["res://.godot/imported/flora_coast_tex_kit_Wood049.jpg-fd4a47e5047b5a58fde5a59ea6630d50.s3tc.ctex", "res://.godot/imported/flora_coast_tex_kit_Wood049.jpg-fd4a47e5047b5a58fde5a59ea6630d50.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=1024
 detect_3d/compress_to=1
