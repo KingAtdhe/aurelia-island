@@ -40,6 +40,13 @@ static func conv(m: Material, has_col: bool) -> Material:
 			if nm in ["ContactAO", "RoadDecals", "Skids", "Puddles", "ShoreFoam", "Shallows", "Markings"]:
 				d.render_priority = 2
 			if nm == "TreeCards": d = null
+			elif nm.begins_with("Leaves") or d.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR or nm.begins_with("T_tree"):
+				d.cull_mode = BaseMaterial3D.CULL_DISABLED
+				if nm.begins_with("Leaves"):
+					d.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR; d.alpha_scissor_threshold = 0.4
+					d.vertex_color_use_as_albedo = false; d.albedo_color = Color(0.92, 0.95, 0.86)
+					d.backlight_enabled = true; d.backlight = Color(0.32, 0.4, 0.18); d.roughness = 0.95
+					d.emission_enabled = true; d.emission = Color(0.035, 0.05, 0.025)
 			out = d
 	_cache[key] = out
 	return out

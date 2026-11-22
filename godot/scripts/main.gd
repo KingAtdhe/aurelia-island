@@ -21,6 +21,7 @@ func _ready():
 		var s = load(f)
 		if s:
 			var n = s.instantiate(); add_child(n); Look.apply(n); colliders(n)
+	var fl = Flora.new(); add_child(fl); fl.build()
 	var sea = MeshInstance3D.new(); var pm = PlaneMesh.new(); pm.size = Vector2(6000, 6000); sea.mesh = pm
 	var wm = ShaderMaterial.new(); wm.shader = load("res://shaders/water.gdshader"); sea.material_override = wm; sea.position = Vector3(-1300, -0.25, 800); add_child(sea)
 	var w = JSON.parse_string(FileAccess.get_file_as_string("res://assets/world.json"))
@@ -103,7 +104,7 @@ func make_hud():
 	var rb = Button.new(); rb.text = "Reset"; rb.position = Vector2(100, 20); rb.add_theme_font_size_override("font_size", 24); rb.pressed.connect(func(): car.place(Vector3(car.safe.x, car.safe.y, car.safe.z), car.safe.w)); hud.add_child(rb)
 
 func run_shots():          # test: drive with full throttle and a few steering inputs, screenshot along the way
-	var plan = [[0.0, 1.0, 0.0, 2.0], [0.0, 1.0, 0.0, 3.0], [-1.0, 1.0, 0.0, 1.2], [0.0, 1.0, 0.0, 2.0], [1.0, 1.0, 0.0, 1.0], [0.0, 0.0, 1.0, 1.5]]
+	var plan = [[0.0, 1.0, 0.0, 2.0], [0.0, 1.0, 0.0, 3.0], [0.0, 1.0, 0.0, 2.0], [0.0, 1.0, 0.0, 2.0], [0.0, 0.0, 1.0, 2.0], [0.0, 0.0, 0.0, 0.5]]
 	var i = 0
 	for st in plan:
 		touch.left = st[0] < 0; touch.right = st[0] > 0; touch.gas = st[1] > 0; touch.brake = st[2] > 0

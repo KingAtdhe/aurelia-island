@@ -24,11 +24,11 @@ void fragment() {
 	float big = fbm(q * 0.021), mid = fbm(q * 0.29), fine = n2(q * 2.3);
 	vec3 base = COLOR.rgb;
 	if (grassy > 0.5) {
-		vec3 tint = mix(vec3(0.86, 1.04, 0.78), vec3(1.22, 1.1, 0.74), smoothstep(0.38, 0.72, big));
+		vec3 tint = mix(vec3(0.82, 0.9, 0.7), vec3(1.15, 1.02, 0.7), smoothstep(0.38, 0.72, big));
 		tint = mix(tint, vec3(1.1, 0.95, 0.78), smoothstep(0.66, 0.88, mid) * 0.6);
 		base *= tint;
 	}
-	ALBEDO = base * d * 2.1 * (0.9 + 0.2 * fine);
+	ALBEDO = base * d * 1.75 * (0.9 + 0.2 * fine);
 	NORMAL_MAP = texture(detail_n, q * tscale).rgb;
 	NORMAL_MAP_DEPTH = 0.8;
 	ROUGHNESS = rough; METALLIC = 0.0; SPECULAR = 0.3;
