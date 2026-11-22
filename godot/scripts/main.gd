@@ -18,7 +18,7 @@ func _ready():
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC; e.tonemap_exposure = 1.0; e.fog_enabled = true; e.fog_light_color = Color(0.72, 0.8, 0.88); e.fog_density = 0.0005; e.fog_sky_affect = 0.0
 	e.glow_enabled = true; e.glow_intensity = 0.4; e.glow_bloom = 0.05; e.glow_hdr_threshold = 1.2
 	env.environment = e; add_child(env)
-	var sun = DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-38, -35, 0); sun.light_energy = 1.35; sun.light_color = Color(1.0, 0.95, 0.86); sun.shadow_enabled = true; sun.directional_shadow_max_distance = 30; add_child(sun)
+	var sun = DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-38, -35, 0); sun.light_energy = 1.35; sun.light_color = Color(1.0, 0.95, 0.86); sun.shadow_enabled = true; sun.directional_shadow_max_distance = 30; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL; add_child(sun)
 	for f in ["res://assets/map/coast_base.glb", "res://assets/map/coast_detail.glb"]:
 		var s = load(f)
 		if s:
@@ -35,6 +35,7 @@ func _ready():
 	spawn("Peninsula Road", 30)
 	make_hud()
 	if OS.get_environment("SHOTS") != "": run_shots()
+	if OS.get_environment("PERF") != "": perf_test()
 	if OS.get_environment("DRIVETEST") != "": drive_test()
 
 func spawn(road: String, i: int):
@@ -112,11 +113,13 @@ func make_hud():
 func run_shots():          # test: drive with full throttle and a few steering inputs, screenshot along the way
 	var plan = [[0.0, 1.0, 0.0, 2.5], [0.0, 1.0, 0.0, 3.0], [0.0, 1.0, 0.0, 3.0], [0.0, 1.0, 0.0, 3.0], [0.0, 1.0, 0.0, 3.0], [0.0, 0.0, 1.0, 1.0]]
 	if OS.get_environment("SHOTS") == "trees": plan = [[0.0, 0.0, 0.0, 1.0]]; car.place(Vector3(-1405, 58, 862), 0.9)
+	if OS.get_environment("SHOTS") == "car": plan = [[0.0, 0.0, 0.0, 1.0]]; cam_mode = 0; car.place(Vector3(-1405, 58, 862), 2.6)
 	var i = 0
 	for st in plan:
 		touch.left = st[0] < 0; touch.right = st[0] > 0; touch.gas = st[1] > 0; touch.brake = st[2] > 0
 		await get_tree().create_timer(st[3]).timeout
 		await RenderingServer.frame_post_draw
+		print("PERF draws %d prims %d objects %d vram %.0f MB" % [Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME), Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0])
 		get_viewport().get_texture().get_image().save_png("/tmp/gd_shot_%d.png" % i); print("SHOT %d pos %s speed %d gear %d surf %s" % [i, Vector3(car.px, car.py, car.pz), int(car.speed * 3.6), car.gear + 1, car.surf]); i += 1
 	get_tree().quit()
 
@@ -134,4 +137,28 @@ func drive_test():          # headless: physics only, prints the state
 		if k == 11: touch.left = false; touch.hand = true
 		if k == 13: touch.hand = false
 		print("T %.1f pos (%.1f %.1f %.1f) v (%.2f %.2f) speed %.1f kmh gear %d rpm %d surf %s air %s beta %.2f" % [k * 0.5, car.px, car.py, car.pz, car.vx, car.vz, car.speed * 3.6, car.gear + 1, car.rpm, car.surf, car.air, car.beta])
+	get_tree().quit()
+
+func perf_test():           # draw calls and triangles with each group switched off in turn
+	await get_tree().create_timer(1.5).timeout
+	var groups = { all = [], no_flora = [], no_map = [] }
+	for c in get_children():
+		if c is Flora: groups.no_flora.append(c)
+		elif c.get_class() == "Node3D" and c != car and not (c is Flora): groups.no_map.append(c)
+	for g in ["all", "no_flora", "no_map"]:
+		for n in groups[g]: n.visible = false
+		for k in 3: await RenderingServer.frame_post_draw
+		print("PERF %s draws %d prims %d" % [g, Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)])
+		for n in groups[g]: n.visible = true
+	var fl: Flora = null
+	for c in get_children(): if c is Flora: fl = c
+	var by := {}
+	for m in fl.get_children():
+		if m is MultiMeshInstance3D and m.visible:
+			var d = m.global_position.distance_to(car.global_position)
+			var key = m.get_meta("sp", "?") + ("_0" if m.visibility_range_begin == 0 else "_1")
+			var inside = (d >= m.visibility_range_begin - 200) and (m.visibility_range_end == 0 or d <= m.visibility_range_end + 200)
+			if inside: by[key] = by.get(key, 0) + m.multimesh.instance_count * m.multimesh.mesh.get_faces().size() / 3
+	var keys = by.keys(); keys.sort_custom(func(a, b): return by[a] > by[b])
+	for k in keys.slice(0, 12): print("FLORA %s ~%d tris (cells near)" % [k, by[k]])
 	get_tree().quit()

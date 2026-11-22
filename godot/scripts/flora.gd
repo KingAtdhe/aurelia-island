@@ -31,8 +31,12 @@ func build():
 			if not cells.has(key): cells[key] = []
 			cells[key].append(Transform3D(Basis(Vector3.UP, a[i + 4]).scaled(Vector3.ONE * a[i + 3]), Vector3(a[i], a[i + 1], a[i + 2])))
 		var small = sp.begins_with("grass") or sp.begins_with("flowers")
-		var big = sp.begins_with("prop_house") or sp.begins_with("prop_barn") or sp.begins_with("rock_t") or sp.begins_with("tree") or TT.has(sp) or sp.begins_with("spruce") or sp.begins_with("palm")
-		var r0 = 55.0 if small else (140.0 if big else 90.0); var r1 = 0.0 if small else (900.0 if big else 450.0)
+		var tree = TT.has(sp) or sp.begins_with("tree") or sp.begins_with("spruce") or sp.begins_with("palm")
+		var bld = sp.begins_with("prop_house") or sp.begins_with("prop_barn") or sp.begins_with("rock_t")
+		var r0 = 50.0; var r1 = 0.0                      # near version up to r0, far version up to r1 (0 = none)
+		if tree: r0 = 60.0; r1 = 380.0
+		elif bld: r0 = 120.0; r1 = 900.0
+		elif not small: r0 = 70.0; r1 = 300.0
 		for key in cells:
 			var xs: Array = cells[key]; n_inst += xs.size()
 			for lod in [0, 1]:

@@ -30,6 +30,7 @@ func _ready():
 	for nm in ["Front_Left", "Front_Right", "Rear_Left", "Rear_Right"]:
 		var w: Node3D = s.find_child(nm, true, false)
 		if w: wheels.append({ n = w, steer = (w.get_parent() if w.get_parent().name.begins_with("Steer_") else null), front = nm.begins_with("Front") })
+	merge_body(s)
 	for mi in s.find_children("*", "MeshInstance3D", true, false):
 		for i in mi.mesh.get_surface_count():
 			var m = mi.mesh.surface_get_material(i)
@@ -170,3 +171,35 @@ func _physics_process(dt):
 
 func bump():
 	if bump_t <= 0: bump_t = 0.8; crashed.emit()
+
+# one mesh per material for everything that does not move: about 60 parts become a dozen draw calls
+func merge_body(root: Node3D):
+	var moving := {}
+	for w in wheels:
+		moving[w.n] = true
+		if w.steer: moving[w.steer] = true
+	var sw = root.find_child("Steering_Wheel", true, false)
+	if sw: moving[sw] = true
+	var tools := {}; var mats := {}
+	var inv = root.global_transform.affine_inverse()
+	for mi in root.find_children("*", "MeshInstance3D", true, false):
+		var skip = false; var p: Node = mi
+		while p and p != root:
+			if moving.has(p): skip = true; break
+			p = p.get_parent()
+		if skip: continue
+		var xf = inv * mi.global_transform
+		for i in mi.mesh.get_surface_count():
+			var m = mi.get_surface_override_material(i)
+			if m == null: m = mi.mesh.surface_get_material(i)
+			var key = m.get_instance_id() if m else 0
+			if not tools.has(key):
+				var st = SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES); tools[key] = st; mats[key] = m
+			tools[key].append_from(mi.mesh, i, xf)
+		mi.queue_free()
+	var am = ArrayMesh.new()
+	for key in tools:
+		am = tools[key].commit(am)
+		am.surface_set_material(am.get_surface_count() - 1, mats[key])
+	var out = MeshInstance3D.new(); out.mesh = am; out.name = "BodyMerged"; root.add_child(out)
+	print("car merged into %d surfaces" % am.get_surface_count())
