@@ -968,6 +968,14 @@ function tunnelLight(dt) {          // how far inside a bore the camera is: the 
   sun.intensity = TUN.base.sun * (1 - 0.88 * k); hemi.intensity = TUN.base.hemi * (1 - 0.55 * k); bounce.intensity = TUN.base.bounce * (1 - 0.8 * k);
   renderer.toneMappingExposure = TUN.base.exp * (1 - 0.18 * k);
 }
+const DROP = /^(prop_(cottage|cottage_b|village_row|silos|warehouse|hay_shed|hut_red|hut_blue|winery_hq|container|jetty|sail_yacht|motor_yacht|person_\d|tcar_[cde]|shop_.*)|sandstone_spire)$/;
+function dropUgly() {               // objects that look broken or boxy next to the Tripo models are taken out, with their colliders
+  const D = FLO.data; if (!D || D.dropped) return; D.dropped = 1; const gone = new Set(Object.keys(D.instances).filter(k => DROP.test(k)));
+  for (const k of gone) { delete D.instances[k]; delete FLO.lib[k]; }
+  for (const c of [...FLO.cells.values(), ...FLO.sup.values()]) for (const g in c.it) for (const k of gone) if (c.it[g][k]) { delete c.it[g][k]; for (const key of Object.keys(c.g)) if (key.startsWith(g)) { scene.remove(c.g[key]); FLO.want.delete(c.g[key]); delete c.g[key]; } }
+  for (const a of obGrid.values()) for (const kind of ['o', 'c', 'k']) if (a[kind]) a[kind] = a[kind].filter(o => !(gone.has(o.sp) || gone.has(o[3])));
+  console.log('dropped', gone.size, 'kinds');
+}
 function tripoPlace(D) {           // coast road first: houses, café, barn, petrol stop, slabs and cliff faces beside Peninsula Road, Lighthouse Road and the west end of West Avenue
   if (!TPROPS.size || D.tplaced) return; D.tplaced = 1; const I = D.instances, S = D.species, gq = { y: 0 }, put = [];
   const add = (sp, x, y, z, s, ya) => { (I[sp] = I[sp] || []).push(x, y, z, s, ya, 0.91, 0.91, 0.91); if (!S[sp]) S[sp] = { height: 1, kind: 'prop', card: -1 }; put.push([x, z, sp]); };
@@ -1057,7 +1065,7 @@ function knock(o) {                  // a cone, post, bin or sign flies off: hid
 }
 function addKit(g) {               // street furniture and buildings arrive after the start: add them to the cells and rebuild the affected groups
   try { tripoPlace(FLO.data); } catch (e) { console.warn('tripo place', e); }
-  const before = new Set(Object.keys(FLO.lib)); floraLib(g); const only = new Set(Object.keys(FLO.lib).filter(k => !before.has(k))); floraAssign(FLO.data, only); floraColliders();
+  const before = new Set(Object.keys(FLO.lib)); floraLib(g); for (const k of Object.keys(FLO.lib)) if (DROP.test(k)) delete FLO.lib[k]; const only = new Set(Object.keys(FLO.lib).filter(k => !before.has(k))); floraAssign(FLO.data, only); dropUgly(); floraColliders();
   for (const c of [...FLO.cells.values(), ...FLO.sup.values()]) for (const k of Object.keys(c.g)) if (/^(solid|bld|tiny)/.test(k)) { scene.remove(c.g[k]); FLO.want.delete(c.g[k]); delete c.g[k]; }
   floraTick = 0;
 }
