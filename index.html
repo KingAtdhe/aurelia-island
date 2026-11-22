@@ -1205,6 +1205,31 @@ function warmUp(prog) {           // send every texture to the GPU a few per fra
   const list = [...tex], n = list.length || 1; let i = 0;
   return new Promise(res => { const step = () => { const t0 = performance.now(); while (i < list.length && performance.now() - t0 < 12) { try { renderer.initTexture ? renderer.initTexture(list[i]) : 0; } catch (e) {} i++; }
       prog(i / n * 0.7); if (i < list.length) requestAnimationFrame(step); else requestAnimationFrame(() => { try { renderer.compile(scene, camera); } catch (e) {} prog(1); res(); }); }; step(); }); }
+function roadLook(m, kind) {          // asphalt and shoulders: large-scale wear, repairs, dust and a second sample that hides the tiling
+  if (m.userData.rl) return; m.userData.rl = 1; const prev = m.onBeforeCompile;
+  m.onBeforeCompile = (sh, rr) => { if (prev) prev(sh, rr);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vRW;').replace('#include <fog_vertex>', '#include <fog_vertex>\n vRW = (modelMatrix * vec4(transformed, 1.0)).xz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+      varying vec2 vRW; float rh(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float rn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(rh(i), rh(i + vec2(1, 0)), f.x), mix(rh(i + vec2(0, 1)), rh(i + vec2(1, 1)), f.x), f.y); }
+      float rf(vec2 p) { return rn(p) * 0.55 + rn(p * 2.3 + 7.1) * 0.3 + rn(p * 5.7 + 3.3) * 0.15; }
+      float uRK;`).replace('#include <map_fragment>', `#include <map_fragment>
+      { float big = rf(vRW * 0.02), mid = rf(vRW * 0.11), fine = rn(vRW * 2.3);
+        ${kind === 'asphalt' ? `
+        vec3 base = diffuseColor.rgb;
+        diffuseColor.rgb = base * mix(0.55, 1.35, big);                                       // sun-faded and darker stretches every 30-60 m
+        float tar = smoothstep(0.58, 0.6, rf(vRW * 0.09 + 13.0)) * smoothstep(0.35, 0.55, rn(vRW * 0.03 + 5.0));   // fresh tar patches
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.05, 0.05, 0.06), tar * 0.9);
+        float crack = smoothstep(0.03, 0.0, abs(rn(vRW * 0.6) - 0.5)) * smoothstep(0.45, 0.65, mid);   // thin dark cracks where it is worn
+        diffuseColor.rgb *= 1.0 - 0.55 * crack;
+        float dust = smoothstep(0.45, 0.8, mid) * 0.35;                                       // dust blown over the surface
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.55, 0.5, 0.42), dust);
+        diffuseColor.rgb *= 0.86 + 0.28 * fine;
+        uRK = 1.0 + 0.2 * (big - 0.5) - 0.3 * tar;` : `
+        diffuseColor.rgb *= 0.7 + 0.6 * big;
+        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.12, 1.0, 0.8), smoothstep(0.4, 0.8, mid) * 0.6);
+        diffuseColor.rgb *= 0.88 + 0.24 * fine; uRK = 1.0;`} }`).replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n roughnessFactor = clamp(roughnessFactor * uRK, 0.04, 1.0);'); };
+  m.customProgramCacheKey = () => 'road-' + kind + (m.userData.wetm ? '-w' : ''); m.needsUpdate = true; }
 function setupMap(g, detail) {
   const root = g.scene; scene.add(root); root.updateMatrixWorld(true); const fac0 = FAC.length;
   root.traverse(o => { if (!o.isMesh) return; const m = o.material, nm = m.name || '';
@@ -1212,7 +1237,8 @@ function setupMap(g, detail) {
     if (nm === 'Water') { m.transparent = true; m.opacity = 0.86; m.depthWrite = false; m.roughness = 0.06; m.metalness = 0.35; m.envMapIntensity = 1.2; o.renderOrder = 2; }
     if (nm === 'Waterfall') { m.transparent = true; m.depthWrite = false; if (m.map) { m.map.wrapS = m.map.wrapT = T3.RepeatWrapping; if (falls.indexOf(m.map) < 0) falls.push(m.map); } o.renderOrder = 3; }
     if (m.map && /Asphalt|Terrain|Facade/.test(nm)) m.map.anisotropy = 4;
-    if (/Asphalt/.test(nm) && !m.userData.gloss) { m.userData.gloss = 1; m.roughness = 0.84; m.envMapIntensity = 1.15; }        // a little sheen so the sky shows on the road at low angles
+    if (/Asphalt/.test(nm)) roadLook(m, 'asphalt'); if (nm === 'Shoulder') roadLook(m, 'shoulder');
+    if (/Asphalt/.test(nm) && !m.userData.gloss) { m.userData.gloss = 1; m.roughness = 0.88; m.envMapIntensity = 0.7; }        // a little sheen so the sky shows on the road at low angles
     if ((/Asphalt/.test(nm) || nm === 'Setts') && !m.userData.wetm) { m.userData.wetm = 1; ROADM.push(m); m.userData.dry = { r: m.roughness, e: m.envMapIntensity, c: m.color.clone() };   // wet roads: marked in alpha for the reflection pass
       const prev = m.onBeforeCompile; m.onBeforeCompile = (sh, rr) => { if (prev) prev(sh, rr); sh.fragmentShader = sh.fragmentShader.replace('#include <dithering_fragment>', '#include <dithering_fragment>\n gl_FragColor.a = 0.25;'); }; m.needsUpdate = true; applyWet(); }
     if (nm === 'TougeLattice') { m.transparent = false; m.alphaTest = 0.5; m.side = T3.DoubleSide; m.roughness = 0.9; m.envMapIntensity = 0.5; }   // art sheet 11: concrete lattice over the cut slopes
