@@ -4,6 +4,7 @@ extends Node3D
 var cam: Camera3D
 var car: Car
 var roads = {}
+var shake = 0.0
 var cam_pos = Vector3.ZERO; var cam_yaw = 0.0; var cam_mode = 0
 const CAMS = [[5.9, 2.05], [9.5, 3.6], [2.75, 0.62]]
 var hud: CanvasLayer; var speed_lbl: Label; var gear_lbl: Label
@@ -11,12 +12,13 @@ var touch = { left = false, right = false, gas = false, brake = false, hand = fa
 
 func _ready():
 	var env = WorldEnvironment.new(); var e = Environment.new()
-	e.background_mode = Environment.BG_SKY; e.sky = Sky.new(); var sm = ProceduralSkyMaterial.new()
-	sm.sky_top_color = Color(0.24, 0.44, 0.78); sm.sky_horizon_color = Color(0.66, 0.76, 0.86); sm.ground_horizon_color = Color(0.66, 0.76, 0.86); sm.sun_angle_max = 20
-	e.sky.sky_material = sm; e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY; e.ambient_light_energy = 0.55
-	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC; e.tonemap_exposure = 0.95; e.fog_enabled = true; e.fog_light_color = Color(0.7, 0.78, 0.86); e.fog_density = 0.0006
+	e.background_mode = Environment.BG_SKY; e.sky = Sky.new(); var sm = PanoramaSkyMaterial.new()
+	sm.panorama = load("res://assets/sky.png"); sm.energy_multiplier = 1.0          # physical sky rendered in Blender with this sun, plus clouds
+	e.sky.sky_material = sm; e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY; e.ambient_light_energy = 0.75; e.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC; e.tonemap_exposure = 1.0; e.fog_enabled = true; e.fog_light_color = Color(0.72, 0.8, 0.88); e.fog_density = 0.0005; e.fog_sky_affect = 0.0
+	e.glow_enabled = true; e.glow_intensity = 0.4; e.glow_bloom = 0.05; e.glow_hdr_threshold = 1.2
 	env.environment = e; add_child(env)
-	var sun = DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-38, -35, 0); sun.light_energy = 1.25; sun.shadow_enabled = true; sun.directional_shadow_max_distance = 30; add_child(sun)
+	var sun = DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-38, -35, 0); sun.light_energy = 1.35; sun.light_color = Color(1.0, 0.95, 0.86); sun.shadow_enabled = true; sun.directional_shadow_max_distance = 30; add_child(sun)
 	for f in ["res://assets/map/coast_base.glb", "res://assets/map/coast_detail.glb"]:
 		var s = load(f)
 		if s:
@@ -28,6 +30,8 @@ func _ready():
 	for r in w["roads"]: roads[r["name"]] = r["pts"]
 	cam = Camera3D.new(); cam.far = 3000; cam.fov = 62; add_child(cam); cam.current = true
 	car = Car.new(); add_child(car)
+	var co = Coll.new(); co.load_data("res://assets/coast_coll.json", roads); car.coll = co
+	car.crashed.connect(func(): shake = 0.35)
 	spawn("Peninsula Road", 30)
 	make_hud()
 	if OS.get_environment("SHOTS") != "": run_shots()
@@ -74,7 +78,9 @@ func update_camera(dt: float):          # port of the web chase camera: swings r
 	cam_pos.x = car.px - cs * d; cam_pos.z = car.pz - cc * d; cam_pos.y = lerpf(cam_pos.y, ty, 1 - exp(-dt * 6))
 	var gq = car.ground(cam_pos.x, cam_pos.z, cam_pos.y + 2)
 	cam_pos.y = max(cam_pos.y, gq[0] + 0.6)
-	cam.position = cam_pos; cam.look_at(c + Vector3(cs * 4, 1.1, cc * 4))
+	shake = maxf(0.0, shake - dt * 1.2)
+	var sh: Vector3 = Vector3(randf() - 0.5, randf() - 0.5, randf() - 0.5) * shake * 0.6
+	cam.position = cam_pos + sh; cam.look_at(c + Vector3(cs * 4, 1.1, cc * 4))
 
 func circle_tex(r: int, col: Color, label := "") -> Texture2D:
 	var img = Image.create(r * 2, r * 2, false, Image.FORMAT_RGBA8)
@@ -116,6 +122,12 @@ func run_shots():          # test: drive with full throttle and a few steering i
 
 func drive_test():          # headless: physics only, prints the state
 	touch.gas = true
+	if OS.get_environment("DRIVETEST") == "crash":         # aim at the nearest tree off the road and hold the throttle
+		var d = JSON.parse_string(FileAccess.get_file_as_string("res://assets/coast_coll.json")); var best = null; var bd = 1e9
+		for o in d["circ"]:
+			var dd = Vector2(o[0] - car.px, o[1] - car.pz).length()
+			if dd > 25 and dd < bd: bd = dd; best = o
+		car.place(Vector3(car.px, car.py, car.pz), atan2(best[0] - car.px, best[1] - car.pz)); print("tree at ", best, " dist ", bd)
 	for k in 16:
 		await get_tree().create_timer(0.5).timeout
 		if k == 8: touch.left = true

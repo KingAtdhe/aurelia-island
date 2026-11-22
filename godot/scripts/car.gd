@@ -18,6 +18,10 @@ var delta_ = 0.0; var st_in = 0.0; var thr = 0.0; var brk = 0.0; var af = 0.0; v
 var gear = 0; var rpm = 950.0; var shiftT = 0.0; var spin = false; var drift = 0.0; var pwr = 0.0; var pb = 0.0
 var beta = 0.0; var air = false; var pitch = 0.0; var roll = 0.0; var speed = 0.0; var vf = 0.0; var surf = "road"
 var safe = Vector4.ZERO; var safe_t = 0.0
+signal knocked(o)
+signal crashed
+var coll: Coll
+var bump_t := 0.0
 var body: Node3D; var wheels = []; var wheel_spin = 0.0; var rear_spin = 0.0
 
 func _ready():
@@ -130,7 +134,11 @@ func physics(dt: float):
 	if not air: drive(dt)
 	else: yr *= exp(-dt * 0.8); delta_ *= exp(-dt * 4); hd += yr * dt
 	vf = vx * fx + vz * fz
-	px += vx * dt; pz += vz * dt
+	var nx: float = px + vx * dt; var nz: float = pz + vz * dt
+	if coll:
+		var w := coll.walls(nx, nz, self); nx = w[0]; nz = w[1]
+		var ob := coll.obstacles(nx, nz, self); nx = ob[0]; nz = ob[1]
+	px = nx; pz = nz; bump_t -= dt
 	var Gn = ground(px, pz, py + 1.0)
 	if not air:
 		var dy: float = Gn[0] - py
@@ -159,3 +167,6 @@ func _physics_process(dt):
 	for w in wheels:
 		w.n.rotation.x = -(wheel_spin if w.front else rear_spin) / V.r
 		if w.steer: w.steer.rotation.y = delta_
+
+func bump():
+	if bump_t <= 0: bump_t = 0.8; crashed.emit()
