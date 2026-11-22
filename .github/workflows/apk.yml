@@ -2,7 +2,7 @@ name: Build Android APK
 on:
   push:
     branches: [main]
-    paths-ignore: ['source/**', 'README.md']
+    paths-ignore: ['source/**', 'README.md', 'godot/**', '.github/workflows/godot-apk.yml']
   workflow_dispatch:
 permissions:
   contents: write
