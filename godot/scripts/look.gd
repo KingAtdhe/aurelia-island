@@ -4,6 +4,7 @@ const TSCALE = {"Terrain": 0.2222, "TerrainField": 0.2, "TerrainForest": 0.25, "
 static var _cache := {}
 static var _sh := {}
 
+static var bake_tex: Texture2D
 static func shader(name: String) -> Shader:
 	if not _sh.has(name): _sh[name] = load("res://shaders/%s.gdshader" % name)
 	return _sh[name]
@@ -21,14 +22,14 @@ static func conv(m: Material, has_col: bool) -> Material:
 			var t := ShaderMaterial.new(); t.shader = shader("terrain")
 			t.set_shader_parameter("detail", sm.albedo_texture); t.set_shader_parameter("detail_n", sm.normal_texture)
 			t.set_shader_parameter("tscale", TSCALE[base]); t.set_shader_parameter("grassy", 1.0 if base in ["Terrain", "TerrainField", "TerrainForest"] else 0.0)
-			t.set_shader_parameter("rough", sm.roughness)
+			t.set_shader_parameter("rough", sm.roughness); t.set_shader_parameter("bake", _bake())
 			if nm.begins_with("TerrainBlend_"):
 				t.set_shader_parameter("blend_layer", 1.0); t.render_priority = 1
 				t.shader = _blend_variant()
 			out = t
 		elif nm == "Asphalt" or nm == "Shoulder" or nm == "Setts":
 			var r := ShaderMaterial.new(); r.shader = shader("road")
-			r.set_shader_parameter("tex", sm.albedo_texture); r.set_shader_parameter("tex_n", sm.normal_texture); r.set_shader_parameter("asphalt", 1.0 if nm == "Asphalt" else 0.0)
+			r.set_shader_parameter("bake", _bake()); r.set_shader_parameter("tex", sm.albedo_texture); r.set_shader_parameter("tex_n", sm.normal_texture); r.set_shader_parameter("asphalt", 1.0 if nm == "Asphalt" else 0.0)
 			out = r
 		elif nm == "Water":
 			var w := ShaderMaterial.new(); w.shader = shader("water"); w.render_priority = 2; out = w
@@ -36,7 +37,7 @@ static func conv(m: Material, has_col: bool) -> Material:
 			var b := sm.duplicate(); b.albedo_color = Color(0.05, 0.22, 0.26); out = b
 		else:
 			var d := sm.duplicate() as BaseMaterial3D
-			if has_col: d.vertex_color_use_as_albedo = true; d.vertex_color_is_srgb = true
+			if has_col: d.vertex_color_use_as_albedo = true; d.vertex_color_is_srgb = false      # glTF vertex colours are linear
 			if nm in ["ContactAO", "RoadDecals", "Skids", "Puddles", "ShoreFoam", "Shallows", "Markings"]:
 				d.render_priority = 2
 			if nm == "TreeCards": d = null
@@ -44,17 +45,21 @@ static func conv(m: Material, has_col: bool) -> Material:
 				d.cull_mode = BaseMaterial3D.CULL_DISABLED
 				if nm.begins_with("Leaves"):
 					d.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR; d.alpha_scissor_threshold = 0.4
-					d.vertex_color_use_as_albedo = false; d.albedo_color = Color(0.92, 0.95, 0.86)
-					d.backlight_enabled = true; d.backlight = Color(0.32, 0.4, 0.18); d.roughness = 0.95
+					d.albedo_color = Color(1.0, 1.0, 0.94)
+					d.backlight_enabled = true; d.backlight = Color(0.22, 0.3, 0.12); d.roughness = 1.0; d.metallic_specular = 0.0; d.metallic = 0.0
 					d.emission_enabled = true; d.emission = Color(0.035, 0.05, 0.025)
 			out = d
 	_cache[key] = out
 	return out
 
+static func _bake() -> Texture2D:
+	if bake_tex == null: bake_tex = load("res://assets/bake_coast.png")
+	return bake_tex
+
 static var _bv: Shader
 static func _blend_variant() -> Shader:
 	if _bv == null:
-		_bv = Shader.new(); _bv.code = shader("terrain").code.replace("shader_type spatial;", "shader_type spatial;\nrender_mode blend_mix, depth_draw_never;")
+		_bv = Shader.new(); _bv.code = shader("terrain").code.replace("shader_type spatial;", "shader_type spatial;\nrender_mode blend_mix, depth_draw_never;").replace("//BLEND_ALPHA", "ALPHA = clamp(UV2.x, 0.0, 1.0);")
 	return _bv
 
 static func apply(root: Node):
@@ -67,4 +72,5 @@ static func apply(root: Node):
 			if m == null: mi.visible = false
 			else: mi.set_surface_override_material(i, m)
 		if mi.name.begins_with("TreeCards") or mi.name == "Water": mi.visible = false
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if (mi.name.begins_with("Terrain") or mi.name.begins_with("Road") or mi.name.begins_with("Verge") or mi.name.begins_with("Markings") or mi.name.begins_with("Water") or mi.name.begins_with("Shallows") or mi.name.begins_with("Seabed")) else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		if false and (mi.name.begins_with("Terrain") or mi.name.begins_with("Road") or mi.name.begins_with("Verge") or mi.name.begins_with("Markings") or mi.name.begins_with("Water") or mi.name.begins_with("Shallows") or mi.name.begins_with("Seabed")): pass

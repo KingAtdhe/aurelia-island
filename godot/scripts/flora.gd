@@ -45,7 +45,7 @@ func build():
 					if lod == 0: mmi.visibility_range_end = r0; mmi.visibility_range_end_margin = 8.0
 					else: mmi.visibility_range_begin = r0; mmi.visibility_range_begin_margin = 8.0; mmi.visibility_range_end = r1
 					mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
-					mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if (small or lod == 1) else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+					mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF      # baked
 					add_child(mmi)
 	lib_scene.queue_free()
 	print("flora: %d objects" % n_inst)

@@ -16,7 +16,7 @@ func _ready():
 	e.sky.sky_material = sm; e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY; e.ambient_light_energy = 0.55
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC; e.tonemap_exposure = 0.95; e.fog_enabled = true; e.fog_light_color = Color(0.7, 0.78, 0.86); e.fog_density = 0.0006
 	env.environment = e; add_child(env)
-	var sun = DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-38, -35, 0); sun.light_energy = 1.25; sun.shadow_enabled = true; sun.directional_shadow_max_distance = 120; add_child(sun)
+	var sun = DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-38, -35, 0); sun.light_energy = 1.25; sun.shadow_enabled = true; sun.directional_shadow_max_distance = 30; add_child(sun)
 	for f in ["res://assets/map/coast_base.glb", "res://assets/map/coast_detail.glb"]:
 		var s = load(f)
 		if s:
@@ -104,7 +104,8 @@ func make_hud():
 	var rb = Button.new(); rb.text = "Reset"; rb.position = Vector2(100, 20); rb.add_theme_font_size_override("font_size", 24); rb.pressed.connect(func(): car.place(Vector3(car.safe.x, car.safe.y, car.safe.z), car.safe.w)); hud.add_child(rb)
 
 func run_shots():          # test: drive with full throttle and a few steering inputs, screenshot along the way
-	var plan = [[0.0, 1.0, 0.0, 2.0], [0.0, 1.0, 0.0, 3.0], [0.0, 1.0, 0.0, 2.0], [0.0, 1.0, 0.0, 2.0], [0.0, 0.0, 1.0, 2.0], [0.0, 0.0, 0.0, 0.5]]
+	var plan = [[0.0, 1.0, 0.0, 2.5], [0.0, 1.0, 0.0, 3.0], [0.0, 1.0, 0.0, 3.0], [0.0, 1.0, 0.0, 3.0], [0.0, 1.0, 0.0, 3.0], [0.0, 0.0, 1.0, 1.0]]
+	if OS.get_environment("SHOTS") == "trees": plan = [[0.0, 0.0, 0.0, 1.0]]; car.place(Vector3(-1405, 58, 862), 0.9)
 	var i = 0
 	for st in plan:
 		touch.left = st[0] < 0; touch.right = st[0] > 0; touch.gas = st[1] > 0; touch.brake = st[2] > 0
