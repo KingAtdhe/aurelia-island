@@ -858,8 +858,17 @@ float l2n(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
 function look2Ground(m) {           // grass, field and forest ground: lush and dry patches, worn spots, fine grain; other ground types get grain only
   if (m.userData.l2) return; m.userData.l2 = 1; const prev = m.onBeforeCompile, nm = m.name.replace(/^TerrainBlend_/, ''), grassy = /^(Terrain|TerrainField|TerrainForest)$/.test(nm), forest = nm === 'TerrainForest';
   m.onBeforeCompile = (sh, r) => { if (prev) prev.call(m, sh, r);
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vL2W;').replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vL2W = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vL2W;' + L2N).replace('#include <map_fragment>', `#include <map_fragment>
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vL2W; varying vec3 vL2N;').replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vL2W = (modelMatrix * vec4(transformed, 1.0)).xyz; vL2N = normalize(mat3(modelMatrix) * objectNormal);');
+    const TS = { TerrainRock: 0.0909, TerrainSand: 0.1815, TerrainSnow: 0.1428, TerrainForest: 0.25, Terrain: 0.2222, TerrainField: 0.2 }[nm];
+    const TRI = TS ? `#ifdef USE_MAP
+      vec4 texelColor = texture2D( map, vUv );
+      { float nl = length(vL2N); vec3 tn = nl > 0.1 ? vL2N / nl : vec3(0.0, 1.0, 0.0); float steep = 1.0 - smoothstep(0.5, 0.78, abs(tn.y));          // steep ground: texture projected from the side, not stretched from above
+        if (steep > 0.001) { vec3 w = pow(abs(tn) + 0.001, vec3(4.0)); w /= max(w.x + w.y + w.z, 1e-4); const float S = ${TS.toFixed(4)};
+          vec4 tri = texture2D(map, vL2W.zy * S) * w.x + texture2D(map, vL2W.xz * S) * w.y + texture2D(map, vL2W.xy * S + 0.37) * w.z;
+          texelColor = mix(texelColor, tri, steep); } }
+      texelColor = mapTexelToLinear( texelColor ); diffuseColor *= texelColor;
+      #endif` : '#include <map_fragment>';
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vL2W; varying vec3 vL2N;' + L2N).replace('#include <map_fragment>', TRI + `
       { vec2 q = vL2W.xz; float big = l2n(q * 0.021) * 0.6 + l2n(q * 0.067) * 0.4, mid = l2n(q * 0.29), fine = l2n(q * 2.3) * 0.5 + l2n(q * 7.1) * 0.5;
         float dz = length(vL2W - cameraPosition), near = 1.0 - smoothstep(25.0, 90.0, dz);
         ${grassy ? `vec3 lush = vec3(0.78, 1.04, 0.72), dry = vec3(1.28, 1.12, 0.70), worn = vec3(1.12, 0.94, 0.74);
