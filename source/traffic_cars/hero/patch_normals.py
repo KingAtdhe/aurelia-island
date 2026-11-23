@@ -9,7 +9,7 @@ g = GLTF2().load(src); blob = bytearray(g.binary_blob())
 def view(ai, n):
     a = g.accessors[ai]; bv = g.bufferViews[a.bufferView]; off = (bv.byteOffset or 0) + (a.byteOffset or 0); st = bv.byteStride or 4 * n
     return np.ndarray((a.count, n), dtype=np.float32, buffer=blob, offset=off, strides=(st, 4))
-SKIP = {'Tyre', 'Rim', 'Disc', 'Caliper', 'Interior', 'Headliner', 'MirrorGlass', 'Amber', 'Chrome', 'Plate', 'Graphite'}
+SKIP = {'Tyre', 'TyreFar', 'Rim', 'Disc', 'Caliper', 'Interior', 'Headliner', 'MirrorGlass', 'Amber', 'Chrome', 'Plate', 'Graphite'}
 tot = 0
 for nd in g.nodes:
     if nd.name not in (NM + '_Body', NM + '_Far') or nd.mesh is None: continue

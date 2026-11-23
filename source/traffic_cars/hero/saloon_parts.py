@@ -30,6 +30,8 @@ MATS = dict(Paint=((0.07, 0.007, 0.016), 0.24, 0.5, None, 1, 1.0), Clad=((0.045,
 for k, v in MATS.items():
     col, rough = v[0], v[1]; metal = v[2] if len(v) > 2 else 0; emit = v[3] if len(v) > 3 else None; alpha = v[4] if len(v) > 4 else 1; coat = v[5] if len(v) > 5 else 0
     mat(k, col, rough, metal, emit, alpha, coat)
+mat('TyreFar', *MATS['Tyre'][:2])                                # plain rubber for the far LOD (no UVs)
+import tyre_detail as TD; TD.setup_material(bpy.data.materials['Tyre'])   # tread and sidewall maps
 body = bpy.data.objects['Body']
 for i, m in enumerate(body.data.materials):                      # the body's zone slots use the same named materials
     if m.name in MATS: continue
@@ -106,12 +108,7 @@ def lathe(bm, prof, seg, ax_y, center, flipw=1):
     return rings
 def wheel(name, x, side):
     c = (x, side * TRK, R); bm = bmesh.new(); o_ = side; kw = 1.05
-    tyre = [(0.203, -0.086), (0.232, -0.099), (0.268, -0.1035), (0.300, -0.097), (0.313, -0.083), (0.318, -0.062), (0.318, -0.034), (0.318, -0.006),
-            (0.311, 0.0), (0.318, 0.006), (0.318, 0.034), (0.318, 0.062), (0.313, 0.083), (0.300, 0.097), (0.268, 0.1035), (0.232, 0.099), (0.203, 0.086)]
-    tyre = [(r * K, w * kw) for r, w in tyre]
-    # 17" rim is relatively bigger: pull the bead radius out so the sidewall is lower
-    tyre = [(0.214 + (r - 0.203 * K) * (R - 0.214) / (R - 0.203 * K), w) for r, w in tyre]
-    lathe(bm, tyre, 48, True, c, o_); obj(name + '_Tyre', bm, 'Tyre')
+    TD.build(bm, c, o_, R, K, kw); obj(name + '_Tyre', bm, 'Tyre')
     bm = bmesh.new(); q = 0.216 / 0.203
     rim = [(0.186, -0.080), (0.198, -0.080), (0.206, -0.088), (0.212, -0.084), (0.200, -0.060), (0.186, -0.05), (0.186, 0.050), (0.196, 0.064), (0.208, 0.078), (0.206, 0.084), (0.196, 0.082), (0.190, 0.074)]
     lathe(bm, [(r * q * (0.214 / 0.2256 if r > 0.205 else 1), w * kw) for r, w in rim], 36, True, c, o_)
@@ -343,7 +340,7 @@ for x in (FX, RX):
     for sd in (1, -1):
         r = bmesh.ops.create_cone(bm, cap_ends=True, segments=12, radius1=R, radius2=R, depth=0.2)
         bmesh.ops.rotate(bm, cent=(0, 0, 0), matrix=Matrix.Rotation(math.pi / 2, 3, 'X'), verts=r['verts']); bmesh.ops.translate(bm, vec=(x, sd * TRK, R), verts=r['verts'])
-wo = obj('far_wheels', bm, 'Tyre'); PARTS.remove(wo)
+wo = obj('far_wheels', bm, 'TyreFar'); PARTS.remove(wo)
 for o in bpy.context.scene.objects: o.select_set(False)
 far.select_set(True); wo.select_set(True); bpy.context.view_layer.objects.active = far; bpy.ops.object.join()
 lod1 = bpy.data.objects.new('LOD1', None); bpy.context.scene.collection.objects.link(lod1); far.parent = lod1
