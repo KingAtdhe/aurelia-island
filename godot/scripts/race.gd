@@ -57,8 +57,7 @@ func start(rid: String, m: Node):
 	for k in RIVALS.size():
 		var rv = RIVALS[k]; var c = Car.new(); c.car_id = rv.car; c.opts = { far = true, paint = rv.paint }; add_child(c); c.coll = coll
 		var r = _racer(c, rv.name, true, rv.line)
-		var ap = AudioStreamPlayer3D.new(); ap.stream = CarAudio.loop_stream("res://assets/audio/eng_4100.ogg"); ap.max_distance = 70.0; ap.unit_size = 6.0
-		ap.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE; ap.position = Vector3(0, 0.6, 0); c.add_child(ap); ap.play(randf() * 4.0); r.snd = ap
+		var au = CarAudio.new(); au.car = c; au.positional = true; c.add_child(au); au.ignition(); r.snd = au      # its own engine, as 3D sound
 		racers.append(r)
 	for k in racers.size():
 		var sl = slots[k]; var a = at(sl[0]); var p: Vector3 = a[0] + a[2] * (sl[1] * a[3] * 2.0)
@@ -198,9 +197,6 @@ func _physics_process(dt):
 		var c: Car = r.car; var h: Vector2 = Car.CARS[c.car_id].half
 		boxes.append([c.px, c.pz, h.x, h.y, atan2(-cos(c.hd), sin(c.hd)), c.get_instance_id()])
 	coll.dyn2 = boxes
-	for r in racers:
-		if r.has("snd"):
-			r.snd.pitch_scale = clampf(r.car.rpm / 4100.0, 0.55, 1.9); r.snd.volume_db = -8.0 + 6.0 * r.car.thr
 
 func _drive(r: Dictionary, dt: float):
 	var c: Car = r.car; var v = c.speed

@@ -223,8 +223,9 @@ func _physics_process(dt):
 		else: w.n.rotation.z = a
 		if w.steer: w.steer.rotation.y = delta_
 
-func bump():
-	if bump_t <= 0: bump_t = 0.8; crashed.emit()
+var impact := 0.0         # speed into the last thing hit (m/s), for the crash sound
+func bump(v := 8.0):
+	if bump_t <= 0: bump_t = 0.8; impact = v; crashed.emit()
 
 # one mesh per material for everything that does not move: about 60 parts become a dozen draw calls
 func merge_body(root: Node3D):

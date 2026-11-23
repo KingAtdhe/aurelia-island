@@ -1,9 +1,27 @@
 # Game sounds: sources (all CC0, real recordings, no synthesis)
 
-- Engine idle, on-throttle blip, start-up: "Car Starting and Accelerating" by jackthemurray, https://freesound.org/people/jackthemurray/sounds/433584/ (CC0)
-- Tyre squeal loop: "Tire squeal" #0500, BigSoundBank (Joseph Sardin), https://bigsoundbank.com (CC0)
+## Player and rival cars (engines.py)
+From the muted.io "Performance Cars" free sample pack (CC0, 68 field recordings, https://muted.io/performance-cars).
+The pack's files are only numbered; these are the ones used:
+- **Vortex:** 011 (a fast full-throttle pull, then the lift-off overrun of the same car) and 039 (a long, even idle).
+- **Calder GT:** 010 (a long, heavy full-throttle pull) and 018 (a deep, rumbling idle).
+
+engines.py follows the engine firing by firing through each pull and builds eight steady loops per car. Every loop takes
+only firings that were recorded at (or near) its rpm, so each rpm keeps the real engine's tone there. The idle loop is
+the steadiest 6.5 s of the idle recording. Each car then gets its own EQ: the Vortex sharper and raspier, the Calder
+deeper and rounder. The Vortex also has off-throttle loops from its real overrun.
+
+## Traffic engines (sfx.py)
+- Hatch: "car_idle_loop" by andrewalexander, https://freesound.org/s/369053/ (CC0)
+- Saloon: the earlier loop made from "Car Starting and Accelerating" by jackthemurray, https://freesound.org/people/jackthemurray/sounds/433584/ (CC0)
+- SUV, van, pickup: muted.io Performance Cars 029, 002 and 016 (steady engine sections; a whistle in 016 notched out)
+
+## Effects (sfx.py, make.py)
+- Start-up (starter and catch): jackthemurray 433584 (CC0)
+- Crashes: "SSE Vintage Destruction 1" pack by craigsmith, https://freesound.org/people/craigsmith/packs/37728/ (CC0):
+  s37-08 hits trash can (light), s37-21 metal gate (medium), s37-34 big auto crash with glass and s38-24 big heavy car crash (heavy)
+- Wind and road noise: "Car interior 80 km/h" #0505, BigSoundBank (CC0)
+- Tyre squeal: "Tire squeal" #0500 and "Screeching tires 4" #2371, BigSoundBank (CC0)
 - Horn: "Horn 3" #3506, BigSoundBank (CC0)
 
-make.py cuts the start-up and horn. psola.py builds eight steady engine loops (900-8400 rpm) from the real engine's own firing
-pulses, re-spaced to each rpm (TD-PSOLA), so the recorded engine's tone is kept at every speed. skid.py chains the
-squeals that sound alike into one loop. Only real recordings go in; nothing is synthesised from scratch.
+Only real recordings go in: the scripts trim, loop, crossfade, re-space firings by a few percent, filter and set levels.

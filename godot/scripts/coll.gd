@@ -64,7 +64,7 @@ func walls(nx: float, nz: float, car) -> Array:
 		if lim > 0 and abs(q.d) > lim and abs(q.d) < lim + 3:
 			var sg: float = sign(q.d); var over: float = q.d - sg * lim; nx -= px * over; nz -= pz * over
 			var vn: float = (car.vx * px + car.vz * pz) * sg
-			if vn > 0: car.vx -= px * sg * vn * 1.25; car.vz -= pz * sg * vn * 1.25; if vn > 6: car.bump()
+			if vn > 0: car.vx -= px * sg * vn * 1.25; car.vz -= pz * sg * vn * 1.25; if vn > 6: car.bump(vn)
 			car.vx *= 0.99; car.vz *= 0.99
 	return [nx, nz]
 
@@ -99,5 +99,5 @@ func obstacles(nx: float, nz: float, car) -> Array:
 				var J = -vn * 1.3; car.vx += ax * J; car.vz += az * J
 				var ox = cfx * off; var oz = cfz * off; var tq = (oz * ax - ox * az) * J * car.V.m
 				car.yr = clampf(car.yr + tq / car.V.Iz * 0.3, -2.5, 2.5)
-				if vn < -6: car.vx *= 0.6; car.vz *= 0.6; car.bump()
+				if vn < -6: car.vx *= 0.6; car.vz *= 0.6; car.bump(-vn)
 	return [nx, nz]
