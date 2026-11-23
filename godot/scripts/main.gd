@@ -10,6 +10,7 @@ var cam_pos = Vector3.ZERO; var cam_yaw = 0.0; var cam_mode = 0
 const CAMS = [[5.9, 2.05], [9.5, 3.6], [2.75, 0.62]]
 var hud: CanvasLayer; var speed_lbl: Label; var gear_lbl: Label
 var traffic: Traffic
+var audio: CarAudio
 var view_car = -1          # test shots: look at this traffic car instead of following the player
 var touch = { left = false, right = false, gas = false, brake = false, hand = false }
 
@@ -36,11 +37,13 @@ func _ready():
 	var co = Coll.new(); co.load_data("res://assets/coast_coll.json", roads); car.coll = co
 	car.crashed.connect(func(): shake = 0.35)
 	spawn("Peninsula Road", 30)
+	audio = CarAudio.new(); audio.car = car; add_child(audio)
 	traffic = Traffic.new(); add_child(traffic); traffic.player = car; traffic.coll = co
 	traffic.build(roads, int(OS.get_environment("TRAFFIC")) if OS.get_environment("TRAFFIC") != "" else 10)
 	make_hud()
 	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == ""
 	if menu_on or OS.get_environment("SHOTS") == "menu": open_menu()
+	if not menu_on: audio.ignition()
 	if OS.get_environment("SHOTS") != "": run_shots()
 	if OS.get_environment("PERF") != "": perf_test()
 	if OS.get_environment("DRIVETEST") != "": drive_test()
@@ -196,7 +199,7 @@ func open_menu():
 	menu.drive.connect(func(id):
 		if id.begins_with("preview:"): car.setup(id.substr(8)); spawn("Peninsula Road", 30); return
 		if car.car_id != id: car.setup(id); spawn("Peninsula Road", 30)
-		menu.queue_free(); menu = null; menu_on = false; hud.visible = true)
+		menu.queue_free(); menu = null; menu_on = false; hud.visible = true; audio.ignition())
 
 func traffic_test():        # headless: watch every traffic car for jumps, sudden turns, overlaps and lost ground
 	var last = {}

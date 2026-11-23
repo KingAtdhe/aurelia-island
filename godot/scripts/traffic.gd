@@ -43,6 +43,9 @@ func build(roads: Dictionary, count: int):
 			if o.lane == c.lane and abs(o.d - c.d) < 20.0: c.d = fmod(c.d + 40.0, lanes[li].len - 20.0) + 10.0
 		var n: Node3D = scenes[model].instantiate(); add_child(n); c.n = n; c.wheels = []
 		_dress(n, rng.randi() % PAINT.size() if rng.randf() < 0.75 else -1, c)
+		var ap = AudioStreamPlayer3D.new(); ap.stream = CarAudio.loop_stream("res://assets/audio/traffic_idle.ogg"); ap.max_distance = 45.0; ap.unit_size = 6.0
+		ap.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE; ap.position = Vector3(1.2, 0.6, 0); n.add_child(ap); ap.play(rng.randf() * 10.0); c.snd = ap
+		var hp = AudioStreamPlayer3D.new(); hp.stream = load("res://assets/audio/horn.ogg"); hp.max_distance = 120.0; hp.unit_size = 14.0; hp.position = Vector3(1.8, 0.6, 0); n.add_child(hp); c.horn = hp; c.blocked = 0.0; c.honked = 0.0
 		var sh = MeshInstance3D.new(); var q = QuadMesh.new(); q.size = Vector2(c.half.x * 2.5, c.half.y * 2.7); q.orientation = PlaneMesh.FACE_Y; sh.mesh = q
 		sh.material_override = blob_material(); sh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; sh.position = Vector3(0, 0.035, 0); sh.visibility_range_end = 70.0; n.add_child(sh)
 		cars.append(c)
@@ -140,7 +143,12 @@ func _physics_process(dt):
 			var to_o: Vector3 = o.n.global_position - me; var ah = to_o.dot(t)
 			if ah > 0 and ah < 20 and abs(to_o.dot(right)) < 2.4 and abs(to_o.y) < 3: gap = minf(gap, ah)
 		var to_p = pp - me; var ahead = to_p.dot(t)
-		if ahead > 0 and ahead < 30 and abs(to_p.dot(right)) < 2.6 and abs(to_p.y) < 4: gap = minf(gap, ahead)
+		var p_block = ahead > 0 and ahead < 30 and abs(to_p.dot(right)) < 2.6 and abs(to_p.y) < 4
+		if p_block: gap = minf(gap, ahead)
+		# a driver stuck behind the player gives a honk now and then
+		c.honked = maxf(0.0, c.honked - dt)
+		c.blocked = c.blocked + dt if (p_block and ahead < 16 and c.v < 2.0) else 0.0
+		if c.blocked > 1.6 and c.honked <= 0.0: c.horn.pitch_scale = randf_range(0.92, 1.08); c.horn.play(); c.honked = randf_range(6.0, 11.0)
 		var vt = c.vmax if gap > 32 else c.vmax * clampf((gap - 8.0) / 24.0, 0.0, 1.0)
 		var braking = vt < c.v - 0.3
 		c.v = move_toward(c.v, vt, (2.5 if vt > c.v else 7.0) * dt)
@@ -173,5 +181,6 @@ func _physics_process(dt):
 		var target = Transform3D(Basis(fw, up, rt), at)
 		c.n.global_transform = target
 		for w in c.wheels: w.rotate_object_local(Vector3(0, 0, 1), -c.v * dt / c.r)
+		c.snd.pitch_scale = 0.8 + c.v / 22.0; c.snd.volume_db = -6.0 + 4.0 * clampf(c.v / 15.0, 0.0, 1.0)
 		dyn.append([at.x, at.z, c.half.x, c.half.y, atan2(-fw.z, fw.x)])
 	if coll: coll.dyn = dyn
