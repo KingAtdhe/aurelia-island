@@ -31,7 +31,7 @@ func _ready():
 	var wm = ShaderMaterial.new(); wm.shader = load("res://shaders/water.gdshader"); sea.material_override = wm; sea.position = Vector3(-1300, -0.25, 800); add_child(sea)
 	var w = JSON.parse_string(FileAccess.get_file_as_string("res://assets/world.json"))
 	for r in w["roads"]: roads[r["name"]] = r["pts"]
-	cam = Camera3D.new(); cam.far = 3000; cam.fov = 62; add_child(cam); cam.current = true
+	cam = Camera3D.new(); cam.far = 3000; cam.near = 0.12; cam.fov = 62; add_child(cam); cam.current = true
 	car = Car.new(); add_child(car)
 	var co = Coll.new(); co.load_data("res://assets/coast_coll.json", roads); car.coll = co
 	car.crashed.connect(func(): shake = 0.35)
@@ -44,6 +44,7 @@ func _ready():
 	if OS.get_environment("SHOTS") != "": run_shots()
 	if OS.get_environment("PERF") != "": perf_test()
 	if OS.get_environment("DRIVETEST") != "": drive_test()
+	if OS.get_environment("TRAFFICTEST") != "": traffic_test()
 
 func spawn(road: String, i: int):
 	var p = roads[road]; var a = Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]); var b = Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
@@ -73,7 +74,8 @@ func _process(dt):
 	update_camera(dt)
 	if view_car >= 0 and traffic and view_car < traffic.cars.size():
 		var tn: Node3D = traffic.cars[view_car].n; var b = tn.global_transform.basis
-		cam.global_position = tn.global_position + b.x * 4.6 + b.z * 4.4 + Vector3(0, 1.7, 0); cam.look_at(tn.global_position + Vector3(0, 0.8, 0) + b.x * 0.3)
+		var ang = float(OS.get_environment("VANG")) if OS.get_environment("VANG") != "" else 0.75
+		cam.global_position = tn.global_position + (b.x * cos(ang) + b.z * sin(ang)) * 6.2 + Vector3(0, 1.5, 0); cam.look_at(tn.global_position + Vector3(0, 0.8, 0) + b.x * 0.3)
 	if speed_lbl: speed_lbl.text = "%d" % int(car.speed * 3.6); gear_lbl.text = "R" if car.vf < -0.5 and car.in_brake > 0 else str(car.gear + 1)
 
 func update_camera(dt: float):          # port of the web chase camera: swings round the car, follows the slide in a drift
@@ -194,3 +196,20 @@ func open_menu():
 		if id.begins_with("preview:"): car.setup(id.substr(8)); spawn("Peninsula Road", 30); return
 		if car.car_id != id: car.setup(id); spawn("Peninsula Road", 30)
 		menu.queue_free(); menu = null; menu_on = false; hud.visible = true)
+
+func traffic_test():        # headless: watch every traffic car for jumps, sudden turns, overlaps and lost ground
+	var last = {}
+	for step in 600:
+		await get_tree().physics_frame; await get_tree().physics_frame
+		for k in traffic.cars.size():
+			var c = traffic.cars[k]; var n: Node3D = c.n; var p = n.global_position; var f = n.global_transform.basis.x
+			if last.has(k):
+				var lp = last[k][0]; var lf = last[k][1]
+				var jump = (p - lp).length(); var turn = rad_to_deg(lf.angle_to(f))
+				if jump > 1.2 or abs(p.y - lp.y) > 0.25 or turn > 12: print("GLITCH t=%.2f car %d lane %d d %.1f dir %d jump %.2f dy %.2f turn %.1f" % [step / 30.0, k, c.lane, c.d, c.dir, jump, p.y - lp.y, turn])
+			last[k] = [p, f]
+			if not c.get("ground", true): print("NOGROUND car %d lane %d d %.1f" % [k, c.lane, c.d])
+			for j in range(k + 1, traffic.cars.size()):
+				var o = traffic.cars[j]
+				if o.n.global_position.distance_to(p) < 4.5: print("OVERLAP t=%.2f cars %d %d lanes %d %d dirs %d %d dist %.2f" % [step / 30.0, k, j, c.lane, o.lane, c.dir, o.dir, o.n.global_position.distance_to(p)])
+	get_tree().quit()
