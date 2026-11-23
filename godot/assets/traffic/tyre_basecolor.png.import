@@ -2,21 +2,18 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bicc38cshyv87"
-path.s3tc="res://.godot/imported/saloon_tyre_basecolor.png-12670633ef139211eab296f26bf0639f.s3tc.ctex"
-path.etc2="res://.godot/imported/saloon_tyre_basecolor.png-12670633ef139211eab296f26bf0639f.etc2.ctex"
+uid="uid://bk7vwrtnfhkse"
+path.s3tc="res://.godot/imported/tyre_basecolor.png-b67dc4aeef679285d0a03844c44a648c.s3tc.ctex"
+path.etc2="res://.godot/imported/tyre_basecolor.png-b67dc4aeef679285d0a03844c44a648c.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
-generator_parameters={
-"md5": "e30089da9d1983d2766514ac6345e64e"
-}
 
 [deps]
 
-source_file="res://assets/traffic/saloon_tyre_basecolor.png"
-dest_files=["res://.godot/imported/saloon_tyre_basecolor.png-12670633ef139211eab296f26bf0639f.s3tc.ctex", "res://.godot/imported/saloon_tyre_basecolor.png-12670633ef139211eab296f26bf0639f.etc2.ctex"]
+source_file="res://assets/traffic/tyre_basecolor.png"
+dest_files=["res://.godot/imported/tyre_basecolor.png-b67dc4aeef679285d0a03844c44a648c.s3tc.ctex", "res://.godot/imported/tyre_basecolor.png-b67dc4aeef679285d0a03844c44a648c.etc2.ctex"]
 
 [params]
 

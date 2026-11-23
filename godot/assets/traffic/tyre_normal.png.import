@@ -2,21 +2,18 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bwigkfohrjxb1"
-path.s3tc="res://.godot/imported/hatch_tyre_normal.png-1e1ee3a4344a843304dc1c44176d31a8.s3tc.ctex"
-path.etc2="res://.godot/imported/hatch_tyre_normal.png-1e1ee3a4344a843304dc1c44176d31a8.etc2.ctex"
+uid="uid://c1o8sctoyqhjx"
+path.s3tc="res://.godot/imported/tyre_normal.png-2ce164bfd6ebb570dddee4dc4698e694.s3tc.ctex"
+path.etc2="res://.godot/imported/tyre_normal.png-2ce164bfd6ebb570dddee4dc4698e694.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
-generator_parameters={
-"md5": "af7477cde7815bd016e9d0e3d1875b07"
-}
 
 [deps]
 
-source_file="res://assets/traffic/hatch_tyre_normal.png"
-dest_files=["res://.godot/imported/hatch_tyre_normal.png-1e1ee3a4344a843304dc1c44176d31a8.s3tc.ctex", "res://.godot/imported/hatch_tyre_normal.png-1e1ee3a4344a843304dc1c44176d31a8.etc2.ctex"]
+source_file="res://assets/traffic/tyre_normal.png"
+dest_files=["res://.godot/imported/tyre_normal.png-2ce164bfd6ebb570dddee4dc4698e694.s3tc.ctex", "res://.godot/imported/tyre_normal.png-2ce164bfd6ebb570dddee4dc4698e694.etc2.ctex"]
 
 [params]
 

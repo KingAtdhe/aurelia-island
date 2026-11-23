@@ -8,4 +8,5 @@ export PRE=${PRE:-$DPRE} NSIG=${NSIG:-2.0}
 LAT=${LAT:-0.085} CAR=$C OUT=/tmp/${C}_body.blend python3 build_body.py -- ${RATIO:-0.03} > /tmp/${C}_b.log 2>&1
 CAR=$C OUT=/tmp/$C python3 ${C}_parts.py > /tmp/${C}_p.log 2>&1
 CAR=$C python3 patch_normals.py /tmp/$C.glb /tmp/${C}_n.glb
+python3 share_tyre_tex.py /tmp/${C}_n.glb /tmp/${C}_n.glb >> /tmp/${C}_p.log   # tyres use the shared tyre_*.png next to the GLB
 grep -E "TRIS" /tmp/${C}_p.log
