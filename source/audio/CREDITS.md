@@ -1,8 +1,9 @@
 # Game sounds: sources (all CC0, real recordings, no synthesis)
 
 - Engine idle, on-throttle blip, start-up: "Car Starting and Accelerating" by jackthemurray, https://freesound.org/people/jackthemurray/sounds/433584/ (CC0)
-- Traffic idle: "car_idle_loop.wav" by AndrewAlexander (Honda CR-V interior), https://freesound.org/people/AndrewAlexander/sounds/369053/ (CC0)
-- Tyre squeal loop: "Tire squeal" #0500 and "Screeching tires 4" #2371, BigSoundBank (Joseph Sardin), https://bigsoundbank.com (CC0)
+- Tyre squeal loop: "Tire squeal" #0500, BigSoundBank (Joseph Sardin), https://bigsoundbank.com (CC0)
 - Horn: "Horn 3" #3506, BigSoundBank (CC0)
 
-Cut into loops by make.py (trims, crossfades on whole engine firings, gain and filtering only).
+make.py cuts the start-up and horn. psola.py builds eight steady engine loops (900-8400 rpm) from the real engine's own firing
+pulses, re-spaced to each rpm (TD-PSOLA), so the recorded engine's tone is kept at every speed. skid.py chains the
+squeals that sound alike into one loop. Only real recordings go in; nothing is synthesised from scratch.
