@@ -3,11 +3,9 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cioj0vlhga3wk"
-path.s3tc="res://.godot/imported/calder_mesh_basecolor_alpha.png-92f7f9b836ab71985af7ae09006090a1.s3tc.ctex"
-path.etc2="res://.godot/imported/calder_mesh_basecolor_alpha.png-92f7f9b836ab71985af7ae09006090a1.etc2.ctex"
+path="res://.godot/imported/calder_mesh_basecolor_alpha.png-92f7f9b836ab71985af7ae09006090a1.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
+"vram_texture": false
 }
 generator_parameters={
 "md5": "023f74f679ed51886cae30754546305a"
@@ -16,7 +14,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/calder_mesh_basecolor_alpha.png"
-dest_files=["res://.godot/imported/calder_mesh_basecolor_alpha.png-92f7f9b836ab71985af7ae09006090a1.s3tc.ctex", "res://.godot/imported/calder_mesh_basecolor_alpha.png-92f7f9b836ab71985af7ae09006090a1.etc2.ctex"]
+dest_files=["res://.godot/imported/calder_mesh_basecolor_alpha.png-92f7f9b836ab71985af7ae09006090a1.ctex"]
 
 [params]
 

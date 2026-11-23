@@ -47,6 +47,15 @@ jobs:
           ../godot-bin --headless --import . || true
           ../godot-bin --headless --export-debug "Android" build/aurelia-godot.apk
           ls -la build
+      - name: Deflate textures, align and re-sign
+        run: |
+          BT=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | sort -V | tail -1); echo "build-tools: $BT"
+          python3 .github/scripts/repack_apk.py godot/build/aurelia-godot.apk /tmp/repacked.apk
+          $BT/zipalign -p -f 4 /tmp/repacked.apk /tmp/aligned.apk
+          $BT/apksigner sign --ks $HOME/debug.keystore --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --out godot/build/aurelia-godot.apk /tmp/aligned.apk
+          $BT/apksigner verify --verbose godot/build/aurelia-godot.apk | head -6
+          $BT/zipalign -c -p 4 godot/build/aurelia-godot.apk && echo aligned
+          ls -la godot/build
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: godot-apk-${{ github.run_number }}

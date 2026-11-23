@@ -3,11 +3,9 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://y3mn0ahtcmim"
-path.s3tc="res://.godot/imported/calder_leather_dark_basecolor.jpg-41918881968f9d4da6538a9e470ee25f.s3tc.ctex"
-path.etc2="res://.godot/imported/calder_leather_dark_basecolor.jpg-41918881968f9d4da6538a9e470ee25f.etc2.ctex"
+path="res://.godot/imported/calder_leather_dark_basecolor.jpg-41918881968f9d4da6538a9e470ee25f.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
+"vram_texture": false
 }
 generator_parameters={
 "md5": "43d4eda61dc45ef8ca0acd5457d018e1"
@@ -16,7 +14,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/calder_leather_dark_basecolor.jpg"
-dest_files=["res://.godot/imported/calder_leather_dark_basecolor.jpg-41918881968f9d4da6538a9e470ee25f.s3tc.ctex", "res://.godot/imported/calder_leather_dark_basecolor.jpg-41918881968f9d4da6538a9e470ee25f.etc2.ctex"]
+dest_files=["res://.godot/imported/calder_leather_dark_basecolor.jpg-41918881968f9d4da6538a9e470ee25f.ctex"]
 
 [params]
 

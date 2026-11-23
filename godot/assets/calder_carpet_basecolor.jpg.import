@@ -3,11 +3,9 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ccr5wo4h5grnh"
-path.s3tc="res://.godot/imported/calder_carpet_basecolor.jpg-443c200ecfe4861f3b36f0926c099440.s3tc.ctex"
-path.etc2="res://.godot/imported/calder_carpet_basecolor.jpg-443c200ecfe4861f3b36f0926c099440.etc2.ctex"
+path="res://.godot/imported/calder_carpet_basecolor.jpg-443c200ecfe4861f3b36f0926c099440.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
+"vram_texture": false
 }
 generator_parameters={
 "md5": "3c9fe175baea12f753148893ad777254"
@@ -16,7 +14,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/calder_carpet_basecolor.jpg"
-dest_files=["res://.godot/imported/calder_carpet_basecolor.jpg-443c200ecfe4861f3b36f0926c099440.s3tc.ctex", "res://.godot/imported/calder_carpet_basecolor.jpg-443c200ecfe4861f3b36f0926c099440.etc2.ctex"]
+dest_files=["res://.godot/imported/calder_carpet_basecolor.jpg-443c200ecfe4861f3b36f0926c099440.ctex"]
 
 [params]
 

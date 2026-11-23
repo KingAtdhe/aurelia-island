@@ -3,11 +3,9 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cm1xcapdqv87d"
-path.s3tc="res://.godot/imported/calder_cluster_emissive.jpg-41a8bd271757a7eec1937a1fe05b0f5c.s3tc.ctex"
-path.etc2="res://.godot/imported/calder_cluster_emissive.jpg-41a8bd271757a7eec1937a1fe05b0f5c.etc2.ctex"
+path="res://.godot/imported/calder_cluster_emissive.jpg-41a8bd271757a7eec1937a1fe05b0f5c.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
+"vram_texture": false
 }
 generator_parameters={
 "md5": "6851675de30fe0fa83de0429922cece0"
@@ -16,7 +14,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/calder_cluster_emissive.jpg"
-dest_files=["res://.godot/imported/calder_cluster_emissive.jpg-41a8bd271757a7eec1937a1fe05b0f5c.s3tc.ctex", "res://.godot/imported/calder_cluster_emissive.jpg-41a8bd271757a7eec1937a1fe05b0f5c.etc2.ctex"]
+dest_files=["res://.godot/imported/calder_cluster_emissive.jpg-41a8bd271757a7eec1937a1fe05b0f5c.ctex"]
 
 [params]
 
