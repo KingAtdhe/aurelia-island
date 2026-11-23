@@ -93,6 +93,10 @@ func place(p: Vector3, h: float):
 	if is_inside_tree():                       # stand on the real surface (camber, kerbs), not on the road's centre-line height
 		var g = ground(p.x, p.z, p.y + 1.5)
 		if g[0] > -50.0 and abs(g[0] - p.y) < 2.5: py = g[0]
+		var fx = sin(h); var fz = cos(h)                       # start already sitting at the slope and camber, not level then tipping over
+		var a0 = ground(px + fx * 1.4, pz + fz * 1.4, py + 1)[0]; var a1 = ground(px - fx * 1.4, pz - fz * 1.4, py + 1)[0]
+		var a2 = ground(px + fz * 0.85, pz - fx * 0.85, py + 1)[0]; var a3 = ground(px - fz * 0.85, pz + fx * 0.85, py + 1)[0]
+		pitch = atan2(clamp(a0 - a1, -2.2, 2.2), 2.8); roll = atan2(clamp(a2 - a3, -1.4, 1.4), 1.7)
 	safe = Vector4(p.x, p.y, p.z, h)
 
 static func lat(a: float, B: float, C: float) -> float: return sin(C * atan(B * a))
@@ -165,10 +169,13 @@ func drive(dt: float):
 		var ax = Fx / V.m - g * sin(pitch) * 0.9; var ay = Fy / V.m
 		wx += (ffx * ax + ffz * ay) * h; wz += (ffz * ax - ffx * ay) * h; r += Mz / V.Iz * h; hd += r * h
 		if bx < -0.3:
-			r *= exp(-h * 3.5); var vxx = wx * ffx + wz * ffz; var vyy = (wx * ffz - wz * ffx) * exp(-h * 3); wx = ffx * vxx + ffz * vyy; wz = ffz * vxx - ffx * vyy
+			r *= exp(-h * 3.5); var vxx = wx * ffx + wz * ffz; var vyy = (wx * ffz - wz * ffx) * exp(-h * 3)
+			if not rev: vxx = move_toward(vxx, 0.0, (4.0 + 9.0 * thT) * h)      # rolling backwards without reverse held: engine braking, and gas stops it quickly
+			wx = ffx * vxx + ffz * vyy; wz = ffz * vxx - ffx * vyy
 		if spd < 1.2 and thT <= 0:
 			var vxx = wx * ffx + wz * ffz; var vyy = (wx * ffz - wz * ffx) * exp(-h * 6); r *= exp(-h * 6)
-			var vk = 0.0 if (abs(vxx) < 0.15 and (brT > 0 or brk > 0.05) and not rev) else vxx
+			var vk = vxx
+			if abs(vxx) < 0.6 and not rev: vk = 0.0; vyy = 0.0; r = 0.0; af = 0.0; ar = 0.0       # parked: held still (hill hold), no tyre forces at zero speed
 			wx = ffx * vk + ffz * vyy; wz = ffz * vk - ffx * vyy
 		axf += (ax - axf) * min(1.0, h * 12); ayf += (ay - ayf) * min(1.0, h * 12)
 	beta = atan2(by, abs(bx)) if Vector2(bx, by).length() > 2 else 0.0; yr = r; vx = wx; vz = wz
@@ -200,7 +207,9 @@ func physics(dt: float):
 		else: vy = clamp(dy / dt, -30, 12); py = Gn[0]
 	if air:
 		vy -= 24 * dt; py += vy * dt
-		if py <= Gn[0]: py = Gn[0]; air = false; vy = 0
+		if py <= Gn[0]:
+			if vy < -4.0: landed.emit(-vy)
+			py = Gn[0]; air = false; vy = 0
 	var a0 = ground(px + fx * 1.4, pz + fz * 1.4, py + 1)[0]; var a1 = ground(px - fx * 1.4, pz - fz * 1.4, py + 1)[0]
 	var a2 = ground(px + fz * 0.85, pz - fx * 0.85, py + 1)[0]; var a3 = ground(px - fz * 0.85, pz + fx * 0.85, py + 1)[0]
 	var tp = pitch if air else atan2(clamp(a0 - a1, -2.2, 2.2), 2.8); var tr = roll if air else atan2(clamp(a2 - a3, -1.4, 1.4), 1.7)
@@ -224,8 +233,9 @@ func _physics_process(dt):
 		if w.steer: w.steer.rotation.y = delta_
 
 var impact := 0.0         # speed into the last thing hit (m/s), for the crash sound
+signal landed(v)          # back on the ground after a jump, with the speed it came down at
 func bump(v := 8.0):
-	if bump_t <= 0: bump_t = 0.8; impact = v; crashed.emit()
+	if bump_t <= 0: bump_t = 0.5 if v < 6.0 else 0.8; impact = v; crashed.emit()
 
 # one mesh per material for everything that does not move: about 60 parts become a dozen draw calls
 func merge_body(root: Node3D):

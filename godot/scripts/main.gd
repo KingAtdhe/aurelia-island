@@ -43,7 +43,7 @@ func _ready():
 	traffic = Traffic.new(); add_child(traffic); traffic.player = car; traffic.coll = co
 	traffic.build(roads, int(OS.get_environment("TRAFFIC")) if OS.get_environment("TRAFFIC") != "" else 10)
 	make_hud()
-	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == ""
+	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == ""
 	if menu_on or OS.get_environment("SHOTS") == "menu": open_menu()
 	if not menu_on: audio.ignition()
 	if OS.get_environment("CAR") != "" and OS.get_environment("DRIVETEST") != "": car.setup(OS.get_environment("CAR"))
@@ -52,6 +52,7 @@ func _ready():
 	if OS.get_environment("DRIVETEST") != "": drive_test()
 	if OS.get_environment("TRAFFICTEST") != "": traffic_test()
 	if OS.get_environment("RACETEST") != "": race_test(OS.get_environment("RACETEST"))
+	if OS.get_environment("PHYSTEST") != "": phys_test(OS.get_environment("PHYSTEST"))
 	if OS.get_environment("ROUTECHECK") != "": var rc = load("res://scripts/_routecheck.gd").new(); add_child(rc)
 
 func start_race(rid: String):
@@ -258,4 +259,42 @@ func traffic_test():        # headless: watch every traffic car for jumps, sudde
 			for j in range(k + 1, traffic.cars.size()):
 				var o = traffic.cars[j]
 				if o.n.global_position.distance_to(p) < 4.5: print("OVERLAP t=%.2f cars %d %d lanes %d %d dirs %d %d dist %.2f" % [step / 30.0, k, j, c.lane, o.lane, c.dir, o.dir, o.n.global_position.distance_to(p)])
+	get_tree().quit()
+
+func phys_test(kind: String):    # test: log the car every physics frame through a scripted scenario
+	var t = 0.0; var last = Vector3(car.px, car.py, car.pz); var lp = [car.pitch, car.roll]
+	var plan = { start = [[0.0, 3.0, 0, 0, false], [3.0, 7.0, 1, 0, false], [7.0, 9.0, 0, 1, false]],
+		crash = [[0.0, 9.0, 1, 0, false]], traffic = [[0.0, 9.0, 1, 0, false]],
+		drift = [[0.0, 4.0, 1, 0, false], [4.0, 4.6, 1, 0, true], [4.6, 9.0, 1, 0, false]],
+		reverse = [[0.0, 3.0, 0, 1, false], [3.0, 5.0, 0, 0, false], [5.0, 7.0, 1, 0, false], [7.0, 9.0, 0, 1, false]] }.get(kind, [])
+	if kind == "crash":            # aim at a tree off the road
+		var d = JSON.parse_string(FileAccess.get_file_as_string("res://assets/coast_coll.json")); var best = null; var bd = 1e9
+		for o in d["circ"]:
+			var dd = Vector2(o[0] - car.px, o[1] - car.pz).length()
+			if dd > 35 and dd < bd: bd = dd; best = o
+		car.place(Vector3(car.px, car.py, car.pz), atan2(best[0] - car.px, best[1] - car.pz))
+	if kind == "traffic":          # line up behind the nearest traffic car on its lane, 45 m back
+		await get_tree().create_timer(0.3).timeout
+		var c = traffic.cars[0]; var l = traffic.lanes[c.lane]; var a = traffic._at(l, clampf(c.d - 45.0 * c.dir, 2.0, l.len - 2.0))
+		var tg: Vector3 = a[1] * c.dir; var rt = Vector3(-tg.z, 0, tg.x).normalized(); var p0: Vector3 = a[0] + rt * l.off
+		car.place(p0, atan2(tg.x, tg.z)); c.vmax = 4.0; c.v = 4.0
+	if kind == "drift": touch.right = false
+	while t < 9.0:
+		await get_tree().physics_frame; t += 1.0 / Engine.physics_ticks_per_second
+		for st in plan:
+			if t >= st[0] and t < st[1]: touch.gas = st[2] == 1; touch.brake = st[3] == 1; touch.hand = st[4]
+		if kind == "drift": touch.right = t > 3.8 and t < 6.0
+		var p = Vector3(car.px, car.py, car.pz); var d = p - last
+		var flag = ""
+		if abs(d.y) > 0.05: flag += " DY"
+		if abs(car.pitch - lp[0]) > 0.02 or abs(car.roll - lp[1]) > 0.02: flag += " TILT"
+		if car.air: flag += " AIR"
+		var nd = 1e9
+		for c in traffic.cars: nd = minf(nd, c.n.global_position.distance_to(p))
+		if flag != "" or int(t * 60) % 15 == 0 or nd < 6.0 or t < 0.3:
+			print("TR nearest traffic %.1f m" % nd) if nd < 8.0 else null
+			print("   AU " + audio.debug())
+			if kind == "traffic": var c0 = traffic.cars[0]; print("   T0 free %s v %.1f pos %s" % [c0.get("free", false), c0.v, c0.n.global_position])
+			print("PH t%.3f vx%+.2f vz%+.2f hd%.3f yr%+.3f y%.3f dy%+.3f v%.1f vy%+.2f pitch%+.3f roll%+.3f gear%d rpm%d surf %s%s" % [t, car.vx, car.vz, car.hd, car.yr, car.py, d.y, car.speed * 3.6, car.vy, car.pitch, car.roll, car.gear + 1, car.rpm, car.surf, flag])
+		last = p; lp = [car.pitch, car.roll]
 	get_tree().quit()

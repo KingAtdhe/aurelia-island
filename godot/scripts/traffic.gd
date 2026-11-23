@@ -128,7 +128,12 @@ func _physics_process(dt):
 	var pp = player.global_position if player else Vector3(1e9, 0, 0)
 	var dyn = []
 	var space = get_world_3d().direct_space_state
-	for c in cars:
+	if coll:                                   # cars the player (or a racer) ran into: off the lane, sliding
+		for h in coll.hits: _knock(cars[h[0]], Vector2(h[1], h[2]))
+		coll.hits = []
+	for ci in cars.size():
+		var c = cars[ci]
+		if c.get("free", false): _slide(c, ci, dt, pp, space, dyn); continue
 		var l = lanes[c.lane]
 		# gap to the next car on the same lane and direction, and to the player if he is in our lane ahead
 		var gap = 1e9
@@ -184,5 +189,29 @@ func _physics_process(dt):
 		c.n.global_transform = target
 		for w in c.wheels: w.rotate_object_local(Vector3(0, 0, 1), -c.v * dt / c.r)
 		c.snd.pitch_scale = SOUND[c.model][0] * (0.85 + c.v / 30.0); c.snd.volume_db = -14.0 + 5.0 * clampf(c.v / 15.0, 0.0, 1.0)
-		dyn.append([at.x, at.z, c.half.x, c.half.y, atan2(-fw.z, fw.x)])
+		dyn.append([at.x, at.z, c.half.x, c.half.y, atan2(-fw.z, fw.x), -1 - ci])
 	if coll: coll.dyn = dyn
+
+# knocked out of its lane: keeps its own speed plus the blow, spins a little, slides to a stop on the tyres' grip,
+# then (once nobody is looking) comes back in at a road end
+func _knock(c: Dictionary, dv: Vector2):
+	if not c.get("free", false):
+		var fw: Vector3 = c.n.global_transform.basis.x
+		c.free = true; c.ft = 0.0; c.fp = c.n.global_position; c.fh = atan2(fw.x, fw.z); c.fs = 0.0
+		c.fv = Vector2(fw.x, fw.z).normalized() * c.v
+		for tm in c.get("tails", []): tm.emission_energy_multiplier = 3.2 * (1.0 if tm.resource_name == "TailLED" else 0.5)
+	c.fv += dv; c.fs += clampf(dv.length() * 0.12, 0.0, 2.5) * (1.0 if randf() < 0.5 else -1.0); c.ft = 0.0
+
+func _slide(c: Dictionary, ci: int, dt: float, pp: Vector3, space, dyn: Array):
+	c.ft += dt; c.fv = c.fv.move_toward(Vector2.ZERO, 7.0 * dt); c.fs *= exp(-2.5 * dt); c.fh += c.fs * dt
+	c.fp.x += c.fv.x * dt; c.fp.z += c.fv.y * dt
+	var hit = space.intersect_ray(PhysicsRayQueryParameters3D.create(c.fp + Vector3(0, 3.0, 0), c.fp - Vector3(0, 40.0, 0)))
+	if hit: c.fp.y = lerpf(c.fp.y, hit.position.y + 0.012, clampf(dt * 10.0, 0.0, 1.0))
+	var fw = Vector3(sin(c.fh), 0, cos(c.fh)); var up = Vector3.UP; var rt = fw.cross(up).normalized()
+	c.n.global_transform = Transform3D(Basis(fw, up, rt), c.fp); c.v = c.fv.length()
+	for w in c.wheels: w.rotate_object_local(Vector3(0, 0, 1), -c.v * dt / c.r)
+	c.snd.pitch_scale = SOUND[c.model][0] * 0.8; c.snd.volume_db = -16.0
+	dyn.append([c.fp.x, c.fp.z, c.half.x, c.half.y, atan2(-fw.z, fw.x), -1 - ci])
+	if c.v < 0.2 and c.ft > 4.0 and _respawn(c, pp):
+		c.free = false
+		for tm in c.get("tails", []): tm.emission_energy_multiplier = 0.6 * (1.0 if tm.resource_name == "TailLED" else 0.5)

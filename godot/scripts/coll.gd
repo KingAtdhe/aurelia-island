@@ -7,6 +7,7 @@ var roads = []           # { p = PackedFloat32Array, n, hw, wall, lim }
 var seg = {}             # Vector2i -> [road index, segment index, ...]
 var dyn = []             # moving boxes (traffic), same layout as the static boxes
 var dyn2 = []            # race cars: [x, z, half length, half width, angle, owner instance id]; a car never collides with its own box
+var hits = []            # traffic cars knocked this frame: [traffic index, push x, push z]  (traffic boxes carry -1 - index as element 5)
 
 func _put(kind: String, o: Array, rad: float):
 	for gx in range(floor((o[0] - rad) / OG), floor((o[0] + rad) / OG) + 1):
@@ -64,7 +65,7 @@ func walls(nx: float, nz: float, car) -> Array:
 		if lim > 0 and abs(q.d) > lim and abs(q.d) < lim + 3:
 			var sg: float = sign(q.d); var over: float = q.d - sg * lim; nx -= px * over; nz -= pz * over
 			var vn: float = (car.vx * px + car.vz * pz) * sg
-			if vn > 0: car.vx -= px * sg * vn * 1.25; car.vz -= pz * sg * vn * 1.25; if vn > 6: car.bump(vn)
+			if vn > 0: car.vx -= px * sg * vn * 1.25; car.vz -= pz * sg * vn * 1.25; if vn > 2.5: car.bump(vn)
 			car.vx *= 0.99; car.vz *= 0.99
 	return [nx, nz]
 
@@ -83,21 +84,37 @@ func obstacles(nx: float, nz: float, car) -> Array:
 			var lx = dx * c - dz * s; var ly = -dx * s - dz * c
 			var ppx: float = o[2] + R - abs(lx); var ppy: float = o[3] + R - abs(ly)
 			if ppx > 0 and ppy > 0:
-				if ppx < ppy: pushes.append([c * sign(lx), -s * sign(lx), ppx])
-				else: pushes.append([-s * sign(ly), -c * sign(ly), ppy])
+				var who = o[5] if o.size() > 5 else null          # a moving car (traffic or racer) rather than a building
+				if ppx < ppy: pushes.append([c * sign(lx), -s * sign(lx), ppx, who])
+				else: pushes.append([-s * sign(ly), -c * sign(ly), ppy, who])
 		if cell != null:
 			for o in cell.c:
 				var dx: float = sx - o[0]; var dz: float = sz - o[1]; var d = Vector2(dx, dz).length(); var pen: float = o[2] + R - d
-				if pen > 0 and d > 0.01: pushes.append([dx / d, dz / d, pen])
+				if pen > 0 and d > 0.01: pushes.append([dx / d, dz / d, pen, null])
 			for o in cell.k:
 				if not o[3] and Vector2(sx - o[0], sz - o[1]).length() < o[2] + R: o[3] = true; car.vx *= 0.94; car.vz *= 0.94; car.knocked.emit(o)
 		for p in pushes:
 			var ax: float = p[0]; var az: float = p[1]; var pen: float = p[2]
 			nx += ax * pen; nz += az * pen; sx += ax * pen; sz += az * pen
 			var vn: float = car.vx * ax + car.vz * az
-			if vn < 0:
+			var who = p[3]
+			if who != null:
+				# another car of about the same weight: they share the blow (nearly inelastic), nobody bounces off a wall
+				var other = instance_from_id(who) if who > 0 else null
+				var ovn = 0.0
+				if other: ovn = other.vx * ax + other.vz * az
+				var rel = vn - ovn
+				if rel < 0:
+					var J = -rel * 0.58; car.vx += ax * J; car.vz += az * J
+					var ox = cfx * off; var oz = cfz * off; var tq = (oz * ax - ox * az) * J * car.V.m
+					car.yr = clampf(car.yr + tq / car.V.Iz * 0.25, -2.5, 2.5)
+					if other: other.vx -= ax * J; other.vz -= az * J
+					elif who < 0: hits.append([-1 - who, -ax * J, -az * J])
+					if rel < -4: car.bump(-rel)
+			elif vn < 0:
 				var J = -vn * 1.3; car.vx += ax * J; car.vz += az * J
 				var ox = cfx * off; var oz = cfz * off; var tq = (oz * ax - ox * az) * J * car.V.m
 				car.yr = clampf(car.yr + tq / car.V.Iz * 0.3, -2.5, 2.5)
-				if vn < -6: car.vx *= 0.6; car.vz *= 0.6; car.bump(-vn)
+				if vn < -6: car.vx *= 0.6; car.vz *= 0.6
+				if vn < -2.5: car.bump(-vn)          # light knocks get a light sound too
 	return [nx, nz]
