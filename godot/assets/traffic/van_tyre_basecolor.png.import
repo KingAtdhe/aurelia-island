@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cxkao47qbxpv6"
-path="res://.godot/imported/van_tyre_basecolor.png-af4519b96e5f86266d6ae4e747e302d1.ctex"
+path.s3tc="res://.godot/imported/van_tyre_basecolor.png-af4519b96e5f86266d6ae4e747e302d1.s3tc.ctex"
+path.etc2="res://.godot/imported/van_tyre_basecolor.png-af4519b96e5f86266d6ae4e747e302d1.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "e30089da9d1983d2766514ac6345e64e"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/traffic/van_tyre_basecolor.png"
-dest_files=["res://.godot/imported/van_tyre_basecolor.png-af4519b96e5f86266d6ae4e747e302d1.ctex"]
+dest_files=["res://.godot/imported/van_tyre_basecolor.png-af4519b96e5f86266d6ae4e747e302d1.s3tc.ctex", "res://.godot/imported/van_tyre_basecolor.png-af4519b96e5f86266d6ae4e747e302d1.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

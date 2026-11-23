@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bicc38cshyv87"
-path="res://.godot/imported/saloon_tyre_basecolor.png-12670633ef139211eab296f26bf0639f.ctex"
+path.s3tc="res://.godot/imported/saloon_tyre_basecolor.png-12670633ef139211eab296f26bf0639f.s3tc.ctex"
+path.etc2="res://.godot/imported/saloon_tyre_basecolor.png-12670633ef139211eab296f26bf0639f.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "e30089da9d1983d2766514ac6345e64e"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/traffic/saloon_tyre_basecolor.png"
-dest_files=["res://.godot/imported/saloon_tyre_basecolor.png-12670633ef139211eab296f26bf0639f.ctex"]
+dest_files=["res://.godot/imported/saloon_tyre_basecolor.png-12670633ef139211eab296f26bf0639f.s3tc.ctex", "res://.godot/imported/saloon_tyre_basecolor.png-12670633ef139211eab296f26bf0639f.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

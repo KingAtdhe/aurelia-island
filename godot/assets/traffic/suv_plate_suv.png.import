@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dkv6311rqvwep"
-path="res://.godot/imported/suv_plate_suv.png-f3ffec93c51fb518a5902fde317e9bc6.ctex"
+path.s3tc="res://.godot/imported/suv_plate_suv.png-f3ffec93c51fb518a5902fde317e9bc6.s3tc.ctex"
+path.etc2="res://.godot/imported/suv_plate_suv.png-f3ffec93c51fb518a5902fde317e9bc6.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "027ffea10c82372600a63711a0a2e225"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/traffic/suv_plate_suv.png"
-dest_files=["res://.godot/imported/suv_plate_suv.png-f3ffec93c51fb518a5902fde317e9bc6.ctex"]
+dest_files=["res://.godot/imported/suv_plate_suv.png-f3ffec93c51fb518a5902fde317e9bc6.s3tc.ctex", "res://.godot/imported/suv_plate_suv.png-f3ffec93c51fb518a5902fde317e9bc6.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

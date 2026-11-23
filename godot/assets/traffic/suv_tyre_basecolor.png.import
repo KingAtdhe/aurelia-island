@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bw3arfh8am3vk"
-path="res://.godot/imported/suv_tyre_basecolor.png-0cca0017cd9af5d37db585776eb6baaf.ctex"
+path.s3tc="res://.godot/imported/suv_tyre_basecolor.png-0cca0017cd9af5d37db585776eb6baaf.s3tc.ctex"
+path.etc2="res://.godot/imported/suv_tyre_basecolor.png-0cca0017cd9af5d37db585776eb6baaf.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "e30089da9d1983d2766514ac6345e64e"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/traffic/suv_tyre_basecolor.png"
-dest_files=["res://.godot/imported/suv_tyre_basecolor.png-0cca0017cd9af5d37db585776eb6baaf.ctex"]
+dest_files=["res://.godot/imported/suv_tyre_basecolor.png-0cca0017cd9af5d37db585776eb6baaf.s3tc.ctex", "res://.godot/imported/suv_tyre_basecolor.png-0cca0017cd9af5d37db585776eb6baaf.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

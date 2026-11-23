@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dgh4h8fm766pv"
-path="res://.godot/imported/van_plate_van.png-071e088fea913caa9f75d42be15aab6c.ctex"
+path.s3tc="res://.godot/imported/van_plate_van.png-071e088fea913caa9f75d42be15aab6c.s3tc.ctex"
+path.etc2="res://.godot/imported/van_plate_van.png-071e088fea913caa9f75d42be15aab6c.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "da9dd745764cac7a096c314bb2603165"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/traffic/van_plate_van.png"
-dest_files=["res://.godot/imported/van_plate_van.png-071e088fea913caa9f75d42be15aab6c.ctex"]
+dest_files=["res://.godot/imported/van_plate_van.png-071e088fea913caa9f75d42be15aab6c.s3tc.ctex", "res://.godot/imported/van_plate_van.png-071e088fea913caa9f75d42be15aab6c.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

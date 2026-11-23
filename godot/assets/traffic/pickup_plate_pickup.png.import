@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ds8frlkphctmf"
-path="res://.godot/imported/pickup_plate_pickup.png-07fd0e5ae0dc3064c8679f2d2105af09.ctex"
+path.s3tc="res://.godot/imported/pickup_plate_pickup.png-07fd0e5ae0dc3064c8679f2d2105af09.s3tc.ctex"
+path.etc2="res://.godot/imported/pickup_plate_pickup.png-07fd0e5ae0dc3064c8679f2d2105af09.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "245e9331841321eb0682c449613a097e"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/traffic/pickup_plate_pickup.png"
-dest_files=["res://.godot/imported/pickup_plate_pickup.png-07fd0e5ae0dc3064c8679f2d2105af09.ctex"]
+dest_files=["res://.godot/imported/pickup_plate_pickup.png-07fd0e5ae0dc3064c8679f2d2105af09.s3tc.ctex", "res://.godot/imported/pickup_plate_pickup.png-07fd0e5ae0dc3064c8679f2d2105af09.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

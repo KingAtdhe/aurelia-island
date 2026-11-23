@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://du1f1pv7dav4g"
-path="res://.godot/imported/calder_carbon_orm.jpg-0b89e8e24218202ee9ac9ec3309b772b.ctex"
+path.s3tc="res://.godot/imported/calder_carbon_orm.jpg-0b89e8e24218202ee9ac9ec3309b772b.s3tc.ctex"
+path.etc2="res://.godot/imported/calder_carbon_orm.jpg-0b89e8e24218202ee9ac9ec3309b772b.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "d57c7d09c723b3706ee089518de53a90"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/calder_carbon_orm.jpg"
-dest_files=["res://.godot/imported/calder_carbon_orm.jpg-0b89e8e24218202ee9ac9ec3309b772b.ctex"]
+dest_files=["res://.godot/imported/calder_carbon_orm.jpg-0b89e8e24218202ee9ac9ec3309b772b.s3tc.ctex", "res://.godot/imported/calder_carbon_orm.jpg-0b89e8e24218202ee9ac9ec3309b772b.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
