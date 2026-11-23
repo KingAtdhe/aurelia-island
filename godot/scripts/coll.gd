@@ -5,6 +5,7 @@ const OG = 40.0; const SG = 48.0
 var grid = {}            # Vector2i -> { o = [], c = [], k = [] }
 var roads = []           # { p = PackedFloat32Array, n, hw, wall, lim }
 var seg = {}             # Vector2i -> [road index, segment index, ...]
+var dyn = []             # moving boxes (traffic), same layout as the static boxes
 
 func _put(kind: String, o: Array, rad: float):
 	for gx in range(floor((o[0] - rad) / OG), floor((o[0] + rad) / OG) + 1):
@@ -72,20 +73,21 @@ func obstacles(nx: float, nz: float, car) -> Array:
 	for off in [hl, 0.0, -hl]:
 		var sx = nx + cfx * off; var sz = nz + cfz * off
 		var cell = grid.get(Vector2i(floor(sx / OG), floor(sz / OG)))
-		if cell == null: continue
 		var pushes = []
-		for o in cell.o:
+		var boxes = dyn if cell == null else cell.o + dyn
+		for o in boxes:
 			var dx: float = sx - o[0]; var dz: float = sz - o[1]; var c = cos(o[4]); var s = sin(o[4])
 			var lx = dx * c - dz * s; var ly = -dx * s - dz * c
 			var ppx: float = o[2] + R - abs(lx); var ppy: float = o[3] + R - abs(ly)
 			if ppx > 0 and ppy > 0:
 				if ppx < ppy: pushes.append([c * sign(lx), -s * sign(lx), ppx])
 				else: pushes.append([-s * sign(ly), -c * sign(ly), ppy])
-		for o in cell.c:
-			var dx: float = sx - o[0]; var dz: float = sz - o[1]; var d = Vector2(dx, dz).length(); var pen: float = o[2] + R - d
-			if pen > 0 and d > 0.01: pushes.append([dx / d, dz / d, pen])
-		for o in cell.k:
-			if not o[3] and Vector2(sx - o[0], sz - o[1]).length() < o[2] + R: o[3] = true; car.vx *= 0.94; car.vz *= 0.94; car.knocked.emit(o)
+		if cell != null:
+			for o in cell.c:
+				var dx: float = sx - o[0]; var dz: float = sz - o[1]; var d = Vector2(dx, dz).length(); var pen: float = o[2] + R - d
+				if pen > 0 and d > 0.01: pushes.append([dx / d, dz / d, pen])
+			for o in cell.k:
+				if not o[3] and Vector2(sx - o[0], sz - o[1]).length() < o[2] + R: o[3] = true; car.vx *= 0.94; car.vz *= 0.94; car.knocked.emit(o)
 		for p in pushes:
 			var ax: float = p[0]; var az: float = p[1]; var pen: float = p[2]
 			nx += ax * pen; nz += az * pen; sx += ax * pen; sz += az * pen

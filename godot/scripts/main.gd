@@ -9,6 +9,8 @@ var menu: Menu; var menu_on = false; var orbit = 0.0
 var cam_pos = Vector3.ZERO; var cam_yaw = 0.0; var cam_mode = 0
 const CAMS = [[5.9, 2.05], [9.5, 3.6], [2.75, 0.62]]
 var hud: CanvasLayer; var speed_lbl: Label; var gear_lbl: Label
+var traffic: Traffic
+var view_car = -1          # test shots: look at this traffic car instead of following the player
 var touch = { left = false, right = false, gas = false, brake = false, hand = false }
 
 func _ready():
@@ -34,6 +36,8 @@ func _ready():
 	var co = Coll.new(); co.load_data("res://assets/coast_coll.json", roads); car.coll = co
 	car.crashed.connect(func(): shake = 0.35)
 	spawn("Peninsula Road", 30)
+	traffic = Traffic.new(); add_child(traffic); traffic.player = car; traffic.coll = co
+	traffic.build(roads, int(OS.get_environment("TRAFFIC")) if OS.get_environment("TRAFFIC") != "" else 10)
 	make_hud()
 	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == ""
 	if menu_on or OS.get_environment("SHOTS") == "menu": open_menu()
@@ -67,6 +71,9 @@ func _physics_process(dt):
 
 func _process(dt):
 	update_camera(dt)
+	if view_car >= 0 and traffic and view_car < traffic.cars.size():
+		var tn: Node3D = traffic.cars[view_car].n; var b = tn.global_transform.basis
+		cam.global_position = tn.global_position + b.x * 4.6 + b.z * 4.4 + Vector3(0, 1.7, 0); cam.look_at(tn.global_position + Vector3(0, 0.8, 0) + b.x * 0.3)
 	if speed_lbl: speed_lbl.text = "%d" % int(car.speed * 3.6); gear_lbl.text = "R" if car.vf < -0.5 and car.in_brake > 0 else str(car.gear + 1)
 
 func update_camera(dt: float):          # port of the web chase camera: swings round the car, follows the slide in a drift
@@ -124,10 +131,16 @@ func run_shots():          # test: drive with full throttle and a few steering i
 	if OS.get_environment("SHOTS") == "trees": plan = [[0.0, 0.0, 0.0, 1.0]]; car.place(Vector3(-1405, 58, 862), 0.9)
 	if OS.get_environment("CAR") != "": car.setup(OS.get_environment("CAR")); spawn("Peninsula Road", 30)
 	if OS.get_environment("SHOTS") == "menu": plan = [[0.0, 0.0, 0.0, 1.5]]
-	if OS.get_environment("SHOTS") == "car": plan = [[0.0, 0.0, 0.0, 1.0]]; cam_mode = 0; car.place(Vector3(-1405, 58, 862), 2.6)
+	if OS.get_environment("SHOTS") == "traffic":             # park on the Peninsula Road and line the five traffic cars up ahead
+		plan = [[0.0, 0.0, 0.0, 0.6], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0]]
+		for k in traffic.cars.size():
+			var c = traffic.cars[k]
+			if k < 5: c.lane = 1; c.dir = -1 if k % 2 == 0 else 1; c.d = 70.0 + k * 16.0; c.vmax = 0.0 if k % 2 == 1 else 6.0; c.v = c.vmax
+		if OS.get_environment("SHOTS") == "car": plan = [[0.0, 0.0, 0.0, 1.0]]; cam_mode = 0; car.place(Vector3(-1405, 58, 862), 2.6)
 	var i = 0
 	for st in plan:
 		touch.left = st[0] < 0; touch.right = st[0] > 0; touch.gas = st[1] > 0; touch.brake = st[2] > 0
+		if OS.get_environment("SHOTS") == "traffic": view_car = i - 2 if i >= 2 else -1; touch.hand = true
 		await get_tree().create_timer(st[3]).timeout
 		await RenderingServer.frame_post_draw
 		print("PERF draws %d prims %d objects %d vram %.0f MB" % [Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME), Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0])
