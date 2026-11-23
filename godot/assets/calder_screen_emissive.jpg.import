@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b0vea063vwbhn"
-path="res://.godot/imported/calder_screen_emissive.jpg-4da1a4a3e8e995bf079d25eaf90038fc.ctex"
+path.s3tc="res://.godot/imported/calder_screen_emissive.jpg-4da1a4a3e8e995bf079d25eaf90038fc.s3tc.ctex"
+path.etc2="res://.godot/imported/calder_screen_emissive.jpg-4da1a4a3e8e995bf079d25eaf90038fc.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "e48566201e6e177fb7a04f95cf100116"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/calder_screen_emissive.jpg"
-dest_files=["res://.godot/imported/calder_screen_emissive.jpg-4da1a4a3e8e995bf079d25eaf90038fc.ctex"]
+dest_files=["res://.godot/imported/calder_screen_emissive.jpg-4da1a4a3e8e995bf079d25eaf90038fc.s3tc.ctex", "res://.godot/imported/calder_screen_emissive.jpg-4da1a4a3e8e995bf079d25eaf90038fc.etc2.ctex"]
 
 [params]
 

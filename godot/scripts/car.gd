@@ -25,16 +25,19 @@ var bump_t := 0.0
 var body: Node3D; var wheels = []; var wheel_spin = 0.0; var rear_spin = 0.0
 
 const CARS = {
-	vortex = { name = "Vortex", file = "res://assets/vortex.glb", yaw = PI, axis = "x", sgn = -1.0, blurb = "Mid-engine hypercar. Light, sharp, drifts on command.",
+	vortex = { name = "Vortex", file = "res://assets/vortex.glb", far = "res://assets/vortex_far.glb", mid = "res://assets/vortex_mid.glb", paint = ["paint"], half = Vector2(2.3, 1.0), yaw = PI, axis = "x", sgn = -1.0, blurb = "Mid-engine hypercar. Light, sharp, drifts on command.",
 		veh = { m = 1380.0, Iz = 2350.0, a = 1.46, b = 1.26, h = 0.47, r = 0.345, gears = [3.20, 2.28, 1.74, 1.38, 1.12, 0.92], fd = 3.70, red = 8100.0, up = 7600.0, down = 3300.0, tqPeak = 660.0, tqRpm = 5900.0, cda = 0.40, dmax = 0.66 } },
-	calder = { name = "Calder GT", file = "res://assets/calder.glb", yaw = 0.0, axis = "z", sgn = -1.0, blurb = "Front-engine V8 grand tourer. Heavier, long and stable; big, slow drifts.",
+	calder = { name = "Calder GT", file = "res://assets/calder.glb", far = "res://assets/calder_far.glb", mid = "res://assets/calder_mid.glb", paint = ["Paint_Body", "Paint"], half = Vector2(2.4, 1.0), yaw = 0.0, axis = "z", sgn = -1.0, blurb = "Front-engine V8 grand tourer. Heavier, long and stable; big, slow drifts.",
 		veh = { m = 1650.0, Iz = 3550.0, a = 1.38, b = 1.49, h = 0.48, r = 0.35, gears = [3.00, 2.10, 1.60, 1.28, 1.03, 0.84], fd = 3.30, red = 7200.0, up = 6800.0, down = 3000.0, tqPeak = 640.0, tqRpm = 5200.0, cda = 0.38, dmax = 0.62 } } }
 var car_id = "vortex"; var spin_axis = "x"; var spin_sgn = -1.0
+var opts = {}            # race rivals: { far = true (light model beyond FAR_AT), paint = Color }
+var frozen = false       # race countdown: the car holds still on the grid
+const NEAR_TO = 12.0; const MID_TO = 45.0      # rivals: full model, then ~45k, then ~16k triangles
 
-func _ready(): setup(car_id)
+func _ready(): setup(car_id, opts)
 
-func setup(id: String):
-	car_id = id; var C = CARS[id]
+func setup(id: String, o := {}):
+	car_id = id; opts = o; var C = CARS[id]
 	for k in C.veh: V[k] = C.veh[k]
 	spin_axis = C.axis; spin_sgn = C.sgn; wheels = []
 	if body: body.queue_free()
@@ -51,10 +54,45 @@ func setup(id: String):
 				var d: BaseMaterial3D = m.duplicate(); d.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 				d.albedo_color.a = 0.35 if m.resource_name.begins_with("Lens") else (0.55 if m.resource_name == "Glass_Tint" else 0.3)
 				d.roughness = 0.05; mi.set_surface_override_material(i, d)
+	if opts.has("paint"): _repaint(s, C.paint, opts.paint)
+	if opts.get("far", false): _add_far(s, C)
+
+# a rival's colour: every paint surface of the near model gets a copy of its material in the new colour
+func _repaint(s: Node3D, names: Array, col: Color):
+	var done = {}
+	for mi in s.find_children("*", "MeshInstance3D", true, false):
+		for i in mi.mesh.get_surface_count():
+			var m = mi.get_surface_override_material(i)
+			if m == null: m = mi.mesh.surface_get_material(i)
+			if m is BaseMaterial3D and m.resource_name in names:
+				if not done.has(m): var d: BaseMaterial3D = m.duplicate(); d.albedo_color = col; done[m] = d
+				mi.set_surface_override_material(i, done[m])
+
+# lighter models for rivals: the same materials as the near one (matched by name) on a ~45k and a ~16k version;
+# shadows come from the light one only, so a pack of rivals costs little in the shadow pass
+func _add_far(s: Node3D, C: Dictionary):
+	var by_name = {}
+	for mi in s.find_children("*", "MeshInstance3D", true, false):
+		mi.visibility_range_end = NEAR_TO; mi.visibility_range_end_margin = 1.5; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		for i in mi.mesh.get_surface_count():
+			var m = mi.get_surface_override_material(i)
+			if m == null: m = mi.mesh.surface_get_material(i)
+			if m: by_name[m.resource_name] = m
+	for lod in [[C.mid, NEAR_TO, MID_TO, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF], [C.far, MID_TO, 0.0, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF],
+			[C.far, 0.0, 90.0, GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY]]:
+		var f = load(lod[0]).instantiate(); s.add_child(f)
+		for mi in f.find_children("*", "MeshInstance3D", true, false):
+			mi.visibility_range_begin = lod[1]; mi.visibility_range_end = lod[2]; mi.visibility_range_begin_margin = 1.5; mi.visibility_range_end_margin = 1.5; mi.cast_shadow = lod[3]
+			for i in mi.mesh.get_surface_count():
+				var m = mi.mesh.surface_get_material(i)
+				if m and by_name.has(m.resource_name): mi.set_surface_override_material(i, by_name[m.resource_name])
 
 func place(p: Vector3, h: float):
 	px = p.x; py = p.y + 0.05; pz = p.z; hd = h; vx = 0; vz = 0; vy = 0; yr = 0; delta_ = 0; st_in = 0; thr = 0; brk = 0
 	af = 0; ar = 0; axf = 0; ayf = 0; gear = 0; rpm = V.idle; shiftT = 0; spin = false; drift = 0; air = false; pitch = 0; roll = 0
+	if is_inside_tree():                       # stand on the real surface (camber, kerbs), not on the road's centre-line height
+		var g = ground(p.x, p.z, p.y + 1.5)
+		if g[0] > -50.0 and abs(g[0] - p.y) < 2.5: py = g[0]
 	safe = Vector4(p.x, p.y, p.z, h)
 
 static func lat(a: float, B: float, C: float) -> float: return sin(C * atan(B * a))
@@ -143,6 +181,7 @@ func ground(x: float, z: float, yref: float) -> Array:
 	return [hit.position.y, hit.collider.get_meta("surf", "grass")]
 
 func physics(dt: float):
+	if frozen: vx = 0.0; vz = 0.0; yr = 0.0; speed = 0.0; vf = 0.0; rpm = lerpf(rpm, V.idle + 3200.0 * in_gas, dt * 6.0); return
 	var fx = sin(hd); var fz = cos(hd)
 	var G = ground(px, pz, py + 1.0); surf = G[1]
 	if not air: drive(dt)

@@ -2,8 +2,10 @@ extends CanvasLayer
 class_name Menu
 # start screen and garage: pick a car, drive; the car turns slowly on the road behind the panel
 signal drive(car_id)
+signal race(race_id)
 var ids = ["vortex", "calder"]; var idx = 0
 var title: Label; var name_lbl: Label; var blurb: Label; var stats: Label; var root: Control
+var car_ui = []; var race_ui = []
 
 func _ready():
 	root = Control.new(); root.set_anchors_preset(Control.PRESET_FULL_RECT); add_child(root)
@@ -11,15 +13,30 @@ func _ready():
 	title = _lbl("AURELIA ISLAND", 44, Vector2(40, 40)); _lbl("Coast · Godot preview", 20, Vector2(42, 98)).modulate = Color(1, 1, 1, 0.6)
 	name_lbl = _lbl("", 36, Vector2(40, 180)); blurb = _lbl("", 18, Vector2(40, 232)); blurb.autowrap_mode = TextServer.AUTOWRAP_WORD; blurb.size = Vector2(380, 80)
 	stats = _lbl("", 18, Vector2(40, 310)); stats.modulate = Color(1, 1, 1, 0.75)
-	_btn("◀", Vector2(40, 420), Vector2(80, 64), func(): pick(-1))
-	_btn("▶", Vector2(130, 420), Vector2(80, 64), func(): pick(1))
-	_btn("DRIVE", Vector2(40, 510), Vector2(300, 80), func(): emit_signal("drive", ids[idx]))
+	car_ui = [name_lbl, blurb, stats]
+	car_ui.append(_btn("◀", Vector2(40, 400), Vector2(80, 64), func(): pick(-1)))
+	car_ui.append(_btn("▶", Vector2(130, 400), Vector2(80, 64), func(): pick(1)))
+	car_ui.append(_btn("FREE ROAM", Vector2(40, 480), Vector2(300, 72), func(): emit_signal("drive", ids[idx])))
+	car_ui.append(_btn("RACES", Vector2(40, 564), Vector2(300, 72), func(): show_races(true)))
+	# race list: three sprints with the best time and place so far; the race uses the car picked above
+	var y = 170
+	for rid in Race.ORDER:
+		var R = Race.RACES[rid]; var b = Race.best(rid)
+		var bt = _btn("", Vector2(40, y), Vector2(390, 108), func(): emit_signal("race", rid)); bt.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		bt.text = "  %s\n  %s" % [R.name, ("best %s · %s" % [Race.fmt(b[0]), ["1st", "2nd", "3rd", "4th"][b[1] - 1]]) if b[0] > 0 else "not raced yet"]
+		bt.add_theme_font_size_override("font_size", 24); race_ui.append(bt); y += 120
+	race_ui.append(_btn("BACK", Vector2(40, y + 6), Vector2(180, 64), func(): show_races(false)))
+	show_races(false)
 	pick(0)
+
+func show_races(on: bool):
+	for c in car_ui: c.visible = not on
+	for c in race_ui: c.visible = on
 
 func _lbl(t: String, sz: int, pos: Vector2) -> Label:
 	var l = Label.new(); l.text = t; l.add_theme_font_size_override("font_size", sz); l.position = pos; root.add_child(l); return l
-func _btn(t: String, pos: Vector2, sz: Vector2, cb: Callable):
-	var b = Button.new(); b.text = t; b.position = pos; b.size = sz; b.add_theme_font_size_override("font_size", 30); b.pressed.connect(cb); root.add_child(b)
+func _btn(t: String, pos: Vector2, sz: Vector2, cb: Callable) -> Button:
+	var b = Button.new(); b.text = t; b.position = pos; b.size = sz; b.add_theme_font_size_override("font_size", 30); b.pressed.connect(cb); root.add_child(b); return b
 
 func pick(d: int):
 	idx = (idx + d + ids.size()) % ids.size(); var C = Car.CARS[ids[idx]]

@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b2eaod30ja5ox"
-path="res://.godot/imported/calder_carbon_normal.jpg-129e5ab20447b1ed587db61c6b3e0249.ctex"
+path.s3tc="res://.godot/imported/calder_carbon_normal.jpg-129e5ab20447b1ed587db61c6b3e0249.s3tc.ctex"
+path.etc2="res://.godot/imported/calder_carbon_normal.jpg-129e5ab20447b1ed587db61c6b3e0249.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "6a75a137dbd7b41e1ea421434785c5e7"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/calder_carbon_normal.jpg"
-dest_files=["res://.godot/imported/calder_carbon_normal.jpg-129e5ab20447b1ed587db61c6b3e0249.ctex"]
+dest_files=["res://.godot/imported/calder_carbon_normal.jpg-129e5ab20447b1ed587db61c6b3e0249.s3tc.ctex", "res://.godot/imported/calder_carbon_normal.jpg-129e5ab20447b1ed587db61c6b3e0249.etc2.ctex"]
 
 [params]
 

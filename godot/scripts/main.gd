@@ -10,6 +10,8 @@ var cam_pos = Vector3.ZERO; var cam_yaw = 0.0; var cam_mode = 0
 const CAMS = [[5.9, 2.05], [9.5, 3.6], [2.75, 0.62]]
 var hud: CanvasLayer; var speed_lbl: Label; var gear_lbl: Label
 var traffic: Traffic
+var coll: Coll
+var race: Race = null
 var audio: CarAudio
 var view_car = -1          # test shots: look at this traffic car instead of following the player
 var touch = { left = false, right = false, gas = false, brake = false, hand = false }
@@ -34,20 +36,50 @@ func _ready():
 	for r in w["roads"]: roads[r["name"]] = r["pts"]
 	cam = Camera3D.new(); cam.far = 3000; cam.near = 0.12; cam.fov = 62; add_child(cam); cam.current = true
 	car = Car.new(); add_child(car)
-	var co = Coll.new(); co.load_data("res://assets/coast_coll.json", roads); car.coll = co
+	var co = Coll.new(); co.load_data("res://assets/coast_coll.json", roads); car.coll = co; coll = co
 	car.crashed.connect(func(): shake = 0.35)
 	spawn("Peninsula Road", 30)
 	audio = CarAudio.new(); audio.car = car; add_child(audio)
 	traffic = Traffic.new(); add_child(traffic); traffic.player = car; traffic.coll = co
 	traffic.build(roads, int(OS.get_environment("TRAFFIC")) if OS.get_environment("TRAFFIC") != "" else 10)
 	make_hud()
-	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == ""
+	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == ""
 	if menu_on or OS.get_environment("SHOTS") == "menu": open_menu()
 	if not menu_on: audio.ignition()
 	if OS.get_environment("SHOTS") != "": run_shots()
 	if OS.get_environment("PERF") != "": perf_test()
 	if OS.get_environment("DRIVETEST") != "": drive_test()
 	if OS.get_environment("TRAFFICTEST") != "": traffic_test()
+	if OS.get_environment("RACETEST") != "": race_test(OS.get_environment("RACETEST"))
+	if OS.get_environment("ROUTECHECK") != "": var rc = load("res://scripts/_routecheck.gd").new(); add_child(rc)
+
+func start_race(rid: String):
+	if race: race.stop(); race = null
+	if menu: menu.queue_free(); menu = null
+	menu_on = false; hud.visible = true; touch = { left = false, right = false, gas = false, brake = false, hand = false }
+	race = Race.new(); add_child(race); race.start(rid, self)
+	if not audio.on: audio.ignition()
+
+func end_race():
+	if race: race.stop(); race = null
+
+func race_test(rid: String):     # headless or with SHOTS: the player's car drives itself; prints the race as it goes
+	if menu: menu.queue_free(); menu = null; menu_on = false; hud.visible = true
+	start_race(rid); race.autopilot = true
+	var shots = OS.get_environment("RACESHOTS") != ""; var k = 0; var tt = 0.0
+	var times = [2.0, 6.0, 14.0, 30.0]
+	if shots and OS.get_environment("RACESHOTS") != "1": times = []; for x in OS.get_environment("RACESHOTS").split(","): times.append(float(x))
+	while true:
+		await get_tree().create_timer(1.0).timeout; tt += 1.0
+		var line = "T %3d %-6s draws %d prims %d" % [int(tt), race.state, Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)]
+		for r in race.racers: line += " | %s s%.0f v%.0f%s" % [r.name.substr(0, 6), r.s, r.car.speed * 3.6, (" FIN " + Race.fmt(r.time)) if r.done else ""]
+		print(line)
+		if shots and (tt in times or race.panel != null):
+			if OS.get_environment("RACESHOTS") == "1" and k > 0 and race.panel == null: continue
+			await RenderingServer.frame_post_draw; get_viewport().get_texture().get_image().save_png("/tmp/race_shot_%d.png" % k); k += 1
+		if race.panel != null or tt > 240:
+			for r in race.standings(): print("RESULT %s %s" % [r.name, Race.fmt(r.time) if r.done else "DNF s=%.0f" % r.s])
+			get_tree().quit(); return
 
 func spawn(road: String, i: int):
 	var p = roads[road]; var a = Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]); var b = Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
@@ -67,6 +99,7 @@ func colliders(root: Node):
 		sb.add_child(cs); n.add_child(sb)
 
 func _physics_process(dt):
+	if race and race.autopilot: return          # test: the race drives the player's car
 	var l = touch.left or Input.is_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_A); var r = touch.right or Input.is_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_D)
 	car.in_steer = (-1.0 if l else 0.0) + (1.0 if r else 0.0)
 	car.in_gas = 1.0 if (touch.gas or Input.is_key_pressed(KEY_UP) or Input.is_key_pressed(KEY_W)) else 0.0
@@ -129,14 +162,20 @@ func make_hud():
 	speed_lbl = Label.new(); speed_lbl.add_theme_font_size_override("font_size", 56); speed_lbl.position = Vector2(vs.x - 190, 20); hud.add_child(speed_lbl)
 	gear_lbl = Label.new(); gear_lbl.add_theme_font_size_override("font_size", 28); gear_lbl.position = Vector2(vs.x - 70, 40); hud.add_child(gear_lbl)
 	var cb = Button.new(); cb.text = "Cam"; cb.position = Vector2(20, 20); cb.add_theme_font_size_override("font_size", 24); cb.pressed.connect(func(): cam_mode = (cam_mode + 1) % 3); hud.add_child(cb)
-	var mb = Button.new(); mb.text = "Menu"; mb.position = Vector2(200, 20); mb.add_theme_font_size_override("font_size", 24); mb.pressed.connect(func(): open_menu()); hud.add_child(mb)
-	var rb = Button.new(); rb.text = "Reset"; rb.position = Vector2(100, 20); rb.add_theme_font_size_override("font_size", 24); rb.pressed.connect(func(): car.place(Vector3(car.safe.x, car.safe.y, car.safe.z), car.safe.w)); hud.add_child(rb)
+	var mb = Button.new(); mb.text = "Menu"; mb.position = Vector2(200, 20); mb.add_theme_font_size_override("font_size", 24); mb.pressed.connect(func(): end_race(); open_menu()); hud.add_child(mb)
+	var rb = Button.new(); rb.text = "Reset"; rb.position = Vector2(100, 20); rb.add_theme_font_size_override("font_size", 24); rb.pressed.connect(reset_car); hud.add_child(rb)
+
+func reset_car():
+	if race:
+		if race.state != "count": race.reset_player()
+	else: car.place(Vector3(car.safe.x, car.safe.y, car.safe.z), car.safe.w)
 
 func run_shots():          # test: drive with full throttle and a few steering inputs, screenshot along the way
 	var plan = [[0.0, 1.0, 0.0, 2.5], [0.0, 1.0, 0.0, 3.0], [0.0, 1.0, 0.0, 3.0], [0.0, 1.0, 0.0, 3.0], [0.0, 1.0, 0.0, 3.0], [0.0, 0.0, 1.0, 1.0]]
 	if OS.get_environment("SHOTS") == "trees": plan = [[0.0, 0.0, 0.0, 1.0]]; car.place(Vector3(-1405, 58, 862), 0.9)
 	if OS.get_environment("CAR") != "": car.setup(OS.get_environment("CAR")); spawn("Peninsula Road", 30)
 	if OS.get_environment("SHOTS") == "menu": plan = [[0.0, 0.0, 0.0, 1.5]]
+	if OS.get_environment("SHOTS") == "menu" and OS.get_environment("MENUVIEW") == "races" and menu: menu.show_races(true)
 	if OS.get_environment("SHOTS") == "traffic":             # park on the Peninsula Road and line the five traffic cars up ahead
 		plan = [[0.0, 0.0, 0.0, 0.6], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0]]
 		for k in traffic.cars.size():
@@ -196,6 +235,7 @@ func perf_test():           # draw calls and triangles with each group switched 
 func open_menu():
 	menu_on = true; hud.visible = false; touch = { left = false, right = false, gas = false, brake = false, hand = false }
 	menu = Menu.new(); add_child(menu)
+	menu.race.connect(func(rid): start_race(rid))
 	menu.drive.connect(func(id):
 		if id.begins_with("preview:"): car.setup(id.substr(8)); spawn("Peninsula Road", 30); return
 		if car.car_id != id: car.setup(id); spawn("Peninsula Road", 30)

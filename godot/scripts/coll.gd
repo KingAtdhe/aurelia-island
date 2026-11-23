@@ -6,6 +6,7 @@ var grid = {}            # Vector2i -> { o = [], c = [], k = [] }
 var roads = []           # { p = PackedFloat32Array, n, hw, wall, lim }
 var seg = {}             # Vector2i -> [road index, segment index, ...]
 var dyn = []             # moving boxes (traffic), same layout as the static boxes
+var dyn2 = []            # race cars: [x, z, half length, half width, angle, owner instance id]; a car never collides with its own box
 
 func _put(kind: String, o: Array, rad: float):
 	for gx in range(floor((o[0] - rad) / OG), floor((o[0] + rad) / OG) + 1):
@@ -74,8 +75,10 @@ func obstacles(nx: float, nz: float, car) -> Array:
 		var sx = nx + cfx * off; var sz = nz + cfz * off
 		var cell = grid.get(Vector2i(floor(sx / OG), floor(sz / OG)))
 		var pushes = []
-		var boxes = dyn if cell == null else cell.o + dyn
+		var boxes = (dyn + dyn2) if cell == null else cell.o + dyn + dyn2
+		var me = car.get_instance_id()
 		for o in boxes:
+			if o.size() > 5 and o[5] == me: continue
 			var dx: float = sx - o[0]; var dz: float = sz - o[1]; var c = cos(o[4]); var s = sin(o[4])
 			var lx = dx * c - dz * s; var ly = -dx * s - dz * c
 			var ppx: float = o[2] + R - abs(lx); var ppy: float = o[3] + R - abs(ly)
