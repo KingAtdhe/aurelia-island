@@ -111,7 +111,7 @@ def wheel(name, x, side):
     tyre = [(r * K, w * kw) for r, w in tyre]
     # 17" rim is relatively bigger: pull the bead radius out so the sidewall is lower
     tyre = [(0.214 + (r - 0.203 * K) * (R - 0.214) / (R - 0.203 * K), w) for r, w in tyre]
-    lathe(bm, tyre, 36, True, c, o_); obj(name + '_Tyre', bm, 'Tyre')
+    lathe(bm, tyre, 48, True, c, o_); obj(name + '_Tyre', bm, 'Tyre')
     bm = bmesh.new(); q = 0.216 / 0.203
     rim = [(0.186, -0.080), (0.198, -0.080), (0.206, -0.088), (0.212, -0.084), (0.200, -0.060), (0.186, -0.05), (0.186, 0.050), (0.196, 0.064), (0.208, 0.078), (0.206, 0.084), (0.196, 0.082), (0.190, 0.074)]
     lathe(bm, [(r * q * (0.214 / 0.2256 if r > 0.205 else 1), w * kw) for r, w in rim], 36, True, c, o_)
@@ -266,6 +266,7 @@ for wn, wx, wsd in (('Wheel_FL', FX, 1), ('Wheel_FR', FX, -1), ('Wheel_RL', RX, 
     bpy.context.view_layer.objects.active = ws[0]; bpy.ops.object.join(); wo_ = bpy.context.view_layer.objects.active; wo_.name = NM + '_' + wn
     bpy.context.scene.cursor.location = (wx, wsd * TRK, R); bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
     for pp in wo_.data.polygons: pp.use_smooth = True
+    wo_.data.set_sharp_from_angle(angle=math.radians(35))                # keep the tyre shoulders and rim lips crisp
     WHEELS.append(wo_); parts = [o for o in parts if o not in ws]
 for o in bpy.context.scene.objects: o.select_set(False)
 bpy.context.view_layer.objects.active = parts[0]

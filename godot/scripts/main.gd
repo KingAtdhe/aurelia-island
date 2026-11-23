@@ -75,7 +75,8 @@ func _process(dt):
 	if view_car >= 0 and traffic and view_car < traffic.cars.size():
 		var tn: Node3D = traffic.cars[view_car].n; var b = tn.global_transform.basis
 		var ang = float(OS.get_environment("VANG")) if OS.get_environment("VANG") != "" else 0.75
-		cam.global_position = tn.global_position + (b.x * cos(ang) + b.z * sin(ang)) * 6.2 + Vector3(0, 1.5, 0); cam.look_at(tn.global_position + Vector3(0, 0.8, 0) + b.x * 0.3)
+		var cd = float(OS.get_environment("VDIST")) if OS.get_environment("VDIST") != "" else 6.2
+		cam.global_position = tn.global_position + (b.x * cos(ang) + b.z * sin(ang)) * cd + Vector3(0, 1.5 * cd / 6.2, 0); cam.look_at(tn.global_position + Vector3(0, 0.8 if cd > 4 else 0.4, 0) + b.x * (0.3 if cd > 4 else 1.4))
 	if speed_lbl: speed_lbl.text = "%d" % int(car.speed * 3.6); gear_lbl.text = "R" if car.vf < -0.5 and car.in_brake > 0 else str(car.gear + 1)
 
 func update_camera(dt: float):          # port of the web chase camera: swings round the car, follows the slide in a drift

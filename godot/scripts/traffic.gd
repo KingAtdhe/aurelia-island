@@ -5,6 +5,7 @@ class_name Traffic
 
 const MODELS = ["hatch", "saloon", "suv", "van", "pickup"]
 const RADIUS = { hatch = 0.335, saloon = 0.345, suv = 0.385, van = 0.40, pickup = 0.40 }
+const WB = { hatch = Vector2(1.35, 1.475), saloon = Vector2(1.585, 1.475), suv = Vector2(1.55, 1.45), van = Vector2(1.58, 1.46), pickup = Vector2(1.84, 1.40) }   # front and rear axle distance from the body centre
 const HALF = { hatch = Vector2(2.08, 0.90), saloon = Vector2(2.39, 0.94), suv = Vector2(2.36, 0.98), van = Vector2(2.41, 1.01), pickup = Vector2(2.71, 0.98) }
 const PAINT = [Color(0.62, 0.63, 0.64), Color(0.45, 0.46, 0.48), Color(0.02, 0.02, 0.025), Color(0.06, 0.11, 0.24), Color(0.30, 0.02, 0.03),
 	Color(0.07, 0.007, 0.016), Color(0.17, 0.33, 0.55), Color(0.40, 0.34, 0.25), Color(0.010, 0.032, 0.017), Color(0.20, 0.21, 0.22), Color(0.55, 0.42, 0.10)]
@@ -36,7 +37,7 @@ func build(roads: Dictionary, count: int):
 		while li < lanes.size() - 1 and pick > lanes[li].len: pick -= lanes[li].len; li += 1
 		var model: String = MODELS[k % MODELS.size()]
 		var c = { lane = li, dir = 1 if rng.randf() < 0.5 else -1, d = clampf(pick, 10.0, lanes[li].len - 10.0), v = 0.0,
-			vmax = rng.randf_range(11.0, 16.5) * (0.85 if model in ["van", "pickup"] else 1.0), r = RADIUS[model], half = HALF[model] }
+			vmax = rng.randf_range(11.0, 16.5) * (0.85 if model in ["van", "pickup"] else 1.0), r = RADIUS[model], half = HALF[model], wb = WB[model] }
 		c.v = c.vmax
 		for o in cars:
 			if o.lane == c.lane and abs(o.d - c.d) < 20.0: c.d = fmod(c.d + 40.0, lanes[li].len - 20.0) + 10.0
@@ -75,6 +76,9 @@ func _dress(n: Node3D, paint: int, c: Dictionary):
 					var tm: StandardMaterial3D = m.duplicate(); tm.emission_enabled = true; tm.emission = Color(1.0, 0.05, 0.03); tm.emission_energy_multiplier = 0.6 if m.resource_name == "TailLED" else 0.15
 					c["tail_" + m.resource_name] = tm; c.tails = c.get("tails", []) + [tm]
 				mi.set_surface_override_material(i, c["tail_" + m.resource_name])
+			elif m.resource_name == "Tyre":
+				if not c.has("tyre"): c.tyre = m.duplicate(); c.tyre.albedo_color = Color(0.05, 0.05, 0.052); c.tyre.roughness = 0.86; c.tyre.metallic_specular = 0.35
+				mi.set_surface_override_material(i, c.tyre)
 			elif m.resource_name == "Glass":
 				var g: StandardMaterial3D = m.duplicate(); g.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA; g.albedo_color.a = 0.62; g.roughness = 0.04
 				mi.set_surface_override_material(i, g)
@@ -148,11 +152,21 @@ func _physics_process(dt):
 			if not _respawn(c, pp): c.d = clampf(c.d, 1.0, l.len - 1.0); c.v = 0.0
 			l = lanes[c.lane]; a = _at(l, c.d); pos = a[0]; t = a[1] * c.dir; right = Vector3(-t.z, 0, t.x).normalized()
 		var at = pos + right * l.off
-		var up = Vector3.UP
-		var hit = space.intersect_ray(PhysicsRayQueryParameters3D.create(at + Vector3(0, 3.0, 0), at - Vector3(0, 60.0, 0)))
-		if hit and (abs(hit.position.y - at.y) > 0.6 or hit.collider.get_meta("surf", "") != "road"): hit = {}      # only the road itself, never a kerb, sign or house
-		c.ground = not hit.is_empty()
-		if hit: at.y = hit.position.y; up = hit.normal if hit.normal.y > 0.8 else Vector3.UP
+		# stand on four wheels: ray down at each contact patch, the body takes the plane through them so no tyre sinks into the camber
+		var up = Vector3.UP; var t2 = Vector3(t.x, 0, t.z).normalized(); var r2 = Vector3(-t2.z, 0, t2.x)
+		var hs = []; var n_ok = 0
+		for q in [[c.wb.x, 1.0], [c.wb.x, -1.0], [-c.wb.y, 1.0], [-c.wb.y, -1.0]]:
+			var wp = at + t2 * q[0] + r2 * (q[1] * c.half.y * 0.85)
+			var hit = space.intersect_ray(PhysicsRayQueryParameters3D.create(wp + Vector3(0, 3.0, 0), wp - Vector3(0, 60.0, 0)))
+			if hit and abs(hit.position.y - at.y) < 0.8 and hit.collider.get_meta("surf", "") == "road": hs.append(hit.position.y); n_ok += 1
+			else: hs.append(at.y)
+		c.ground = n_ok > 0
+		var fy = (hs[0] + hs[1]) * 0.5; var ry = (hs[2] + hs[3]) * 0.5; var ly = (hs[0] + hs[2]) * 0.5; var ryy = (hs[1] + hs[3]) * 0.5
+		var ax = t2 * (c.wb.x + c.wb.y) + Vector3(0, fy - ry, 0); var az = r2 * (2 * c.half.y * 0.85) + Vector3(0, ryy - ly, 0)
+		up = az.cross(ax).normalized()
+		if up.y < 0: up = -up
+		if up.y < 0.8: up = Vector3.UP
+		at.y = (fy * c.wb.y + ry * c.wb.x) / (c.wb.x + c.wb.y) + 0.012     # height under the body centre, a hair above so the tread never clips
 		c.y = at.y if not c.has("y") else lerpf(c.y, at.y, clampf(dt * 8.0, 0.0, 1.0)); at.y = c.y           # no pops where the road mesh and the centre line disagree
 		c.up = c.get("up", up).lerp(up, clampf(dt * 6.0, 0.0, 1.0)).normalized(); up = c.up
 		var fw = (t - up * t.dot(up)).normalized(); var rt = fw.cross(up).normalized()
