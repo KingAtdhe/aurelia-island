@@ -97,6 +97,7 @@ for sp, (off, cnt) in FD['species'].items():
     info = FD['info'].get(sp, {}); tree = info.get('card', -1) >= 0 or TREE.match(sp); kn = KNOCK.match(sp)
     a = FB[off:off + cnt * 8].reshape(-1, 8)
     for k, (x, y, z, s, ya) in enumerate(a[:, :5]):
+        if ht * s < 0.65 and not kn: continue          # low slabs and small stones: the car rides over them, they are no wall
         c, sn = math.cos(ya), math.sin(ya); ox, oz = x + (cx0 * c + cz0 * sn) * s, z + (-cx0 * sn + cz0 * c) * s
         if tree: circ.append([round(float(x), 2), round(float(z), 2), round(min(max(0.045 * ht * s, 0.18), 0.6), 2)]); continue
         if POLE.search(sp): circ.append([round(float(x), 2), round(float(z), 2), 0.22]); continue

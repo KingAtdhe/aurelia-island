@@ -6,7 +6,7 @@ class_name Car
 var V = { m = 1380.0, Iz = 2350.0, a = 1.46, b = 1.26, h = 0.47, r = 0.345, B = 11.5, Br = 14.5, C = 1.42, mu = 1.15, muF = 0.96, muR = 1.10,
 	dmax = 0.66, lockD = 0.87, sigma = 0.45, gears = [3.20, 2.28, 1.74, 1.38, 1.12, 0.92], fd = 3.70, eff = 0.88, idle = 950.0, red = 8100.0,
 	up = 7600.0, down = 3300.0, brake = 1.18, bias = 0.63, cda = 0.40, down_ = 0.10, rr = 0.012, tqPeak = 660.0, tqRpm = 5900.0 }
-const MU := { road = 1.0, dirt = 0.72, grass = 0.6, sand = 0.5, snow = 0.45 }
+const MU := { road = 1.0, dirt = 0.82, grass = 0.74, sand = 0.62, snow = 0.52 }          # off the asphalt: less grip, but still a car you can steer
 const RRS := { road = 1.0, dirt = 2.5, grass = 10.0, sand = 13.0, snow = 6.0 }
 
 # input (set by the HUD): steer -1..1 (left negative), gas, brake 0..1, hand bool
@@ -18,6 +18,7 @@ var delta_ = 0.0; var st_in = 0.0; var thr = 0.0; var brk = 0.0; var af = 0.0; v
 var gear = 0; var rpm = 950.0; var shiftT = 0.0; var spin = false; var drift = 0.0; var pwr = 0.0; var pb = 0.0
 var beta = 0.0; var air = false; var pitch = 0.0; var roll = 0.0; var speed = 0.0; var vf = 0.0; var surf = "road"
 var safe = Vector4.ZERO; var safe_t = 0.0
+var mu_s = 1.0
 signal knocked(o)
 signal crashed
 var coll: Coll
@@ -129,7 +130,8 @@ func torque_at(r: float) -> float:
 	return V.tqPeak * max(0.5, 1.0 - x * x * 0.85)
 
 func drive(dt: float):
-	var L = V.a + V.b; var g = 9.81; var mu = V.mu * MU.get(surf, 0.6)
+	mu_s = move_toward(mu_s, MU.get(surf, 0.7), dt * 2.5)          # grip changes over a few tenths of a second: crossing a verge or a seam never jerks the car
+	var L = V.a + V.b; var g = 9.81; var mu = V.mu * mu_s
 	var stT = -in_steer; var thT = in_gas; var brT = in_brake
 	var spd0 = Vector2(vx, vz).length(); var srate = (9.0 if stT * st_in < 0 else 5.5) / (1.0 + spd0 / 40.0)
 	st_in += clamp(stT - st_in, -srate * dt, srate * dt); thr += clamp(thT - thr, -dt * 10, dt * 7); brk += clamp(brT - brk, -dt * 12, dt * 9)
@@ -235,7 +237,7 @@ func physics(dt: float):
 		var dy: float = Gn[0] - py
 		if dy < -0.5 - abs(vf) * dt * 0.9: air = true; vy = min(vy, 6.0)
 		elif dy > 2.5: px -= vx * dt; pz -= vz * dt; vx *= -0.3; vz *= -0.3      # a step too high to climb (wall, kerb of a cliff): bounce back
-		elif surf != "road" and dy / dt < vy - 24.0 * dt - 6.0: air = true      # rough ground dropping away faster than the car can fall: off the edge, not glued down (roads stay smooth)
+		elif surf != "road" and dy < -0.25 and dy / dt < vy - 24.0 * dt - 6.0: air = true      # rough ground dropping away faster than the car can fall: off the edge, not glued down (roads stay smooth)
 		else: vy = clamp(dy / dt, -30, 12); py = Gn[0]
 	if air:
 		vy -= 24 * dt; py += vy * dt

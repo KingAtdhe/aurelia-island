@@ -19,6 +19,7 @@ var world_roads = []
 var road_hw = {}
 var landmarks = []          # [name, position] of the island's sights
 var tunnels: Tunnels
+var grass: Grass
 var sun: DirectionalLight3D
 var environment: Environment
 var eyes = 0.0          # 0 in daylight, 1 deep in a tunnel
@@ -50,13 +51,14 @@ func _ready():
 	island = Island.new(); add_child(island); island.load_base(sp0)
 	flora = Flora.new(); add_child(flora); flora.build(sp0)
 	tunnels = Tunnels.new(); add_child(tunnels); tunnels.build(w, island)
+	grass = Grass.new(); add_child(grass); grass.build(w)
 	var sea = MeshInstance3D.new(); var pm = PlaneMesh.new(); pm.size = Vector2(16000, 16000); sea.mesh = pm
 	var wm = ShaderMaterial.new(); wm.shader = load("res://shaders/water.gdshader"); sea.material_override = wm; sea.position = Vector3(0, -0.25, 0); add_child(sea)
 	get_viewport().mesh_lod_threshold = 4.0          # simpler versions of far meshes (LODs made at import): no visible change on a phone screen
 	cam = Camera3D.new(); cam.far = 3000; cam.near = 0.12; cam.fov = 62; add_child(cam); cam.current = true
 	Progress.load_save()
 	car = Car.new(); car.player = true; car.car_id = Progress.car if Progress.car in Progress.cars else "vortex"; add_child(car)
-	var co = Coll.new(); co.load_data("res://assets/island/coll.json", roads); car.coll = co; coll = co
+	var co = Coll.new(); co.load_data("res://assets/island/coll.json", roads); car.coll = co; coll = co; grass.coll = co
 	car.knocked.connect(func(o): if o.size() > 5: flora.hide_instance(o[4], o[5]))
 	car.crashed.connect(func(): shake = 0.35)
 	car.nearest_road = nearest_road
@@ -209,7 +211,7 @@ func _process(dt):
 	update_camera(dt)
 	_landmarks(dt)
 	var fp = Vector3(car.px, car.py, car.pz) if view_car < 0 else cam.global_position
-	island.focus = fp; flora.focus = fp
+	island.focus = fp; flora.focus = fp; grass.focus = fp
 	# eyes adjusting in a tunnel: the sun and the sky fade, exposure opens up a little
 	var tin = tunnels.inside(Vector3(car.px, car.py, car.pz)) if tunnels else 0.0
 	eyes = move_toward(eyes, tin, dt * (0.9 if tin > eyes else 0.6))
@@ -390,8 +392,11 @@ func phys_test(kind: String):    # test: log the car every physics frame through
 		crash = [[0.0, 9.0, 1, 0, false]], traffic = [[0.0, 9.0, 1, 0, false]],
 		drift = [[0.0, 4.0, 1, 0, false], [4.0, 4.6, 1, 0, true], [4.6, 9.0, 1, 0, false]],
 		reverse = [[0.0, 3.0, 0, 1, false], [3.0, 5.0, 0, 0, false], [5.0, 7.0, 1, 0, false], [7.0, 9.0, 0, 1, false]],
-		shots = [[0.0, 14.5, 1, 0, false], [14.5, 16.5, 0, 1, false]] }.get(kind, [])
-	var tend = 16.5 if kind == "shots" else 9.0
+		shots = [[0.0, 14.5, 1, 0, false], [14.5, 16.5, 0, 1, false]], offroad = [[0.0, 14.0, 1, 0, false]] }.get(kind, [])
+	var tend = 16.5 if kind == "shots" else (14.0 if kind == "offroad" else 9.0)
+	car.crashed.connect(func(): print("EV CRASH t%.2f impact %.1f surf %s air %s v %.1f at %s" % [t, car.impact, car.surf, car.air, car.speed * 3.6, Vector3(car.px, car.py, car.pz)]))
+	car.landed.connect(func(v): print("EV LANDED t%.2f vy %.1f surf %s v %.1f" % [t, v, car.surf, car.speed * 3.6]))
+	var lsurf = car.surf
 	if kind == "crash":            # aim at a tree off the road
 		var d = JSON.parse_string(FileAccess.get_file_as_string("res://assets/island/coll.json")); var best = null; var bd = 1e9
 		for o in d["circ"]:
@@ -409,6 +414,8 @@ func phys_test(kind: String):    # test: log the car every physics frame through
 		for st in plan:
 			if t >= st[0] and t < st[1]: touch.gas = st[2] == 1; touch.brake = st[3] == 1; touch.hand = st[4]
 		if kind == "drift": touch.right = t > 3.8 and t < 6.0
+		if kind == "offroad": touch.right = t > 3.0 and t < 3.45; touch.left = t > 6.0 and t < 6.6
+		if car.surf != lsurf: print("EV SURF t%.2f %s -> %s v %.1f beta %.2f yr %.2f" % [t, lsurf, car.surf, car.speed * 3.6, car.beta, car.yr]); lsurf = car.surf
 		var p = Vector3(car.px, car.py, car.pz); var d = p - last
 		var flag = ""
 		if abs(d.y) > 0.05: flag += " DY"

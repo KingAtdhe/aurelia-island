@@ -50,7 +50,7 @@ func build(spawn: Vector3):
 	data = FileAccess.get_file_as_bytes(DIR + "flora.bin").to_float32_array()
 	for sp in idx["species"]:
 		var model: String = idx["model"][sp]
-		if not lib.has(model): continue
+		if not lib.has(model) or sp in ["grass", "grass_tall"]: continue          # the old grass cards: the modelled grass (grass.gd) took over
 		var off = int(idx["species"][sp][0]); var cnt = int(idx["species"][sp][1])
 		species[sp] = { off = off, n = cnt, model = model, kind = kind_of(sp, idx["info"].get(sp, {})), tint = not untinted.has(model) }
 		var per := {}

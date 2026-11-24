@@ -40,8 +40,8 @@ func _ready():
 	for c in CRASH: crash.append(_player(load("res://assets/audio/%s.ogg" % c), "Master"))      # rivals crash audibly too (as 3D sound)
 	if car:
 		car.crashed.connect(_on_crash)
-		car.knocked.connect(func(_o): _hit(0, -8.0))                  # a bin, sign or post knocked over
-		car.landed.connect(func(v): _hit(0 if v < 9.0 else 1, lerpf(-16.0, -4.0, clampf((v - 4.0) / 10.0, 0.0, 1.0))))   # coming down from a jump
+		car.knocked.connect(func(o): _hit(0, -17.0 if o[2] < 0.35 else -11.0, 1.3 if o[2] < 0.35 else 1.0))                  # a bin, sign or post knocked over
+		car.landed.connect(func(v): if v > 6.5: _hit(0 if v < 10.0 else 1, lerpf(-20.0, -6.0, clampf((v - 6.5) / 10.0, 0.0, 1.0)), 0.8))   # coming down from a jump
 	_build()
 
 func _player(s: AudioStream, b: String) -> Node:
@@ -81,9 +81,9 @@ func _on_crash():
 	var v: float = car.impact
 	_hit(0 if v < 9.0 else (1 if v < 16.0 else 2 + randi() % 2), lerpf(-18.0, 0.0, clampf((v - 2.5) / 19.0, 0.0, 1.0)))
 
-func _hit(k: int, db: float):
+func _hit(k: int, db: float, pitch := 1.0):
 	if crash.is_empty(): return
-	var p = crash[k]; p.pitch_scale = randf_range(0.93, 1.05); p.volume_db = db + (6.0 if positional else 0.0); p.play()
+	var p = crash[k]; p.pitch_scale = randf_range(0.93, 1.05) * pitch; p.volume_db = db + (6.0 if positional else 0.0); p.play()
 
 func _process(dt):
 	if not car: return

@@ -92,7 +92,8 @@ func obstacles(nx: float, nz: float, car) -> Array:
 				var dx: float = sx - o[0]; var dz: float = sz - o[1]; var d = Vector2(dx, dz).length(); var pen: float = o[2] + R - d
 				if pen > 0 and d > 0.01: pushes.append([dx / d, dz / d, pen, null])
 			for o in cell.k:
-				if not o[3] and Vector2(sx - o[0], sz - o[1]).length() < o[2] + R: o[3] = true; car.vx *= 0.94; car.vz *= 0.94; car.knocked.emit(o)
+				if not o[3] and Vector2(sx - o[0], sz - o[1]).length() < o[2] + R:
+					o[3] = true; var f = 0.99 if o[2] < 0.35 else 0.95; car.vx *= f; car.vz *= f; car.knocked.emit(o)          # a plastic post barely slows the car
 		for p in pushes:
 			var ax: float = p[0]; var az: float = p[1]; var pen: float = p[2]
 			if p[3] != null and p[3] < 0: pen = minf(pen, 0.08)          # a traffic car overlapping us: separate over a few frames, never a pop
