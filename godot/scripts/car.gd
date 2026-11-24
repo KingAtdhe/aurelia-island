@@ -96,8 +96,18 @@ func place(p: Vector3, h: float):
 		var fx = sin(h); var fz = cos(h)                       # start already sitting at the slope and camber, not level then tipping over
 		var a0 = ground(px + fx * 1.4, pz + fz * 1.4, py + 1)[0]; var a1 = ground(px - fx * 1.4, pz - fz * 1.4, py + 1)[0]
 		var a2 = ground(px + fz * 0.85, pz - fx * 0.85, py + 1)[0]; var a3 = ground(px - fz * 0.85, pz + fx * 0.85, py + 1)[0]
-		pitch = atan2(clamp(a0 - a1, -2.2, 2.2), 2.8); roll = atan2(clamp(a2 - a3, -1.4, 1.4), 1.7)
+		var sp = rest(py, a0, a1, 1.4); var sr = rest(py, a2, a3, 0.85); pitch = sp[0]; roll = sr[0]; body_lift = maxf(sp[1], sr[1])
 	safe = Vector4(p.x, p.y, p.z, h)
+
+# how the body sits on three ground points along one axis (ahead, centre, behind at +-half): over a crest it rests on the
+# crest and the higher end (no end floating in the air), in a dip on both ends with the middle lifted (no sinking).
+# returns [tilt angle, lift of the centre]
+static func rest(c: float, f: float, b: float, half: float) -> Array:
+	f = maxf(f, c - 2.0); b = maxf(b, c - 2.0)
+	if c >= (f + b) * 0.5:
+		var t = atan2(f - c, half) if f >= b else atan2(c - b, half)
+		return [clampf(t, -0.5, 0.5), 0.0]
+	return [clampf(atan2(f - b, half * 2.0), -0.6, 0.6), minf((f + b) * 0.5 - c, 0.4)]
 
 static func lat(a: float, B: float, C: float) -> float: return sin(C * atan(B * a))
 static func tyre_angle(a: float) -> float:
@@ -167,7 +177,9 @@ func drive(dt: float):
 		var Fd = V.cda * bx * abs(bx) + V.rr * RRS.get(surf, 10.0) * V.m * g * sv
 		var Fx = Fxr + Fxf * cd - Fyf * sd - Fd; var Fy = Fyr + Fyf * cd + Fxf * sd; var Mz = V.a * (Fyf * cd + Fxf * sd) - V.b * Fyr
 		var ax = Fx / V.m - g * sin(pitch) * 0.9; var ay = Fy / V.m
-		wx += (ffx * ax + ffz * ay) * h; wz += (ffz * ax - ffx * ay) * h; r += Mz / V.Iz * h; hd += r * h
+		wx += (ffx * ax + ffz * ay) * h; wz += (ffz * ax - ffx * ay) * h; r += Mz / V.Iz * h
+		var rlim = 1.0 + 0.35 * spd; r = clampf(r, -rlim, rlim)            # no pirouettes at walking pace: a car can only turn so fast for its speed
+		hd += r * h
 		if bx < -0.3:
 			r *= exp(-h * 3.5); var vxx = wx * ffx + wz * ffz; var vyy = (wx * ffz - wz * ffx) * exp(-h * 3)
 			if not rev: vxx = move_toward(vxx, 0.0, (4.0 + 9.0 * thT) * h)      # rolling backwards without reverse held: engine braking, and gas stops it quickly
@@ -198,12 +210,17 @@ func physics(dt: float):
 	if coll:
 		var w := coll.walls(nx, nz, self); nx = w[0]; nz = w[1]
 		var ob := coll.obstacles(nx, nz, self); nx = ob[0]; nz = ob[1]
+	var gn0 = ground(nx, nz, py + 1.0)[0]
+	if not air and (gn0 < -50.0 or (gn0 < -0.15 and gn0 <= py + 0.02)):          # the edge of the map, or the sea (surface at -0.25): stop at the edge / waterline
+		nx = px; nz = pz; var sp0 = Vector2(vx, vz).length(); vx *= -0.25; vz *= -0.25; yr *= 0.5
+		if sp0 > 3.0: bump(sp0)
 	px = nx; pz = nz; bump_t -= dt
 	var Gn = ground(px, pz, py + 1.0)
 	if not air:
 		var dy: float = Gn[0] - py
 		if dy < -0.5 - abs(vf) * dt * 0.9: air = true; vy = min(vy, 6.0)
 		elif dy > 2.5: px -= vx * dt; pz -= vz * dt; vx *= -0.3; vz *= -0.3      # a step too high to climb (wall, kerb of a cliff): bounce back
+		elif surf != "road" and dy / dt < vy - 24.0 * dt - 6.0: air = true      # rough ground dropping away faster than the car can fall: off the edge, not glued down (roads stay smooth)
 		else: vy = clamp(dy / dt, -30, 12); py = Gn[0]
 	if air:
 		vy -= 24 * dt; py += vy * dt
@@ -212,10 +229,16 @@ func physics(dt: float):
 			py = Gn[0]; air = false; vy = 0
 	var a0 = ground(px + fx * 1.4, pz + fz * 1.4, py + 1)[0]; var a1 = ground(px - fx * 1.4, pz - fz * 1.4, py + 1)[0]
 	var a2 = ground(px + fz * 0.85, pz - fx * 0.85, py + 1)[0]; var a3 = ground(px - fz * 0.85, pz + fx * 0.85, py + 1)[0]
-	var tp = pitch if air else atan2(clamp(a0 - a1, -2.2, 2.2), 2.8); var tr = roll if air else atan2(clamp(a2 - a3, -1.4, 1.4), 1.7)
-	pitch = lerpf(pitch, tp, 1 - exp(-dt * 9)); roll = lerpf(roll, tr, 1 - exp(-dt * 9))
+	var tp = pitch; var tr = roll; var lift = 0.0
+	if not air:
+		var sp = rest(py, a0, a1, 1.4); var sr = rest(py, a2, a3, 0.85); tp = sp[0]; tr = sr[0]; lift = maxf(sp[1], sr[1])
+	pitch = lerpf(pitch, tp, 1 - exp(-dt * 9)); roll = lerpf(roll, tr, 1 - exp(-dt * 9)); body_lift = lerpf(body_lift, lift, 1 - exp(-dt * 12))
 	speed = Vector2(vx, vz).length()
-	if py < -1.0 or Gn[0] < -50: place(Vector3(safe.x, safe.y, safe.z), safe.w); return       # into the sea: back on the road
+	if py < -1.0 or Gn[0] < -50:                                        # into the sea or out of the map: back on the nearest road
+		var q = nearest_road.call(Vector3(px, py, pz)) if nearest_road.is_valid() else null
+		if q: place(q[0], q[1])
+		else: place(Vector3(safe.x, safe.y, safe.z), safe.w)
+		return
 	safe_t += dt
 	if safe_t > 0.7 and surf == "road" and not air: safe_t = 0; safe = Vector4(px, py, pz, hd)
 
@@ -224,7 +247,7 @@ func _physics_process(dt):
 	acc = min(acc + dt, 0.1)
 	while acc >= 1.0 / 120.0: physics(1.0 / 120.0); acc -= 1.0 / 120.0
 	position = Vector3(px, py, pz); rotation = Vector3(0, hd, 0)
-	body.rotation = Vector3(-pitch, 0, roll)
+	body.rotation = Vector3(-pitch, 0, roll); body.position.y = body_lift
 	wheel_spin += vf * dt; rear_spin += (vf + (16 * thr if spin else 0.0) - (vf if in_hand and abs(vf) > 1 else 0.0)) * dt
 	for w in wheels:
 		var a = spin_sgn * (wheel_spin if w.front else rear_spin) / V.r
@@ -232,11 +255,14 @@ func _physics_process(dt):
 		else: w.n.rotation.z = a
 		if w.steer: w.steer.rotation.y = delta_
 
+var body_lift := 0.0
+var nearest_road: Callable          # set by the game: position -> [road point, heading] nearest to it
 var impact := 0.0         # speed into the last thing hit (m/s), for the crash sound
 signal landed(v)          # back on the ground after a jump, with the speed it came down at
 func bump(v := 8.0):
 	if bump_t <= 0: bump_t = 0.5 if v < 6.0 else 0.8; impact = v; crashed.emit()
 
+static var _merged = {}
 # one mesh per material for everything that does not move: about 60 parts become a dozen draw calls
 func merge_body(root: Node3D):
 	var moving := {}
@@ -247,6 +273,14 @@ func merge_body(root: Node3D):
 	if sw: moving[sw] = true
 	var tools := {}; var mats := {}
 	var inv = root.global_transform.affine_inverse()
+	if _merged.has(car_id):                     # merged once per car model; rivals and later races reuse it (no hitch at the start)
+		for mi in root.find_children("*", "MeshInstance3D", true, false):
+			var skip2 = false; var p2: Node = mi
+			while p2 and p2 != root:
+				if moving.has(p2): skip2 = true; break
+				p2 = p2.get_parent()
+			if not skip2: mi.queue_free()
+		var o2 = MeshInstance3D.new(); o2.mesh = _merged[car_id]; o2.name = "BodyMerged"; root.add_child(o2); return
 	for mi in root.find_children("*", "MeshInstance3D", true, false):
 		var skip = false; var p: Node = mi
 		while p and p != root:
@@ -267,4 +301,5 @@ func merge_body(root: Node3D):
 		am = tools[key].commit(am)
 		am.surface_set_material(am.get_surface_count() - 1, mats[key])
 	var out = MeshInstance3D.new(); out.mesh = am; out.name = "BodyMerged"; root.add_child(out)
+	_merged[car_id] = am
 	print("car merged into %d surfaces" % am.get_surface_count())

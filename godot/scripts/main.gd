@@ -6,7 +6,7 @@ var car: Car
 var roads = {}
 var shake = 0.0
 var menu: Menu; var menu_on = false; var orbit = 0.0
-var cam_pos = Vector3.ZERO; var cam_yaw = 0.0; var cam_mode = 0
+var cam_pos = Vector3.ZERO; var cam_yaw = 0.0; var cam_mode = 0; var cam_fix = 0.0
 const CAMS = [[5.9, 2.05], [9.5, 3.6], [2.75, 0.62]]
 var hud: CanvasLayer; var speed_lbl: Label; var gear_lbl: Label
 var traffic: Traffic
@@ -38,12 +38,13 @@ func _ready():
 	car = Car.new(); add_child(car)
 	var co = Coll.new(); co.load_data("res://assets/coast_coll.json", roads); car.coll = co; coll = co
 	car.crashed.connect(func(): shake = 0.35)
+	car.nearest_road = nearest_road
 	spawn("Peninsula Road", 30)
 	audio = CarAudio.new(); audio.car = car; add_child(audio)
 	traffic = Traffic.new(); add_child(traffic); traffic.player = car; traffic.coll = co
 	traffic.build(roads, int(OS.get_environment("TRAFFIC")) if OS.get_environment("TRAFFIC") != "" else 10)
 	make_hud()
-	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == ""
+	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == "" and OS.get_environment("FUZZ") == ""
 	if menu_on or OS.get_environment("SHOTS") == "menu": open_menu()
 	if not menu_on: audio.ignition()
 	if OS.get_environment("CAR") != "" and OS.get_environment("DRIVETEST") != "": car.setup(OS.get_environment("CAR"))
@@ -51,9 +52,20 @@ func _ready():
 	if OS.get_environment("PERF") != "": perf_test()
 	if OS.get_environment("DRIVETEST") != "": drive_test()
 	if OS.get_environment("TRAFFICTEST") != "": traffic_test()
+	_prewarm()
 	if OS.get_environment("RACETEST") != "": race_test(OS.get_environment("RACETEST"))
 	if OS.get_environment("PHYSTEST") != "": phys_test(OS.get_environment("PHYSTEST"))
+	if OS.get_environment("FUZZ") != "": add_child(load("res://scripts/_fuzz.gd").new())
+	if OS.get_environment("FLOW") != "": add_child(load("res://scripts/_flow.gd").new())
+	if OS.get_environment("TIMING") != "": add_child(load("res://scripts/_timing.gd").new())
 	if OS.get_environment("ROUTECHECK") != "": var rc = load("res://scripts/_routecheck.gd").new(); add_child(rc)
+
+# merge every car model and load the rivals' light models while the game loads, so the first race starts without a hitch
+func _prewarm():
+	for id in Car.CARS:
+		load(Car.CARS[id].far); load(Car.CARS[id].mid)
+		if not Car._merged.has(id):
+			var c = Car.new(); c.car_id = id; c.process_mode = Node.PROCESS_MODE_DISABLED; add_child(c); c.queue_free()
 
 func start_race(rid: String):
 	if race: race.stop(); race = null
@@ -82,6 +94,21 @@ func race_test(rid: String):     # headless or with SHOTS: the player's car driv
 		if race.panel != null or tt > 240:
 			for r in race.standings(): print("RESULT %s %s" % [r.name, Race.fmt(r.time) if r.done else "DNF s=%.0f" % r.s])
 			get_tree().quit(); return
+
+# nearest point on any road the coast slice has, facing along the road (the direction closer to the car's own heading)
+func nearest_road(p: Vector3):
+	var best = null; var bd = 1e18
+	for r in Traffic.RUNS:
+		var a = roads[r[0]]
+		for i in range(r[1], r[2] + 1):
+			var q = Vector3(a[i * 3], a[i * 3 + 1], a[i * 3 + 2]); var d = (q - p).length_squared()
+			if d < bd: bd = d; best = [r[0], i, r[2]]
+	if best == null: return null
+	var a = roads[best[0]]; var i: int = mini(best[1], best[2] - 1)
+	var q0 = Vector3(a[i * 3], a[i * 3 + 1], a[i * 3 + 2]); var q1 = Vector3(a[i * 3 + 3], a[i * 3 + 4], a[i * 3 + 5])
+	var h = atan2(q1.x - q0.x, q1.z - q0.z)
+	if abs(wrapf(h - car.hd, -PI, PI)) > PI / 2: h += PI
+	return [q0, h]
 
 func spawn(road: String, i: int):
 	var p = roads[road]; var a = Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]); var b = Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
@@ -137,7 +164,11 @@ func update_camera(dt: float):          # port of the web chase camera: swings r
 	cam_pos.y = max(cam_pos.y, gq[0] + 0.6)
 	shake = maxf(0.0, shake - dt * 1.2)
 	var sh: Vector3 = Vector3(randf() - 0.5, randf() - 0.5, randf() - 0.5) * shake * 0.6
-	cam.position = cam_pos + sh; cam.look_at(c + Vector3(cs * 4, 1.1, cc * 4))
+	var want = cam_pos + sh; var eye = c + Vector3(0, 1.3, 0)
+	var hit = get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(eye, want))
+	if hit: want = hit.position + (eye - hit.position).normalized() * 0.45            # a wall, house or hill between: come in front of it, never through
+	cam_fix = lerpf(cam_fix, 1.0 if hit else 0.0, 1.0 - exp(-dt * 10.0))
+	cam.position = want; cam.look_at(c + Vector3(cs * 4, 1.1, cc * 4))
 
 func circle_tex(r: int, col: Color, label := "") -> Texture2D:
 	var img = Image.create(r * 2, r * 2, false, Image.FORMAT_RGBA8)
@@ -266,7 +297,9 @@ func phys_test(kind: String):    # test: log the car every physics frame through
 	var plan = { start = [[0.0, 3.0, 0, 0, false], [3.0, 7.0, 1, 0, false], [7.0, 9.0, 0, 1, false]],
 		crash = [[0.0, 9.0, 1, 0, false]], traffic = [[0.0, 9.0, 1, 0, false]],
 		drift = [[0.0, 4.0, 1, 0, false], [4.0, 4.6, 1, 0, true], [4.6, 9.0, 1, 0, false]],
-		reverse = [[0.0, 3.0, 0, 1, false], [3.0, 5.0, 0, 0, false], [5.0, 7.0, 1, 0, false], [7.0, 9.0, 0, 1, false]] }.get(kind, [])
+		reverse = [[0.0, 3.0, 0, 1, false], [3.0, 5.0, 0, 0, false], [5.0, 7.0, 1, 0, false], [7.0, 9.0, 0, 1, false]],
+		shots = [[0.0, 14.5, 1, 0, false], [14.5, 16.5, 0, 1, false]] }.get(kind, [])
+	var tend = 16.5 if kind == "shots" else 9.0
 	if kind == "crash":            # aim at a tree off the road
 		var d = JSON.parse_string(FileAccess.get_file_as_string("res://assets/coast_coll.json")); var best = null; var bd = 1e9
 		for o in d["circ"]:
@@ -279,7 +312,7 @@ func phys_test(kind: String):    # test: log the car every physics frame through
 		var tg: Vector3 = a[1] * c.dir; var rt = Vector3(-tg.z, 0, tg.x).normalized(); var p0: Vector3 = a[0] + rt * l.off
 		car.place(p0, atan2(tg.x, tg.z)); c.vmax = 4.0; c.v = 4.0
 	if kind == "drift": touch.right = false
-	while t < 9.0:
+	while t < tend:
 		await get_tree().physics_frame; t += 1.0 / Engine.physics_ticks_per_second
 		for st in plan:
 			if t >= st[0] and t < st[1]: touch.gas = st[2] == 1; touch.brake = st[3] == 1; touch.hand = st[4]
@@ -291,6 +324,9 @@ func phys_test(kind: String):    # test: log the car every physics frame through
 		if car.air: flag += " AIR"
 		var nd = 1e9
 		for c in traffic.cars: nd = minf(nd, c.n.global_position.distance_to(p))
+		if kind == "shots" and t > 14.4:
+			var g = car.ground(car.px, car.pz, car.py + 3.0)
+			print("SH t%.3f y%.3f ground %.3f (%s) air %s vy%+.2f pitch%+.2f roll%+.2f v%.1f vf%.1f" % [t, car.py, g[0], g[1], car.air, car.vy, car.pitch, car.roll, car.speed * 3.6, car.vf])
 		if flag != "" or int(t * 60) % 15 == 0 or nd < 6.0 or t < 0.3:
 			print("TR nearest traffic %.1f m" % nd) if nd < 8.0 else null
 			print("   AU " + audio.debug())

@@ -95,6 +95,7 @@ func obstacles(nx: float, nz: float, car) -> Array:
 				if not o[3] and Vector2(sx - o[0], sz - o[1]).length() < o[2] + R: o[3] = true; car.vx *= 0.94; car.vz *= 0.94; car.knocked.emit(o)
 		for p in pushes:
 			var ax: float = p[0]; var az: float = p[1]; var pen: float = p[2]
+			if p[3] != null and p[3] < 0: pen = minf(pen, 0.08)          # a traffic car overlapping us: separate over a few frames, never a pop
 			nx += ax * pen; nz += az * pen; sx += ax * pen; sz += az * pen
 			var vn: float = car.vx * ax + car.vz * az
 			var who = p[3]
