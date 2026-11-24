@@ -239,6 +239,7 @@ func _drive(r: Dictionary, dt: float):
 	if r.rival:
 		var lead = r.s - racers[0].s
 		sk *= clampf(1.0 - lead / 1200.0, 0.85, 1.03)          # well ahead of the player: ease off; behind: push a little
+	sk = minf(sk, 0.985)          # never past the corner speeds of the profile: pushing harder only ran them off the track
 	var grip = 0.92 if c.car_id == "calder" else 1.0          # the heavier GT carries less speed through corners
 	var vt = minf(vmax_at(r.s + v * 0.25), vmax_at(r.s + v * 0.6)) * sk * grip
 	# a car right ahead on the same line: hold station behind it
@@ -262,7 +263,7 @@ func _drive(r: Dictionary, dt: float):
 			for o in racers:
 				if o != r and Vector2(o.car.px - pp.x, o.car.pz - pp.z).length() < 7.0: free = false
 			if free:
-				if OS.get_environment("RACETEST") != "": print("RESCUE %s s %.0f off %.1f v %.1f" % [r.name, r.s, off, v])
+				if OS.get_environment("RACETEST") != "": print("RESCUE %s s %.0f off %.1f v %.1f at (%.0f %.0f) route (%.0f %.0f) herr %.2f" % [r.name, r.s, off, v, c.px, c.pz, here[0].x, here[0].z, herr])
 				c.place(pp, atan2(b[1].x, b[1].z)); r.s = back; r.stuck = 0.0; r.shift = 0.0; break
 
 func _steer_to(c: Car, tgt: Vector3) -> float:
@@ -305,8 +306,8 @@ func standings() -> Array:
 func _make_hud():
 	hud = Control.new(); hud.set_anchors_preset(Control.PRESET_FULL_RECT); hud.mouse_filter = Control.MOUSE_FILTER_IGNORE; main.hud.add_child(hud)
 	var vs = get_viewport().get_visible_rect().size
-	var bg = Panel.new(); var sb = StyleBoxFlat.new(); sb.bg_color = Color(0.04, 0.07, 0.1, 0.55); sb.set_corner_radius_all(12); bg.add_theme_stylebox_override("panel", sb)
-	bg.size = Vector2(560, 50); bg.position = Vector2(vs.x / 2 - 280, 14); bg.mouse_filter = Control.MOUSE_FILTER_IGNORE; hud.add_child(bg)
+	var bg = Panel.new(); var sb = Hud.panel_style(12); sb.border_color = Color(Hud.ACCENT.r, Hud.ACCENT.g, Hud.ACCENT.b, 0.5); sb.border_width_bottom = 3; bg.add_theme_stylebox_override("panel", sb)
+	bg.size = Vector2(560, 50); bg.position = Vector2(vs.x / 2 - 280 - 20, 20); bg.mouse_filter = Control.MOUSE_FILTER_IGNORE; hud.add_child(bg)
 	info = Label.new(); info.add_theme_font_size_override("font_size", 26); info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	info.size = Vector2(560, 50); info.vertical_alignment = VERTICAL_ALIGNMENT_CENTER; bg.add_child(info)
 	big = Label.new(); big.add_theme_font_size_override("font_size", 120); big.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6)); big.add_theme_constant_override("outline_size", 10)

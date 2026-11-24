@@ -10,7 +10,7 @@ const DROP_R = 1250.0         # and dropped again past this
 const RANGE = {
 	"Markings": [0, 320], "RoadDecals": [0, 220], "RoadDecalsStreet": [0, 220], "Skids": [0, 160], "Puddles": [0, 160], "ContactAO": [0, 260],
 	"Props": [0, 330], "Shapes": [0, 420], "KitTrim": [0, 520], "ArchTrim": [0, 620], "Kerbs": [0, 500],
-	"BuildingsHDModel": [0, 500], "BuildingsLOD": [470, 0], "Glazing": [0, 1400],
+	"BuildingsHDModel": [0, 1150], "BuildingsLOD": [1100, 0], "Glazing": [0, 1400],
 }
 
 var chunks := {}               # name -> { kind, lo: Vector2, hi: Vector2, node, state (0 none, 1 loading, 3 loaded and queued, 2 in) }

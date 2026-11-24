@@ -8,7 +8,7 @@ var shake = 0.0
 var menu: Menu; var menu_on = false; var orbit = 0.0
 var cam_pos = Vector3.ZERO; var cam_yaw = 0.0; var cam_mode = 0; var cam_fix = 0.0
 const CAMS = [[5.9, 2.05], [9.5, 3.6], [2.75, 0.62]]
-var hud: CanvasLayer; var speed_lbl: Label; var gear_lbl: Label
+var hud: CanvasLayer; var speed_lbl: Label; var gear_lbl: Label; var minimap
 var traffic: Traffic
 var coll: Coll
 var race: Race = null
@@ -34,8 +34,9 @@ func _ready():
 	e.sky.sky_material = sm; e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY; e.ambient_light_energy = 0.75; e.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC; e.tonemap_exposure = 1.0; e.fog_enabled = true; e.fog_light_color = Color(0.72, 0.8, 0.88); e.fog_density = 0.0005; e.fog_sky_affect = 0.0
 	e.glow_enabled = true; e.glow_intensity = 0.4; e.glow_bloom = 0.05; e.glow_hdr_threshold = 1.2
+	e.adjustment_enabled = true; e.adjustment_contrast = 1.07; e.adjustment_saturation = 1.1          # a touch more punch: the haze and filmic curve flatten the colours
 	env.environment = e; add_child(env); environment = e
-	sun = DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-38, -35, 0); sun.light_energy = 1.35; sun.light_color = Color(1.0, 0.95, 0.86); sun.shadow_enabled = true; sun.directional_shadow_max_distance = 30; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL; sun.light_cull_mask = 1; add_child(sun)
+	sun = DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-38, -35, 0); sun.light_energy = 1.35; sun.light_color = Color(1.0, 0.95, 0.86); sun.shadow_enabled = true; sun.directional_shadow_max_distance = 60; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS; sun.directional_shadow_split_1 = 0.25; sun.light_cull_mask = 1; add_child(sun)
 	# the car sun lights only the cars and dims where the island bake has shade; no shadow map of its own
 	# (on the Compatibility renderer a second shadowed sun draws the whole scene again)
 	car_sun = sun.duplicate(); car_sun.light_cull_mask = 2; car_sun.shadow_enabled = false; add_child(car_sun)
@@ -49,6 +50,7 @@ func _ready():
 	tunnels = Tunnels.new(); add_child(tunnels); tunnels.build(w, island)
 	var sea = MeshInstance3D.new(); var pm = PlaneMesh.new(); pm.size = Vector2(16000, 16000); sea.mesh = pm
 	var wm = ShaderMaterial.new(); wm.shader = load("res://shaders/water.gdshader"); sea.material_override = wm; sea.position = Vector3(0, -0.25, 0); add_child(sea)
+	get_viewport().mesh_lod_threshold = 4.0          # simpler versions of far meshes (LODs made at import): no visible change on a phone screen
 	cam = Camera3D.new(); cam.far = 3000; cam.near = 0.12; cam.fov = 62; add_child(cam); cam.current = true
 	car = Car.new(); add_child(car)
 	var co = Coll.new(); co.load_data("res://assets/island/coll.json", roads); car.coll = co; coll = co
@@ -219,12 +221,17 @@ func update_camera(dt: float):          # port of the web chase camera: swings r
 	cam_fix = lerpf(cam_fix, 1.0 if hit else 0.0, 1.0 - exp(-dt * 10.0))
 	cam.position = want; cam.look_at(c + Vector3(cs * 4, 1.1, cc * 4))
 
-func circle_tex(r: int, col: Color, label := "") -> Texture2D:
+func circle_tex(r: int, col: Color, label := "") -> Texture2D:          # touch button: soft-edged disc with a light rim
 	var img = Image.create(r * 2, r * 2, false, Image.FORMAT_RGBA8)
 	for y in r * 2:
 		for x in r * 2:
 			var d = Vector2(x - r + 0.5, y - r + 0.5).length()
-			if d < r - 1: img.set_pixel(x, y, col if d < r - 4 else Color(1, 1, 1, 0.55))
+			var a = clampf(r - 1.0 - d, 0.0, 1.0)
+			if a <= 0.0: continue
+			var rim = clampf(1.0 - abs(d - (r - 3.5)) / 1.6, 0.0, 1.0)
+			var shade = 1.0 - 0.25 * (y / float(r * 2))
+			var c = Color(col.r * shade, col.g * shade, col.b * shade, col.a).lerp(Color(1, 1, 1, 0.7), rim)
+			c.a *= a; img.set_pixel(x, y, c)
 	return ImageTexture.create_from_image(img)
 
 func make_hud():
@@ -234,18 +241,19 @@ func make_hud():
 		var b = TouchScreenButton.new(); b.texture_normal = circle_tex(rad, Color(0.08, 0.1, 0.13, 0.45)); b.texture_pressed = circle_tex(rad, Color(0.9, 0.9, 0.95, 0.35))
 		var sh = CircleShape2D.new(); sh.radius = rad; b.shape = sh; b.shape_centered = true; b.position = pos - Vector2(rad, rad)
 		b.pressed.connect(func(): touch[key] = true); b.released.connect(func(): touch[key] = false)
-		var lb = Label.new(); lb.text = txt; lb.add_theme_font_size_override("font_size", 26); lb.position = Vector2(rad - 14, rad - 20); b.add_child(lb)
+		var lb = Label.new(); lb.text = txt; lb.add_theme_font_size_override("font_size", int(rad * 0.5)); lb.size = Vector2(rad * 2, rad * 2)
+		lb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; lb.vertical_alignment = VERTICAL_ALIGNMENT_CENTER; lb.modulate = Color(1, 1, 1, 0.9); b.add_child(lb)
 		hud.add_child(b)
 	mk.call("left", Vector2(110, vs.y - 110), 62, "◀")
 	mk.call("right", Vector2(260, vs.y - 110), 62, "▶")
 	mk.call("gas", Vector2(vs.x - 110, vs.y - 130), 74, "▲")
 	mk.call("brake", Vector2(vs.x - 270, vs.y - 100), 58, "▼")
 	mk.call("hand", Vector2(vs.x - 390, vs.y - 90), 44, "D")
-	speed_lbl = Label.new(); speed_lbl.add_theme_font_size_override("font_size", 56); speed_lbl.position = Vector2(vs.x - 190, 20); hud.add_child(speed_lbl)
-	gear_lbl = Label.new(); gear_lbl.add_theme_font_size_override("font_size", 28); gear_lbl.position = Vector2(vs.x - 70, 40); hud.add_child(gear_lbl)
-	var cb = Button.new(); cb.text = "Cam"; cb.position = Vector2(20, 20); cb.add_theme_font_size_override("font_size", 24); cb.pressed.connect(func(): cam_mode = (cam_mode + 1) % 3); hud.add_child(cb)
-	var mb = Button.new(); mb.text = "Menu"; mb.position = Vector2(200, 20); mb.add_theme_font_size_override("font_size", 24); mb.pressed.connect(func(): end_race(); open_menu()); hud.add_child(mb)
-	var rb = Button.new(); rb.text = "Reset"; rb.position = Vector2(100, 20); rb.add_theme_font_size_override("font_size", 24); rb.pressed.connect(reset_car); hud.add_child(rb)
+	var gauge = Hud.Gauge.new(); gauge.car = car; gauge.size = Vector2(186, 186); gauge.position = Vector2(338, vs.y - 196); gauge.mouse_filter = Control.MOUSE_FILTER_IGNORE; hud.add_child(gauge)
+	minimap = Hud.MiniMap.new(self, 230.0); minimap.position = Vector2(vs.x - 250, 20); hud.add_child(minimap)
+	var x = 20.0
+	for bdef in [["CAM", func(): cam_mode = (cam_mode + 1) % 3], ["RESET", reset_car], ["MENU", func(): end_race(); open_menu()]]:
+		var b = Button.new(); b.text = bdef[0]; b.position = Vector2(x, 20); b.custom_minimum_size = Vector2(96, 48); Hud.style_button(b); b.pressed.connect(bdef[1]); hud.add_child(b); x += 108.0
 
 func reset_car():
 	if race:
