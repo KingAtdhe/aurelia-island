@@ -36,6 +36,24 @@ func _dist(c: Dictionary) -> float:
 	var p = Vector2(focus.x, focus.z); var q = p.clamp(c.lo, c.hi)
 	return p.distance_to(q)
 
+# turning parts (wind turbines, Ferris wheel, windmill sails, heliport rotor): each turns about its hub on a pivot
+var spinners = []
+func setup_spinners(world: Dictionary):
+	for sp in world["spinners"]:
+		var n: Node3D = find_child(sp["name"], true, false)
+		if n == null: continue
+		var pv = Node3D.new(); pv.name = "Pivot_" + sp["name"]; add_child(pv); pv.global_position = Vector3(sp["pos"][0], sp["pos"][1], sp["pos"][2])
+		var gt = n.global_transform; n.get_parent().remove_child(n); pv.add_child(n); n.global_transform = gt
+		var ax = { x = Vector3.RIGHT, y = Vector3.UP, z = Vector3.BACK }[sp["axis"]]
+		spinners.append([pv, ax, float(sp["speed"])])
+		if String(sp["name"]).begins_with("Spin_Turbine"):          # the tower is in the streamed detail (drawn to 420 m): past that a plain
+			var tw := MeshInstance3D.new(); var cm := CylinderMesh.new()   # mast stands in, so the rotor never hangs in the sky on its own
+			cm.top_radius = 1.25; cm.bottom_radius = 2.3; cm.height = 130.0; cm.radial_segments = 10; cm.rings = 1; cm.cap_top = false; cm.cap_bottom = false
+			var tm := StandardMaterial3D.new(); tm.albedo_color = Color(0.86, 0.87, 0.86); tm.roughness = 0.6; cm.material = tm
+			tw.mesh = cm; tw.name = "Mast_" + sp["name"]; add_child(tw); tw.global_position = pv.global_position + Vector3(0.0, -65.0 - 1.5, 0.0)
+			tw.visibility_range_begin = 400.0; tw.visibility_range_begin_margin = 20.0; tw.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
+			tw.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
 func _coll_path(nm: String) -> String: return DIR + "coll/%s.scn" % nm
 
 func _attach(nm: String, scene: PackedScene, cs: PackedScene = null, deferred := false):
@@ -52,6 +70,7 @@ func _attach(nm: String, scene: PackedScene, cs: PackedScene = null, deferred :=
 
 # detail streaming: a look round every quarter second, at most one chunk put in per frame
 func _process(dt):
+	for sp in spinners: sp[0].rotate(sp[1], sp[2] * dt)
 	if not _coll_queue.is_empty():          # one piece of work per frame: a chunk's colliders, or the next chunk
 		var q = _coll_queue.pop_front()
 		if is_instance_valid(q[0]): q[0].add_child(q[1].instantiate())
@@ -108,6 +127,7 @@ static func ranges(root: Node):
 	for n in root.find_children("*", "GeometryInstance3D", true, false):
 		var g = group_of(String(n.name))
 		if g.begins_with("TerrainBlend"): (n as GeometryInstance3D).visibility_range_end = 900.0
+		if OS.get_environment("HIDEGRP") != "" and g in OS.get_environment("HIDEGRP").split(","): n.visible = false   # test: look behind a group
 		if not RANGE.has(g): continue
 		var r = RANGE[g]; var gi := n as GeometryInstance3D
 		gi.visibility_range_begin = r[0]; gi.visibility_range_end = r[1]

@@ -16,13 +16,15 @@ void fragment() {
 	vec2 q = wpos.xz; vec3 c = texture(tex, UV).rgb * COLOR.rgb * 1.9;
 	float big = fbm(q * 0.02), mid = fbm(q * 0.11), fine = n2(q * 2.3), r = 0.88;
 	if (asphalt > 0.5) {
-		c *= mix(0.62, 1.3, big);
+		c *= mix(0.7, 1.15, big);
 		float tar = smoothstep(0.58, 0.6, fbm(q * 0.09 + 13.0)) * smoothstep(0.35, 0.55, n2(q * 0.03 + 5.0));
 		c = mix(c, vec3(0.05, 0.05, 0.06), tar * 0.9);
 		float crack = smoothstep(0.012, 0.0, abs(n2(q * 1.3) - 0.5)) * smoothstep(0.55, 0.75, mid);
 		c *= 1.0 - 0.5 * crack;
-		c = mix(c, vec3(0.55, 0.5, 0.42), smoothstep(0.45, 0.8, mid) * 0.3);
+		c = mix(c, vec3(0.5, 0.47, 0.41), smoothstep(0.45, 0.8, mid) * 0.16);
 		r = 0.86 + 0.08 * (big - 0.5) - 0.25 * tar;
+		float l = dot(c, vec3(0.3, 0.5, 0.2)); c = mix(vec3(l), c, 0.65);           // grey, not green-tinted, and never paler than old worn asphalt
+		c *= min(1.0, 0.17 / max(l, 0.001));
 	} else { c *= 0.75 + 0.5 * big; }
 	ALBEDO = baked(c * (0.88 + 0.24 * fine)); NORMAL_MAP = texture(tex_n, UV).rgb; NORMAL_MAP_DEPTH = 0.7; ROUGHNESS = r; SPECULAR = 0.35;
 }

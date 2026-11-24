@@ -5,6 +5,14 @@ static var _cache := {}
 static var _sh := {}
 
 static var bake_tex: Texture2D
+const DECALS = ["Markings", "RoadDecals", "RoadDecalsStreet", "Skids", "Puddles", "ContactAO", "ShoreFoam"]
+static var _dsh := {}
+static func _decal_shader(blend: bool) -> Shader:
+	if not _dsh.has(blend):
+		var sh = Shader.new(); var code: String = shader("decal").code
+		if blend: code = code.replace("render_mode skip_vertex_transform, cull_disabled;", "render_mode skip_vertex_transform, cull_disabled, blend_mix, depth_draw_never;").replace("//ALPHA", "ALPHA = c.a;")
+		sh.code = code; _dsh[blend] = sh
+	return _dsh[blend]
 static func shader(name: String) -> Shader:
 	if not _sh.has(name): _sh[name] = load("res://shaders/%s.gdshader" % name)
 	return _sh[name]
@@ -31,6 +39,14 @@ static func conv(m: Material, has_col: bool) -> Material:
 			var r := ShaderMaterial.new(); r.shader = shader("road")
 			r.set_shader_parameter("bake", _bake()); r.set_shader_parameter("bake_rect", BAKE_RECT); r.set_shader_parameter("tex", sm.albedo_texture); r.set_shader_parameter("tex_n", sm.normal_texture); r.set_shader_parameter("asphalt", 1.0 if nm == "Asphalt" else 0.0)
 			out = r
+		elif nm in DECALS:
+			var dm := ShaderMaterial.new(); var blend = sm.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED
+			dm.shader = _decal_shader(blend); dm.set_shader_parameter("tex", sm.albedo_texture); dm.set_shader_parameter("has_tex", 1.0 if sm.albedo_texture else 0.0)
+			dm.set_shader_parameter("col", sm.albedo_color); dm.set_shader_parameter("rough", sm.roughness); dm.set_shader_parameter("bake", _bake()); dm.set_shader_parameter("bake_rect", BAKE_RECT)
+			if blend: dm.render_priority = 2
+			out = dm
+		elif nm in ["WindowGlass", "KitWindow", "HeroCurtain"]:
+			var im := ShaderMaterial.new(); im.shader = shader("interior"); out = im
 		elif nm == "Water":
 			var w := ShaderMaterial.new(); w.shader = shader("water"); w.render_priority = 2; out = w
 		elif nm == "Seabed":

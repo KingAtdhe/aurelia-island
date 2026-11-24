@@ -48,13 +48,13 @@ func _ready():
 	world_roads = w["roads"]
 	for l in w["landmarks"]: landmarks.append([l["name"], Vector3(l["pos"][0], l["pos"][1], l["pos"][2])])
 	var sp0 = _road_pt(START[0], START[1])
-	island = Island.new(); add_child(island); island.load_base(sp0)
+	island = Island.new(); add_child(island); island.load_base(sp0); island.setup_spinners(w)
 	flora = Flora.new(); add_child(flora); flora.build(sp0)
 	tunnels = Tunnels.new(); add_child(tunnels); tunnels.build(w, island)
 	grass = Grass.new(); add_child(grass); grass.build(w)
 	var sea = MeshInstance3D.new(); var pm = PlaneMesh.new(); pm.size = Vector2(16000, 16000); sea.mesh = pm
 	var wm = ShaderMaterial.new(); wm.shader = load("res://shaders/water.gdshader"); sea.material_override = wm; sea.position = Vector3(0, -0.25, 0); add_child(sea)
-	get_viewport().mesh_lod_threshold = 4.0          # simpler versions of far meshes (LODs made at import): no visible change on a phone screen
+	get_viewport().mesh_lod_threshold = float(OS.get_environment("LODT")) if OS.get_environment("LODT") != "" else 4.0         # simpler versions of far meshes (LODs made at import): no visible change on a phone screen
 	cam = Camera3D.new(); cam.far = 3000; cam.near = 0.12; cam.fov = 62; add_child(cam); cam.current = true
 	Progress.load_save()
 	car = Car.new(); car.player = true; car.car_id = Progress.car if Progress.car in Progress.cars else "vortex"; add_child(car)

@@ -281,3 +281,15 @@ scripts/progress.gd (user://progress.cfg; CAREERSAVE=<path> for tests): credits 
 as the web game) and paint (9 colours, 1,500 each, kept once bought). Race purse 1,200 + 900 per race in the list (Grand Prix x2),
 paid 100/60/35/12% by place; a podium opens the next race (first three always open, old podiums count). Landmarks found in free
 roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with the reason. Race results show the credits won.
+
+## Godot: graphics glitch pass (24 Nov 2026)
+- Rivers: source/godot_tools/fix_rivers.py (run after export_chunks.py) settles River_* water onto the ground and dips it under
+  roads (Ring crossing at x -1694 had the river running over the deck). Edits the exported b_ chunks in place.
+- Decals (Markings, RoadDecals*, Skids, Puddles, ContactAO, ShoreFoam): shaders/decal.gdshader pulls them 8 mm toward the camera
+  (no flicker against the road) and shades them with the island bake like the road under them.
+- Windows (WindowGlass, KitWindow, HeroCurtain): shaders/interior.gdshader, the web game's traced rooms behind the glass.
+- Road: sunlit asphalt was near white; albedo capped and desaturated in road.gdshader. Grass ring blends to ground green with distance.
+- Wind turbines: rotors spin (island.setup_spinners, all world.json spinners); past 400 m a plain mast stands in for the tower,
+  which streams with the detail Shapes (420 m), so blades never hang in the sky.
+- Shop prefabs (prop_shop_*) stay dropped as in the web game: their records sit inside the tower podium walls.
+- Test hooks: TOUR spot "P:x:y:z:heading[:cx;cy;cz]" (free camera), HIDEGRP=Group,Group hides map groups, LODT=mesh LOD threshold.
