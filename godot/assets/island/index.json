@@ -1,0 +1,3941 @@
+{
+"cell": 400.0,
+"chunks": {
+"b_-1_-1": {
+"kind": "b",
+"cell": [
+-1,
+-1
+],
+"min": [
+-696.0,
+11.1,
+-530.3
+],
+"max": [
+0.0,
+193.0,
+12.5
+],
+"tris": 20022,
+"bytes": 852924,
+"groups": {
+"BuildingsLOD": 168,
+"Glazing": 744,
+"Houses": 5984,
+"Pavement": 14,
+"Puddles": 10,
+"RoadSetts": 1152,
+"TerrainPave": 11704,
+"Towers": 246
+}
+},
+"b_-1_-2": {
+"kind": "b",
+"cell": [
+-1,
+-2
+],
+"min": [
+-556.1,
+14.0,
+-804.9
+],
+"max": [
+5.7,
+105.8,
+0.0
+],
+"tris": 5714,
+"bytes": 210328,
+"groups": {
+"Bridges": 240,
+"Markings": 1891,
+"Road": 2342,
+"Skids": 102,
+"TougeLattice": 568,
+"TougeTerrace": 571
+}
+},
+"b_-1_-3": {
+"kind": "b",
+"cell": [
+-1,
+-3
+],
+"min": [
+-799.5,
+35.0,
+-1279.0
+],
+"max": [
+5.9,
+112.6,
+-790.8
+],
+"tris": 5538,
+"bytes": 228052,
+"groups": {
+"Bridges": 1339,
+"Skids": 48,
+"TougeLattice": 1096,
+"TougeTerrace": 1093,
+"Verge": 1962
+}
+},
+"b_-1_-4": {
+"kind": "b",
+"cell": [
+-1,
+-4
+],
+"min": [
+-801.9,
+0.1,
+-1410.5
+],
+"max": [
+7.4,
+0.1,
+-1241.0
+],
+"tris": 133,
+"bytes": 10412,
+"groups": {
+"ShoreFoam": 133
+}
+},
+"b_-1_0": {
+"kind": "b",
+"cell": [
+-1,
+0
+],
+"min": [
+-799.9,
+-13.0,
+-2.0
+],
+"max": [
+5.7,
+190.6,
+444.0
+],
+"tris": 20623,
+"bytes": 836128,
+"groups": {
+"BuildingsLOD": 136,
+"Houses": 5184,
+"Markings": 1269,
+"Pavement": 12,
+"Puddles": 20,
+"RoadSetts": 1390,
+"Skids": 100,
+"TerrainBlend_Pave": 204,
+"TerrainPave": 12162,
+"Towers": 146
+}
+},
+"b_-1_1": {
+"kind": "b",
+"cell": [
+-1,
+1
+],
+"min": [
+-530.1,
+5.0,
+461.5
+],
+"max": [
+-43.0,
+30.2,
+599.0
+],
+"tris": 40,
+"bytes": 3120,
+"groups": {
+"Buildings": 40
+}
+},
+"b_-1_2": {
+"kind": "b",
+"cell": [
+-1,
+2
+],
+"min": [
+-799.6,
+-1.5,
+972.0
+],
+"max": [
+4.9,
+27.1,
+1416.0
+],
+"tris": 12478,
+"bytes": 499248,
+"groups": {
+"Markings": 4787,
+"Puddles": 4,
+"Road": 1288,
+"Terrain": 5624,
+"TerrainBlend_Field": 11,
+"TerrainBlend_Grass": 193,
+"TerrainBlend_Sand": 97,
+"TerrainField": 10,
+"Verge": 464
+}
+},
+"b_-1_3": {
+"kind": "b",
+"cell": [
+-1,
+3
+],
+"min": [
+-638.9,
+0.1,
+945.0
+],
+"max": [
+9.5,
+0.1,
+1466.6
+],
+"tris": 477,
+"bytes": 37316,
+"groups": {
+"Shallows": 239,
+"ShoreFoam": 238
+}
+},
+"b_-2_-1": {
+"kind": "b",
+"cell": [
+-2,
+-1
+],
+"min": [
+-804.0,
+11.0,
+-798.0
+],
+"max": [
+0.0,
+103.8,
+0.2
+],
+"tris": 8017,
+"bytes": 263592,
+"groups": {
+"BuildingsLOD": 96,
+"Rocks": 180,
+"Terrain": 6706,
+"TerrainBlend_Forest": 31,
+"TerrainBlend_Pave": 82,
+"TerrainForest": 922
+}
+},
+"b_-2_-2": {
+"kind": "b",
+"cell": [
+-2,
+-2
+],
+"min": [
+-804.0,
+13.2,
+-899.1
+],
+"max": [
+2.7,
+286.9,
+-0.0
+],
+"tris": 8424,
+"bytes": 398144,
+"groups": {
+"Bridges": 1310,
+"TerrainBlend_Grass": 491,
+"TerrainBlend_Rock": 562,
+"TerrainBlend_Snow": 122,
+"TerrainRock": 2065,
+"TerrainSnow": 508,
+"Verge": 3366
+}
+},
+"b_-2_-3": {
+"kind": "b",
+"cell": [
+-2,
+-3
+],
+"min": [
+-804.0,
+-0.7,
+-1416.0
+],
+"max": [
+2.1,
+286.9,
+-792.0
+],
+"tris": 24817,
+"bytes": 970632,
+"groups": {
+"Markings": 6139,
+"Puddles": 10,
+"Road": 2975,
+"Terrain": 8640,
+"TerrainBlend_Grass": 472,
+"TerrainBlend_Rock": 556,
+"TerrainBlend_Snow": 78,
+"TerrainRock": 5335,
+"TerrainSnow": 612
+}
+},
+"b_-2_-4": {
+"kind": "b",
+"cell": [
+-2,
+-4
+],
+"min": [
+-809.2,
+-30.0,
+-1572.0
+],
+"max": [
+1.9,
+12.7,
+-1236.0
+],
+"tris": 2012,
+"bytes": 63276,
+"groups": {
+"Shallows": 132,
+"TerrainBlend_Sand": 120,
+"TerrainSand": 1760
+}
+},
+"b_-2_0": {
+"kind": "b",
+"cell": [
+-2,
+0
+],
+"min": [
+-804.0,
+1.4,
+-1.7
+],
+"max": [
+0.0,
+71.7,
+456.0
+],
+"tris": 7766,
+"bytes": 294596,
+"groups": {
+"BuildingsLOD": 128,
+"Glazing": 676,
+"Houses": 200,
+"Road": 1807,
+"Spin_FerrisWheel": 1536,
+"Terrain": 1154,
+"Verge": 2265
+}
+},
+"b_-2_1": {
+"kind": "b",
+"cell": [
+-2,
+1
+],
+"min": [
+-804.0,
+-13.0,
+377.9
+],
+"max": [
+0.0,
+14.1,
+804.0
+],
+"tris": 4448,
+"bytes": 117308,
+"groups": {
+"Shallows": 39,
+"ShoreFoam": 38,
+"TerrainBlend_Grass": 33,
+"TerrainBlend_Rock": 21,
+"TerrainBlend_Sand": 7,
+"TerrainRock": 22,
+"TerrainSand": 4288
+}
+},
+"b_-2_2": {
+"kind": "b",
+"cell": [
+-2,
+2
+],
+"min": [
+-900.1,
+-17.0,
+1056.0
+],
+"max": [
+-559.1,
+101.6,
+1158.0
+],
+"tris": 3330,
+"bytes": 218880,
+"groups": {
+"Bridges": 3188,
+"TerrainBlend_Rock": 38,
+"TerrainRock": 104
+}
+},
+"b_-2_3": {
+"kind": "b",
+"cell": [
+-2,
+3
+],
+"min": [
+-804.0,
+-30.0,
+804.0
+],
+"max": [
+0.0,
+8.2,
+1608.0
+],
+"tris": 5813,
+"bytes": 147308,
+"groups": {
+"TerrainSand": 5813
+}
+},
+"b_-2_4": {
+"kind": "b",
+"cell": [
+-2,
+4
+],
+"min": [
+-804.0,
+-30.0,
+1596.0
+],
+"max": [
+-528.0,
+-15.0,
+1680.0
+],
+"tris": 287,
+"bytes": 8384,
+"groups": {
+"TerrainSand": 287
+}
+},
+"b_-3_-1": {
+"kind": "b",
+"cell": [
+-3,
+-1
+],
+"min": [
+-1368.0,
+23.3,
+-720.0
+],
+"max": [
+-798.0,
+97.9,
+0.0
+],
+"tris": 233,
+"bytes": 11192,
+"groups": {
+"Terrain": 128,
+"TerrainBlend_Forest": 76,
+"TerrainBlend_Grass": 29
+}
+},
+"b_-3_-2": {
+"kind": "b",
+"cell": [
+-3,
+-2
+],
+"min": [
+-1380.0,
+34.4,
+-804.0
+],
+"max": [
+-804.0,
+303.1,
+-336.0
+],
+"tris": 760,
+"bytes": 35684,
+"groups": {
+"Lake_1": 28,
+"TerrainBlend_Rock": 167,
+"TerrainBlend_Snow": 45,
+"TerrainRock": 397,
+"TerrainSnow": 123
+}
+},
+"b_-3_-3": {
+"kind": "b",
+"cell": [
+-3,
+-3
+],
+"min": [
+-1584.0,
+0.6,
+-1572.0
+],
+"max": [
+-797.5,
+320.6,
+-792.0
+],
+"tris": 7473,
+"bytes": 387304,
+"groups": {
+"Markings": 4424,
+"Puddles": 6,
+"Road": 1276,
+"TerrainBlend_Grass": 366,
+"TerrainBlend_Snow": 36,
+"TerrainSnow": 55,
+"Verge": 1310
+}
+},
+"b_-3_-4": {
+"kind": "b",
+"cell": [
+-3,
+-4
+],
+"min": [
+-1572.0,
+0.5,
+-1572.0
+],
+"max": [
+-798.0,
+100.4,
+-840.0
+],
+"tris": 4054,
+"bytes": 133428,
+"groups": {
+"Terrain": 4054
+}
+},
+"b_-3_0": {
+"kind": "b",
+"cell": [
+-3,
+0
+],
+"min": [
+-1114.3,
+25.7,
+44.1
+],
+"max": [
+-921.4,
+34.0,
+189.1
+],
+"tris": 488,
+"bytes": 23440,
+"groups": {
+"Houses": 200,
+"Rocks": 288
+}
+},
+"b_-3_1": {
+"kind": "b",
+"cell": [
+-3,
+1
+],
+"min": [
+-1596.0,
+-13.0,
+0.0
+],
+"max": [
+-789.4,
+101.7,
+804.0
+],
+"tris": 780,
+"bytes": 36460,
+"groups": {
+"Shallows": 60,
+"ShoreFoam": 60,
+"TerrainBlend_Grass": 171,
+"TerrainBlend_Sand": 53,
+"TerrainSand": 436
+}
+},
+"b_-3_2": {
+"kind": "b",
+"cell": [
+-3,
+2
+],
+"min": [
+-1447.1,
+23.0,
+794.7
+],
+"max": [
+-799.4,
+64.1,
+1220.1
+],
+"tris": 6988,
+"bytes": 348468,
+"groups": {
+"Bridges": 368,
+"Markings": 3976,
+"Puddles": 4,
+"Road": 1696,
+"Verge": 944
+}
+},
+"b_-3_4": {
+"kind": "b",
+"cell": [
+-3,
+4
+],
+"min": [
+-972.0,
+-30.0,
+1596.0
+],
+"max": [
+-804.0,
+-15.0,
+1680.0
+],
+"tris": 182,
+"bytes": 5376,
+"groups": {
+"TerrainSand": 182
+}
+},
+"b_-4_-1": {
+"kind": "b",
+"cell": [
+-4,
+-1
+],
+"min": [
+-1569.4,
+69.2,
+-283.0
+],
+"max": [
+-1564.9,
+156.6,
+-52.7
+],
+"tris": 232,
+"bytes": 2544,
+"groups": {
+"Spin_Turbine_0": 116,
+"Spin_Turbine_1": 116
+}
+},
+"b_-4_-2": {
+"kind": "b",
+"cell": [
+-4,
+-2
+],
+"min": [
+-1674.0,
+13.7,
+-804.4
+],
+"max": [
+-797.3,
+97.9,
+-0.0
+],
+"tris": 24096,
+"bytes": 813460,
+"groups": {
+"Bridges": 372,
+"Lake_0": 28,
+"Markings": 880,
+"River_2": 82,
+"Road": 238,
+"Rocks": 3827,
+"TerrainForest": 15297,
+"Verge": 3372
+}
+},
+"b_-4_-3": {
+"kind": "b",
+"cell": [
+-4,
+-3
+],
+"min": [
+-1608.0,
+-30.0,
+-1596.0
+],
+"max": [
+-798.0,
+320.6,
+-792.0
+],
+"tris": 5844,
+"bytes": 210344,
+"groups": {
+"Rocks": 1309,
+"TerrainBlend_Forest": 21,
+"TerrainBlend_Rock": 343,
+"TerrainForest": 2707,
+"TerrainRock": 1464
+}
+},
+"b_-4_-4": {
+"kind": "b",
+"cell": [
+-4,
+-4
+],
+"min": [
+-1623.0,
+-30.0,
+-1611.1
+],
+"max": [
+-794.2,
+11.7,
+-864.0
+],
+"tris": 2855,
+"bytes": 121196,
+"groups": {
+"Shallows": 208,
+"ShoreFoam": 214,
+"TerrainBlend_Sand": 169,
+"TerrainSand": 2264
+}
+},
+"b_-4_-5": {
+"kind": "b",
+"cell": [
+-4,
+-5
+],
+"min": [
+-1572.0,
+-30.0,
+-1620.0
+],
+"max": [
+-1440.0,
+-15.1,
+-1596.0
+],
+"tris": 55,
+"bytes": 3428,
+"groups": {
+"TerrainBlend_Rock": 2,
+"TerrainBlend_Sand": 21,
+"TerrainRock": 26,
+"TerrainSand": 6
+}
+},
+"b_-4_0": {
+"kind": "b",
+"cell": [
+-4,
+0
+],
+"min": [
+-1608.0,
+25.5,
+-10.0
+],
+"max": [
+-912.0,
+153.6,
+477.4
+],
+"tris": 2032,
+"bytes": 77172,
+"groups": {
+"Glazing": 72,
+"Houses": 400,
+"Spin_Turbine_2": 116,
+"Spin_Turbine_4": 116,
+"TerrainBlend_Forest": 168,
+"TerrainForest": 1160
+}
+},
+"b_-4_1": {
+"kind": "b",
+"cell": [
+-4,
+1
+],
+"min": [
+-1608.0,
+-1.6,
+0.0
+],
+"max": [
+-797.7,
+135.6,
+804.8
+],
+"tris": 22777,
+"bytes": 690484,
+"groups": {
+"Bridges": 664,
+"Markings": 1818,
+"Pavement": 2,
+"Puddles": 8,
+"Road": 2889,
+"Terrain": 14311,
+"TerrainBlend_Rock": 63,
+"TerrainRock": 1284,
+"TunnelPortal": 64,
+"Verge": 1674
+}
+},
+"b_-4_2": {
+"kind": "b",
+"cell": [
+-4,
+2
+],
+"min": [
+-1620.3,
+-7.6,
+794.4
+],
+"max": [
+-825.0,
+115.4,
+1443.1
+],
+"tris": 9906,
+"bytes": 310756,
+"groups": {
+"Shallows": 230,
+"ShoreFoam": 236,
+"Skids": 20,
+"Terrain": 8080,
+"TerrainBlend_Grass": 252,
+"TerrainBlend_Rock": 261,
+"TerrainBlend_Sand": 111,
+"TerrainRock": 716
+}
+},
+"b_-4_3": {
+"kind": "b",
+"cell": [
+-4,
+3
+],
+"min": [
+-1608.0,
+-30.0,
+804.0
+],
+"max": [
+-804.0,
+57.4,
+1608.0
+],
+"tris": 3972,
+"bytes": 128904,
+"groups": {
+"Rocks": 480,
+"TerrainSand": 3492
+}
+},
+"b_-5_-1": {
+"kind": "b",
+"cell": [
+-5,
+-1
+],
+"min": [
+-2246.7,
+-26.5,
+-808.8
+],
+"max": [
+-1597.1,
+155.3,
+9.0
+],
+"tris": 8524,
+"bytes": 397804,
+"groups": {
+"Markings": 4052,
+"Puddles": 8,
+"Road": 1160,
+"Rocks": 1852,
+"Shallows": 161,
+"ShoreFoam": 163,
+"Spin_Turbine_3": 116,
+"Verge": 1012
+}
+},
+"b_-5_-2": {
+"kind": "b",
+"cell": [
+-5,
+-2
+],
+"min": [
+-2244.0,
+-19.8,
+-804.0
+],
+"max": [
+-1596.0,
+38.5,
+0.0
+],
+"tris": 7747,
+"bytes": 259952,
+"groups": {
+"Bridges": 340,
+"River_1": 164,
+"TerrainBlend_Forest": 142,
+"TerrainBlend_Rock": 26,
+"TerrainBlend_Sand": 67,
+"TerrainForest": 6982,
+"TerrainRock": 26
+}
+},
+"b_-5_-3": {
+"kind": "b",
+"cell": [
+-5,
+-3
+],
+"min": [
+-1944.0,
+-30.0,
+-1584.0
+],
+"max": [
+-1576.6,
+14.0,
+-782.3
+],
+"tris": 974,
+"bytes": 37952,
+"groups": {
+"Shallows": 27,
+"ShoreFoam": 18,
+"TerrainBlend_Forest": 7,
+"TerrainBlend_Sand": 9,
+"TerrainForest": 40,
+"TerrainSand": 873
+}
+},
+"b_-5_-4": {
+"kind": "b",
+"cell": [
+-5,
+-4
+],
+"min": [
+-1644.0,
+-30.0,
+-1572.0
+],
+"max": [
+-1596.0,
+0.2,
+-1392.0
+],
+"tris": 68,
+"bytes": 4108,
+"groups": {
+"TerrainBlend_Rock": 31,
+"TerrainRock": 37
+}
+},
+"b_-5_0": {
+"kind": "b",
+"cell": [
+-5,
+0
+],
+"min": [
+-2117.7,
+0.1,
+-8.5
+],
+"max": [
+-1595.4,
+143.0,
+801.3
+],
+"tris": 6187,
+"bytes": 299320,
+"groups": {
+"Markings": 3329,
+"Puddles": 6,
+"Road": 1166,
+"Rocks": 72,
+"ShoreFoam": 133,
+"Spin_Turbine_5": 116,
+"TerrainBlend_Forest": 79,
+"TerrainForest": 418,
+"Verge": 868
+}
+},
+"b_-5_1": {
+"kind": "b",
+"cell": [
+-5,
+1
+],
+"min": [
+-2150.7,
+0.1,
+-8.8
+],
+"max": [
+-1596.0,
+103.5,
+815.3
+],
+"tris": 11730,
+"bytes": 572792,
+"groups": {
+"Glazing": 474,
+"Houses": 3652,
+"Roofs": 72,
+"Shallows": 132,
+"Terrain": 6945,
+"TerrainBlend_Grass": 236,
+"TerrainBlend_Rock": 61,
+"TerrainRock": 158
+}
+},
+"b_-5_2": {
+"kind": "b",
+"cell": [
+-5,
+2
+],
+"min": [
+-2400.0,
+-30.0,
+794.7
+],
+"max": [
+-1575.6,
+116.4,
+1380.0
+],
+"tris": 3863,
+"bytes": 182708,
+"groups": {
+"Rocks": 240,
+"Shallows": 150,
+"ShoreFoam": 144,
+"Terrain": 484,
+"TerrainBlend_Grass": 69,
+"TerrainBlend_Rock": 246,
+"TerrainRock": 540,
+"TerrainSand": 1708,
+"TreeCards": 282
+}
+},
+"b_-6_-1": {
+"kind": "b",
+"cell": [
+-6,
+-1
+],
+"min": [
+-2208.0,
+-2.0,
+-456.0
+],
+"max": [
+-1860.0,
+27.3,
+0.0
+],
+"tris": 1433,
+"bytes": 49304,
+"groups": {
+"Terrain": 1342,
+"TerrainBlend_Grass": 91
+}
+},
+"b_-6_-2": {
+"kind": "b",
+"cell": [
+-6,
+-2
+],
+"min": [
+-2340.0,
+-30.0,
+-804.0
+],
+"max": [
+-1668.0,
+10.0,
+0.0
+],
+"tris": 2577,
+"bytes": 84488,
+"groups": {
+"TerrainSand": 2577
+}
+},
+"b_-6_0": {
+"kind": "b",
+"cell": [
+-6,
+0
+],
+"min": [
+-2076.0,
+3.9,
+108.0
+],
+"max": [
+-2064.0,
+6.1,
+120.0
+],
+"tris": 1,
+"bytes": 116,
+"groups": {
+"TerrainBlend_Sand": 1
+}
+},
+"b_-6_1": {
+"kind": "b",
+"cell": [
+-6,
+1
+],
+"min": [
+-2340.0,
+-30.0,
+0.0
+],
+"max": [
+-1788.0,
+13.5,
+804.0
+],
+"tris": 3026,
+"bytes": 96300,
+"groups": {
+"TerrainSand": 3026
+}
+},
+"b_-6_2": {
+"kind": "b",
+"cell": [
+-6,
+2
+],
+"min": [
+-2400.0,
+-30.0,
+912.0
+],
+"max": [
+-2076.0,
+11.9,
+1236.0
+],
+"tris": 174,
+"bytes": 11652,
+"groups": {
+"TerrainBlend_Sand": 174
+}
+},
+"b_0_-1": {
+"kind": "b",
+"cell": [
+0,
+-1
+],
+"min": [
+-2.8,
+11.0,
+-802.4
+],
+"max": [
+802.3,
+177.6,
+12.5
+],
+"tris": 23911,
+"bytes": 1051076,
+"groups": {
+"BuildingsLOD": 104,
+"Glazing": 806,
+"Houses": 6448,
+"Pavement": 14,
+"RoadSetts": 1148,
+"Skids": 58,
+"TerrainBlend_Grass": 579,
+"TerrainBlend_Pave": 16,
+"TerrainPave": 11542,
+"Towers": 250,
+"Verge": 2946
+}
+},
+"b_0_-2": {
+"kind": "b",
+"cell": [
+0,
+-2
+],
+"min": [
+-5.6,
+15.8,
+-810.0
+],
+"max": [
+798.0,
+160.8,
+-319.0
+],
+"tris": 7303,
+"bytes": 281484,
+"groups": {
+"Bridges": 1275,
+"Lake_2": 28,
+"Lake_3": 28,
+"TerrainBlend_Rock": 442,
+"TerrainBlend_Snow": 50,
+"TerrainRock": 5130,
+"TerrainSnow": 122,
+"TunnelPortal": 128,
+"Waterfall_0": 50,
+"Waterfall_1": 50
+}
+},
+"b_0_-3": {
+"kind": "b",
+"cell": [
+0,
+-3
+],
+"min": [
+0.0,
+-0.5,
+-1428.0
+],
+"max": [
+798.0,
+359.7,
+-792.0
+],
+"tris": 1864,
+"bytes": 105556,
+"groups": {
+"TerrainBlend_Grass": 498,
+"TerrainBlend_Rock": 663,
+"TerrainBlend_Snow": 189,
+"TerrainSnow": 514
+}
+},
+"b_0_-4": {
+"kind": "b",
+"cell": [
+0,
+-4
+],
+"min": [
+-7.8,
+-25.0,
+-1490.0
+],
+"max": [
+801.4,
+53.9,
+-1219.1
+],
+"tris": 293,
+"bytes": 14732,
+"groups": {
+"Rocks": 160,
+"ShoreFoam": 133
+}
+},
+"b_0_0": {
+"kind": "b",
+"cell": [
+0,
+0
+],
+"min": [
+-30000.0,
+-30.5,
+-30000.0
+],
+"max": [
+30000.0,
+203.5,
+30000.0
+],
+"tris": 23774,
+"bytes": 1056240,
+"groups": {
+"BuildingsLOD": 104,
+"Glazing": 1770,
+"Houses": 6000,
+"Markings": 1526,
+"Pavement": 12,
+"Puddles": 30,
+"RoadSetts": 1382,
+"Seabed": 2,
+"Skids": 64,
+"TerrainBlend_Pave": 130,
+"TerrainPave": 12540,
+"Towers": 214
+}
+},
+"b_0_1": {
+"kind": "b",
+"cell": [
+0,
+1
+],
+"min": [
+-0.0,
+-13.0,
+432.0
+],
+"max": [
+252.0,
+9.2,
+804.0
+],
+"tris": 1296,
+"bytes": 36792,
+"groups": {
+"Shallows": 66,
+"ShoreFoam": 66,
+"TerrainBlend_Sand": 2,
+"TerrainSand": 1162
+}
+},
+"b_0_2": {
+"kind": "b",
+"cell": [
+0,
+2
+],
+"min": [
+-5.7,
+11.5,
+798.0
+],
+"max": [
+804.1,
+29.0,
+1197.7
+],
+"tris": 5342,
+"bytes": 306652,
+"groups": {
+"Markings": 4645,
+"Puddles": 8,
+"Skids": 20,
+"TerrainBlend_Field": 669
+}
+},
+"b_0_3": {
+"kind": "b",
+"cell": [
+0,
+3
+],
+"min": [
+-9.2,
+-30.0,
+794.0
+],
+"max": [
+801.5,
+9.3,
+1610.1
+],
+"tris": 771,
+"bytes": 55424,
+"groups": {
+"Shallows": 225,
+"ShoreFoam": 230,
+"TerrainBlend_Rock": 56,
+"TerrainBlend_Sand": 112,
+"TerrainRock": 148
+}
+},
+"b_0_4": {
+"kind": "b",
+"cell": [
+0,
+4
+],
+"min": [
+204.0,
+-30.0,
+1586.2
+],
+"max": [
+456.0,
+13.1,
+1683.0
+],
+"tris": 339,
+"bytes": 18756,
+"groups": {
+"Shallows": 27,
+"ShoreFoam": 24,
+"Terrain": 46,
+"TerrainBlend_Grass": 26,
+"TerrainBlend_Rock": 33,
+"TerrainRock": 140,
+"TerrainSand": 43
+}
+},
+"b_1_-1": {
+"kind": "b",
+"cell": [
+1,
+-1
+],
+"min": [
+0.0,
+11.0,
+-798.0
+],
+"max": [
+804.0,
+102.5,
+0.0
+],
+"tris": 6675,
+"bytes": 227156,
+"groups": {
+"BuildingsLOD": 128,
+"Terrain": 6547
+}
+},
+"b_1_-2": {
+"kind": "b",
+"cell": [
+1,
+-2
+],
+"min": [
+-6.0,
+14.0,
+-903.1
+],
+"max": [
+866.5,
+132.2,
+1.9
+],
+"tris": 11312,
+"bytes": 447748,
+"groups": {
+"Bridges": 3490,
+"Markings": 2542,
+"Puddles": 18,
+"Road": 3804,
+"TougeLattice": 728,
+"TougeTerrace": 730
+}
+},
+"b_1_-3": {
+"kind": "b",
+"cell": [
+1,
+-3
+],
+"min": [
+-2.1,
+-1.0,
+-1428.0
+],
+"max": [
+902.3,
+356.0,
+-792.0
+],
+"tris": 29062,
+"bytes": 1148080,
+"groups": {
+"Bridges": 2668,
+"Markings": 6093,
+"Puddles": 14,
+"Road": 2831,
+"Terrain": 8056,
+"TerrainRock": 5781,
+"TougeLattice": 1016,
+"TougeTerrace": 1021,
+"Verge": 1582
+}
+},
+"b_1_-4": {
+"kind": "b",
+"cell": [
+1,
+-4
+],
+"min": [
+-8.1,
+-30.0,
+-1584.0
+],
+"max": [
+809.3,
+16.5,
+-1212.0
+],
+"tris": 2109,
+"bytes": 66740,
+"groups": {
+"Shallows": 133,
+"TerrainBlend_Sand": 166,
+"TerrainSand": 1810
+}
+},
+"b_1_0": {
+"kind": "b",
+"cell": [
+1,
+0
+],
+"min": [
+404.9,
+11.0,
+14.0
+],
+"max": [
+622.6,
+48.6,
+308.6
+],
+"tris": 64,
+"bytes": 4992,
+"groups": {
+"BuildingsLOD": 64
+}
+},
+"b_1_1": {
+"kind": "b",
+"cell": [
+1,
+1
+],
+"min": [
+-0.0,
+-1.6,
+-2.3
+],
+"max": [
+804.0,
+31.8,
+804.0
+],
+"tris": 22301,
+"bytes": 1054336,
+"groups": {
+"Houses": 8092,
+"Road": 3210,
+"Roofs": 24,
+"Terrain": 5318,
+"TerrainBlend_Field": 317,
+"TerrainBlend_Grass": 498,
+"TerrainField": 1785,
+"Verge": 3057
+}
+},
+"b_1_2": {
+"kind": "b",
+"cell": [
+1,
+2
+],
+"min": [
+-0.9,
+12.0,
+796.4
+],
+"max": [
+804.0,
+30.0,
+1201.6
+],
+"tris": 8569,
+"bytes": 287216,
+"groups": {
+"Glazing": 58,
+"Houses": 458,
+"Road": 1984,
+"Roofs": 4,
+"TerrainField": 4542,
+"Verge": 1523
+}
+},
+"b_1_3": {
+"kind": "b",
+"cell": [
+1,
+3
+],
+"min": [
+0.0,
+-30.0,
+798.0
+],
+"max": [
+804.0,
+29.5,
+1608.0
+],
+"tris": 11244,
+"bytes": 332124,
+"groups": {
+"Rocks": 80,
+"Terrain": 8144,
+"TerrainBlend_Grass": 714,
+"TerrainSand": 2306
+}
+},
+"b_1_4": {
+"kind": "b",
+"cell": [
+1,
+4
+],
+"min": [
+384.0,
+-30.0,
+1596.0
+],
+"max": [
+444.0,
+-19.3,
+1680.0
+],
+"tris": 10,
+"bytes": 828,
+"groups": {
+"TerrainBlend_Sand": 10
+}
+},
+"b_2_-1": {
+"kind": "b",
+"cell": [
+2,
+-1
+],
+"min": [
+792.0,
+14.4,
+-803.5
+],
+"max": [
+1605.0,
+84.8,
+5.5
+],
+"tris": 12126,
+"bytes": 447096,
+"groups": {
+"Buildings": 8,
+"Glazing": 272,
+"Houses": 200,
+"Markings": 2299,
+"Terrain": 9347
+}
+},
+"b_2_-2": {
+"kind": "b",
+"cell": [
+2,
+-2
+],
+"min": [
+798.0,
+15.3,
+-804.0
+],
+"max": [
+1596.0,
+112.2,
+-53.5
+],
+"tris": 1897,
+"bytes": 94760,
+"groups": {
+"Pavement": 2,
+"Skids": 52,
+"TerrainBlend_Grass": 86,
+"TerrainBlend_Rock": 471,
+"TerrainRock": 1286
+}
+},
+"b_2_-3": {
+"kind": "b",
+"cell": [
+2,
+-3
+],
+"min": [
+792.0,
+-30.0,
+-1392.0
+],
+"max": [
+1604.8,
+127.6,
+-792.0
+],
+"tris": 18189,
+"bytes": 744580,
+"groups": {
+"Bridges": 264,
+"Markings": 4076,
+"Pavement": 2,
+"Puddles": 12,
+"Road": 1466,
+"ShoreFoam": 134,
+"Skids": 8,
+"Terrain": 2170,
+"TerrainBlend_Grass": 190,
+"TerrainBlend_Rock": 163,
+"TerrainBlend_Sand": 267,
+"TerrainRock": 1707,
+"TerrainSand": 6018,
+"TougeLattice": 104,
+"TougeTerrace": 97,
+"Verge": 1511
+}
+},
+"b_2_0": {
+"kind": "b",
+"cell": [
+2,
+0
+],
+"min": [
+886.3,
+16.0,
+18.5
+],
+"max": [
+887.9,
+16.0,
+21.3
+],
+"tris": 2,
+"bytes": 156,
+"groups": {
+"Puddles": 2
+}
+},
+"b_2_1": {
+"kind": "b",
+"cell": [
+2,
+1
+],
+"min": [
+792.0,
+9.8,
+0.0
+],
+"max": [
+1602.0,
+60.1,
+804.0
+],
+"tris": 24856,
+"bytes": 690488,
+"groups": {
+"Lake_4": 28,
+"Spin_Windmill": 992,
+"Terrain": 22294,
+"TerrainBlend_Field": 203,
+"TerrainBlend_Grass": 237,
+"TerrainBlend_Rock": 9,
+"TerrainField": 1085,
+"TerrainRock": 8
+}
+},
+"b_2_2": {
+"kind": "b",
+"cell": [
+2,
+2
+],
+"min": [
+792.0,
+-0.1,
+707.7
+],
+"max": [
+1605.8,
+30.1,
+1343.9
+],
+"tris": 20362,
+"bytes": 875192,
+"groups": {
+"Bridges": 1392,
+"Markings": 5018,
+"Puddles": 16,
+"River": 260,
+"Shallows": 141,
+"Terrain": 8408,
+"TerrainBlend_Field": 844,
+"TerrainBlend_Grass": 1021,
+"TerrainBlend_Rock": 3,
+"TerrainBlend_Sand": 45,
+"TerrainField": 3214
+}
+},
+"b_2_3": {
+"kind": "b",
+"cell": [
+2,
+3
+],
+"min": [
+792.0,
+-30.0,
+1044.0
+],
+"max": [
+1596.0,
+8.6,
+1404.0
+],
+"tris": 2191,
+"bytes": 74012,
+"groups": {
+"TerrainSand": 2191
+}
+},
+"b_3_-1": {
+"kind": "b",
+"cell": [
+3,
+-1
+],
+"min": [
+868.5,
+16.4,
+-741.0
+],
+"max": [
+1600.2,
+48.2,
+-40.8
+],
+"tris": 216,
+"bytes": 16416,
+"groups": {
+"Houses": 200,
+"Puddles": 16
+}
+},
+"b_3_-2": {
+"kind": "b",
+"cell": [
+3,
+-2
+],
+"min": [
+796.6,
+15.2,
+-804.0
+],
+"max": [
+1603.5,
+112.2,
+0.6
+],
+"tris": 24316,
+"bytes": 911088,
+"groups": {
+"Houses": 1880,
+"Road": 5352,
+"Rocks": 728,
+"TerrainBlend_Sand": 714,
+"TerrainSand": 11934,
+"Verge": 3708
+}
+},
+"b_3_-3": {
+"kind": "b",
+"cell": [
+3,
+-3
+],
+"min": [
+794.3,
+0.1,
+-1263.1
+],
+"max": [
+1607.4,
+32.4,
+-887.3
+],
+"tris": 176,
+"bytes": 12328,
+"groups": {
+"Bridges": 42,
+"Shallows": 134
+}
+},
+"b_3_0": {
+"kind": "b",
+"cell": [
+3,
+0
+],
+"min": [
+795.8,
+13.9,
+-4.8
+],
+"max": [
+1605.2,
+33.5,
+801.0
+],
+"tris": 11046,
+"bytes": 698364,
+"groups": {
+"Glazing": 776,
+"Houses": 6288,
+"Kerbs": 1307,
+"Markings": 1945,
+"Skids": 728,
+"StartLine": 2
+}
+},
+"b_3_1": {
+"kind": "b",
+"cell": [
+3,
+1
+],
+"min": [
+797.1,
+14.8,
+-0.0
+],
+"max": [
+1603.1,
+28.5,
+801.1
+],
+"tris": 7215,
+"bytes": 239744,
+"groups": {
+"Road": 4813,
+"Verge": 2402
+}
+},
+"b_3_2": {
+"kind": "b",
+"cell": [
+3,
+2
+],
+"min": [
+795.1,
+0.1,
+798.6
+],
+"max": [
+1605.0,
+28.8,
+1232.4
+],
+"tris": 5202,
+"bytes": 199908,
+"groups": {
+"Glazing": 24,
+"Houses": 200,
+"Road": 2636,
+"ShoreFoam": 140,
+"Verge": 2202
+}
+},
+"b_3_3": {
+"kind": "b",
+"cell": [
+3,
+3
+],
+"min": [
+1501.3,
+-21.1,
+1316.4
+],
+"max": [
+1546.1,
+25.0,
+1362.6
+],
+"tris": 160,
+"bytes": 4320,
+"groups": {
+"Rocks": 160
+}
+},
+"b_4_-1": {
+"kind": "b",
+"cell": [
+4,
+-1
+],
+"min": [
+1594.9,
+0.1,
+-801.5
+],
+"max": [
+2118.7,
+82.6,
+9.1
+],
+"tris": 12847,
+"bytes": 555732,
+"groups": {
+"Glazing": 24,
+"Houses": 200,
+"Markings": 3961,
+"Road": 1860,
+"ShoreFoam": 133,
+"Terrain": 4802,
+"TerrainBlend_Grass": 100,
+"TerrainBlend_Sand": 269,
+"Verge": 1498
+}
+},
+"b_4_-2": {
+"kind": "b",
+"cell": [
+4,
+-2
+],
+"min": [
+1596.0,
+-30.0,
+-813.7
+],
+"max": [
+2352.0,
+82.6,
+0.6
+],
+"tris": 8368,
+"bytes": 285472,
+"groups": {
+"Puddles": 4,
+"Shallows": 131,
+"TerrainBlend_Rock": 182,
+"TerrainRock": 422,
+"TerrainSand": 7629
+}
+},
+"b_4_-3": {
+"kind": "b",
+"cell": [
+4,
+-3
+],
+"min": [
+1596.0,
+-30.0,
+-1116.0
+],
+"max": [
+2400.0,
+62.6,
+-792.0
+],
+"tris": 2147,
+"bytes": 95592,
+"groups": {
+"ShoreFoam": 120,
+"TerrainBlend_Rock": 173,
+"TerrainBlend_Sand": 125,
+"TerrainRock": 622,
+"TerrainSand": 1107
+}
+},
+"b_4_0": {
+"kind": "b",
+"cell": [
+4,
+0
+],
+"min": [
+1596.6,
+0.1,
+-8.8
+],
+"max": [
+2179.6,
+24.3,
+802.1
+],
+"tris": 3285,
+"bytes": 128160,
+"groups": {
+"Bridges": 596,
+"Kerbs": 357,
+"Puddles": 6,
+"Road": 2149,
+"ShoreFoam": 145,
+"Skids": 32
+}
+},
+"b_4_1": {
+"kind": "b",
+"cell": [
+4,
+1
+],
+"min": [
+1594.3,
+-16.2,
+-3.9
+],
+"max": [
+2208.0,
+25.7,
+804.1
+],
+"tris": 19087,
+"bytes": 813248,
+"groups": {
+"Glazing": 136,
+"Houses": 1088,
+"Markings": 5284,
+"Terrain": 11366,
+"TerrainBlend_Grass": 37,
+"TerrainBlend_Sand": 128,
+"Verge": 1048
+}
+},
+"b_4_2": {
+"kind": "b",
+"cell": [
+4,
+2
+],
+"min": [
+1594.3,
+-30.0,
+783.0
+],
+"max": [
+2136.0,
+15.3,
+1356.0
+],
+"tris": 6026,
+"bytes": 225128,
+"groups": {
+"Buildings": 8,
+"Markings": 1056,
+"Puddles": 2,
+"Road": 302,
+"Shallows": 103,
+"ShoreFoam": 104,
+"Spin_HeliRotor": 24,
+"Terrain": 2676,
+"TerrainBlend_Grass": 44,
+"TerrainBlend_Sand": 75,
+"TerrainSand": 1480,
+"Verge": 152
+}
+},
+"b_5_-1": {
+"kind": "b",
+"cell": [
+5,
+-1
+],
+"min": [
+2221.9,
+-23.7,
+-193.3
+],
+"max": [
+2271.5,
+55.3,
+-143.1
+],
+"tris": 160,
+"bytes": 4320,
+"groups": {
+"Rocks": 160
+}
+},
+"b_5_-3": {
+"kind": "b",
+"cell": [
+5,
+-3
+],
+"min": [
+1598.6,
+0.1,
+-1083.0
+],
+"max": [
+2402.7,
+28.6,
+-794.8
+],
+"tris": 475,
+"bytes": 23024,
+"groups": {
+"Shallows": 121,
+"Terrain": 306,
+"TerrainBlend_Grass": 48
+}
+},
+"b_5_0": {
+"kind": "b",
+"cell": [
+5,
+0
+],
+"min": [
+2088.0,
+-16.2,
+36.0
+],
+"max": [
+2208.0,
+17.2,
+264.0
+],
+"tris": 147,
+"bytes": 7940,
+"groups": {
+"TerrainBlend_Rock": 57,
+"TerrainRock": 90
+}
+},
+"b_5_1": {
+"kind": "b",
+"cell": [
+5,
+1
+],
+"min": [
+1788.0,
+-30.0,
+-9.5
+],
+"max": [
+2352.0,
+37.7,
+817.0
+],
+"tris": 3017,
+"bytes": 85508,
+"groups": {
+"Rocks": 160,
+"Shallows": 147,
+"TerrainSand": 2710
+}
+},
+"df_-1_-1": {
+"kind": "b",
+"cell": [
+-1,
+-1
+],
+"min": [
+-254.0,
+94.7,
+-242.0
+],
+"max": [
+-18.4,
+168.7,
+-6.4
+],
+"tris": 4632,
+"bytes": 402016,
+"groups": {
+"TowerCrown_33": 728,
+"TowerCrown_50": 596,
+"TowerCrown_56": 836,
+"TowerCrown_57": 848,
+"TowerCrown_58": 776,
+"TowerCrown_61": 848
+}
+},
+"df_-1_0": {
+"kind": "b",
+"cell": [
+-1,
+0
+],
+"min": [
+-288.9,
+105.4,
+42.5
+],
+"max": [
+-91.5,
+170.7,
+222.9
+],
+"tris": 3928,
+"bytes": 285880,
+"groups": {
+"TowerCrown_27": 668,
+"TowerCrown_28": 668,
+"TowerCrown_29": 812,
+"TowerCrown_43": 968,
+"TowerCrown_46": 812
+}
+},
+"df_-1_1": {
+"kind": "b",
+"cell": [
+-1,
+1
+],
+"min": [
+-453.8,
+-0.6,
+434.1
+],
+"max": [
+160.5,
+3.7,
+435.2
+],
+"tris": 11708,
+"bytes": 877272,
+"groups": {
+"Landmark_Quay": 11708
+}
+},
+"df_-4_3": {
+"kind": "b",
+"cell": [
+-4,
+3
+],
+"min": [
+-1372.5,
+33.4,
+1220.6
+],
+"max": [
+-1339.4,
+70.4,
+1255.3
+],
+"tris": 9641,
+"bytes": 782412,
+"groups": {
+"Landmark_Lighthouse": 9641
+}
+},
+"df_0_-1": {
+"kind": "b",
+"cell": [
+0,
+-1
+],
+"min": [
+18.9,
+91.5,
+-237.5
+],
+"max": [
+297.0,
+166.2,
+-3.6
+],
+"tris": 6552,
+"bytes": 606384,
+"groups": {
+"TowerCrown_70": 728,
+"TowerCrown_73": 584,
+"TowerCrown_74": 764,
+"TowerCrown_75": 716,
+"TowerCrown_78": 620,
+"TowerCrown_79": 608,
+"TowerCrown_90": 788,
+"TowerCrown_91": 776,
+"TowerCrown_93": 968
+}
+},
+"df_0_0": {
+"kind": "b",
+"cell": [
+0,
+0
+],
+"min": [
+96.0,
+106.1,
+101.4
+],
+"max": [
+292.5,
+152.3,
+276.5
+],
+"tris": 3044,
+"bytes": 283548,
+"groups": {
+"TowerCrown_63": 788,
+"TowerCrown_64": 812,
+"TowerCrown_67": 644,
+"TowerCrown_88": 800
+}
+},
+"df_1_0": {
+"kind": "b",
+"cell": [
+1,
+0
+],
+"min": [
+538.7,
+12.4,
+106.0
+],
+"max": [
+773.8,
+72.3,
+284.0
+],
+"tris": 21376,
+"bytes": 1299836,
+"groups": {
+"Landmark_Stadium": 21376
+}
+},
+"df_1_1": {
+"kind": "b",
+"cell": [
+1,
+1
+],
+"min": [
+525.6,
+24.0,
+727.3
+],
+"max": [
+546.7,
+31.0,
+751.2
+],
+"tris": 5518,
+"bytes": 406996,
+"groups": {
+"Landmark_FuelStation": 5518
+}
+},
+"df_1_2": {
+"kind": "b",
+"cell": [
+1,
+2
+],
+"min": [
+566.8,
+23.5,
+886.9
+],
+"max": [
+594.7,
+53.4,
+921.1
+],
+"tris": 14949,
+"bytes": 1222516,
+"groups": {
+"Landmark_Church": 14949
+}
+},
+"df_2_1": {
+"kind": "b",
+"cell": [
+2,
+1
+],
+"min": [
+1055.1,
+29.1,
+728.6
+],
+"max": [
+1069.6,
+50.6,
+742.0
+],
+"tris": 3224,
+"bytes": 229488,
+"groups": {
+"Landmark_Windmill": 3224
+}
+},
+"d_-1_-1": {
+"kind": "d",
+"cell": [
+-1,
+-1
+],
+"min": [
+-638.1,
+13.3,
+-777.1
+],
+"max": [
+1.8,
+189.0,
+12.5
+],
+"tris": 288590,
+"bytes": 20410344,
+"groups": {
+"ArchTrim": 4480,
+"BuildingsHDModel": 240540,
+"ContactAO": 356,
+"KitTrim": 24736,
+"Props": 492,
+"RoadDecals": 182,
+"RoadDecalsStreet": 1498,
+"Shapes": 320,
+"Structures": 15986
+}
+},
+"d_-1_-3": {
+"kind": "d",
+"cell": [
+-1,
+-3
+],
+"min": [
+-764.9,
+36.5,
+-1268.6
+],
+"max": [
+1.9,
+107.4,
+-790.9
+],
+"tris": 2175,
+"bytes": 82208,
+"groups": {
+"Props": 2088,
+"RoadDecals": 87
+}
+},
+"d_-1_-4": {
+"kind": "d",
+"cell": [
+-1,
+-4
+],
+"min": [
+-314.9,
+54.7,
+-1253.4
+],
+"max": [
+-78.0,
+73.6,
+-1206.6
+],
+"tris": 384,
+"bytes": 18720,
+"groups": {
+"Props": 384
+}
+},
+"d_-1_0": {
+"kind": "d",
+"cell": [
+-1,
+0
+],
+"min": [
+-800.9,
+13.3,
+-2.6
+],
+"max": [
+1.8,
+216.7,
+339.0
+],
+"tris": 280910,
+"bytes": 20774712,
+"groups": {
+"ArchTrim": 3896,
+"BuildingsHDModel": 247578,
+"KitTrim": 12674,
+"Props": 984,
+"RoadDecals": 202,
+"RoadDecalsStreet": 1922,
+"Structures": 13654
+}
+},
+"d_-1_1": {
+"kind": "d",
+"cell": [
+-1,
+1
+],
+"min": [
+-469.9,
+-16.0,
+319.3
+],
+"max": [
+169.9,
+55.1,
+489.0
+],
+"tris": 2708,
+"bytes": 190744,
+"groups": {
+"Shapes": 100,
+"Structures": 2608
+}
+},
+"d_-1_2": {
+"kind": "d",
+"cell": [
+-1,
+2
+],
+"min": [
+-545.8,
+15.4,
+1105.9
+],
+"max": [
+-22.2,
+18.7,
+1184.9
+],
+"tris": 26,
+"bytes": 2028,
+"groups": {
+"RoadDecals": 26
+}
+},
+"d_-2_-1": {
+"kind": "d",
+"cell": [
+-2,
+-1
+],
+"min": [
+-895.3,
+13.3,
+-421.1
+],
+"max": [
+-294.3,
+88.4,
+12.5
+],
+"tris": 145512,
+"bytes": 10177852,
+"groups": {
+"BuildingsHDModel": 122822,
+"Props": 558,
+"Shapes": 420,
+"Structures": 21712
+}
+},
+"d_-2_-2": {
+"kind": "d",
+"cell": [
+-2,
+-2
+],
+"min": [
+-547.9,
+20.0,
+-830.2
+],
+"max": [
+-414.4,
+93.0,
+-402.9
+],
+"tris": 3098,
+"bytes": 128092,
+"groups": {
+"Props": 3034,
+"Shapes": 64
+}
+},
+"d_-2_-3": {
+"kind": "d",
+"cell": [
+-2,
+-3
+],
+"min": [
+-512.9,
+84.4,
+-833.3
+],
+"max": [
+-495.6,
+90.4,
+-799.8
+],
+"tris": 44,
+"bytes": 3000,
+"groups": {
+"Structures": 44
+}
+},
+"d_-2_0": {
+"kind": "d",
+"cell": [
+-2,
+0
+],
+"min": [
+-904.3,
+13.2,
+-0.3
+],
+"max": [
+-15.1,
+58.0,
+340.9
+],
+"tris": 137782,
+"bytes": 10156540,
+"groups": {
+"ArchTrim": 144,
+"BuildingsHDModel": 118078,
+"ContactAO": 348,
+"KitTrim": 64,
+"Props": 810,
+"Structures": 18338
+}
+},
+"d_-2_1": {
+"kind": "d",
+"cell": [
+-2,
+1
+],
+"min": [
+-588.5,
+-16.0,
+296.7
+],
+"max": [
+-298.1,
+55.1,
+604.6
+],
+"tris": 3666,
+"bytes": 276068,
+"groups": {
+"Shapes": 100,
+"Structures": 3566
+}
+},
+"d_-2_2": {
+"kind": "d",
+"cell": [
+-2,
+2
+],
+"min": [
+-899.9,
+14.8,
+1096.6
+],
+"max": [
+-385.3,
+28.4,
+1122.4
+],
+"tris": 5428,
+"bytes": 185496,
+"groups": {
+"Props": 5428
+}
+},
+"d_-3_-1": {
+"kind": "d",
+"cell": [
+-3,
+-1
+],
+"min": [
+-1206.3,
+33.7,
+-387.5
+],
+"max": [
+-894.9,
+49.4,
+-178.7
+],
+"tris": 1932,
+"bytes": 114116,
+"groups": {
+"Props": 1288,
+"Shapes": 644
+}
+},
+"d_-3_-2": {
+"kind": "d",
+"cell": [
+-3,
+-2
+],
+"min": [
+-1197.6,
+28.9,
+-890.5
+],
+"max": [
+-897.4,
+144.7,
+-479.1
+],
+"tris": 492,
+"bytes": 32360,
+"groups": {
+"Props": 240,
+"Shapes": 140,
+"Structures": 112
+}
+},
+"d_-3_-3": {
+"kind": "d",
+"cell": [
+-3,
+-3
+],
+"min": [
+-1486.1,
+15.5,
+-1176.6
+],
+"max": [
+-805.5,
+46.3,
+-819.9
+],
+"tris": 176,
+"bytes": 12208,
+"groups": {
+"Props": 104,
+"RoadDecals": 44,
+"Shapes": 28
+}
+},
+"d_-3_0": {
+"kind": "d",
+"cell": [
+-3,
+0
+],
+"min": [
+-1203.8,
+26.7,
+11.8
+],
+"max": [
+-903.4,
+45.6,
+288.4
+],
+"tris": 982,
+"bytes": 50984,
+"groups": {
+"ArchTrim": 144,
+"KitTrim": 64,
+"Props": 258,
+"Shapes": 392,
+"Structures": 124
+}
+},
+"d_-3_2": {
+"kind": "d",
+"cell": [
+-3,
+2
+],
+"min": [
+-1131.4,
+27.9,
+1074.2
+],
+"max": [
+-899.1,
+49.4,
+1112.4
+],
+"tris": 1136,
+"bytes": 44472,
+"groups": {
+"Props": 1136
+}
+},
+"d_-4_-1": {
+"kind": "d",
+"cell": [
+-4,
+-1
+],
+"min": [
+-1503.8,
+37.7,
+-303.2
+],
+"max": [
+-1199.3,
+49.3,
+-215.9
+],
+"tris": 1235,
+"bytes": 78692,
+"groups": {
+"Props": 878,
+"Shapes": 357
+}
+},
+"d_-4_-2": {
+"kind": "d",
+"cell": [
+-4,
+-2
+],
+"min": [
+-1666.5,
+14.0,
+-902.9
+],
+"max": [
+-1200.6,
+45.7,
+-296.6
+],
+"tris": 3551,
+"bytes": 128160,
+"groups": {
+"Props": 1010,
+"RoadDecals": 8,
+"Shapes": 2149,
+"Structures": 384
+}
+},
+"d_-4_-3": {
+"kind": "d",
+"cell": [
+-4,
+-3
+],
+"min": [
+-1481.2,
+10.2,
+-931.2
+],
+"max": [
+-1354.9,
+32.1,
+-813.7
+],
+"tris": 230,
+"bytes": 11884,
+"groups": {
+"Props": 104,
+"Shapes": 126
+}
+},
+"d_-4_0": {
+"kind": "d",
+"cell": [
+-4,
+0
+],
+"min": [
+-1435.3,
+29.7,
+171.4
+],
+"max": [
+-1084.3,
+57.4,
+479.9
+],
+"tris": 880,
+"bytes": 56400,
+"groups": {
+"ArchTrim": 288,
+"ContactAO": 24,
+"KitTrim": 128,
+"Props": 192,
+"Structures": 248
+}
+},
+"d_-4_1": {
+"kind": "d",
+"cell": [
+-4,
+1
+],
+"min": [
+-1702.7,
+24.1,
+41.1
+],
+"max": [
+-820.7,
+79.7,
+799.8
+],
+"tris": 1044,
+"bytes": 69840,
+"groups": {
+"Props": 956,
+"RoadDecals": 88
+}
+},
+"d_-4_2": {
+"kind": "d",
+"cell": [
+-4,
+2
+],
+"min": [
+-1427.2,
+31.2,
+809.8
+],
+"max": [
+-977.0,
+61.2,
+1204.3
+],
+"tris": 48,
+"bytes": 3744,
+"groups": {
+"RoadDecals": 48
+}
+},
+"d_-5_-1": {
+"kind": "d",
+"cell": [
+-5,
+-1
+],
+"min": [
+-1857.1,
+21.4,
+-684.3
+],
+"max": [
+-1550.9,
+112.8,
+-9.3
+],
+"tris": 1619,
+"bytes": 68608,
+"groups": {
+"Props": 414,
+"RoadDecals": 38,
+"Shapes": 1123,
+"Structures": 44
+}
+},
+"d_-5_-2": {
+"kind": "d",
+"cell": [
+-5,
+-2
+],
+"min": [
+-1799.0,
+16.2,
+-596.9
+],
+"max": [
+-1503.1,
+47.2,
+-298.8
+],
+"tris": 2231,
+"bytes": 82360,
+"groups": {
+"Props": 1142,
+"Shapes": 1001,
+"Structures": 88
+}
+},
+"d_-5_0": {
+"kind": "d",
+"cell": [
+-5,
+0
+],
+"min": [
+-1825.8,
+26.1,
+3.3
+],
+"max": [
+-1569.2,
+111.4,
+554.8
+],
+"tris": 432,
+"bytes": 14720,
+"groups": {
+"RoadDecals": 44,
+"Shapes": 388
+}
+},
+"d_-5_1": {
+"kind": "d",
+"cell": [
+-5,
+1
+],
+"min": [
+-2075.0,
+1.3,
+378.0
+],
+"max": [
+-1719.3,
+40.3,
+545.3
+],
+"tris": 14124,
+"bytes": 995116,
+"groups": {
+"ArchTrim": 4784,
+"ContactAO": 144,
+"KitTrim": 3948,
+"Structures": 5248
+}
+},
+"d_-6_1": {
+"kind": "d",
+"cell": [
+-6,
+1
+],
+"min": [
+-2067.7,
+-6.0,
+468.4
+],
+"max": [
+-2014.8,
+1.6,
+471.6
+],
+"tris": 160,
+"bytes": 11328,
+"groups": {
+"Props": 160
+}
+},
+"d_0_-1": {
+"kind": "d",
+"cell": [
+0,
+-1
+],
+"min": [
+-2.5,
+13.3,
+-794.9
+],
+"max": [
+792.2,
+221.8,
+12.5
+],
+"tris": 258999,
+"bytes": 19309824,
+"groups": {
+"ArchTrim": 4832,
+"BuildingsHDModel": 215714,
+"ContactAO": 326,
+"KitTrim": 22492,
+"Props": 684,
+"RoadDecals": 212,
+"RoadDecalsStreet": 1505,
+"Shapes": 160,
+"Structures": 13074
+}
+},
+"d_0_-2": {
+"kind": "d",
+"cell": [
+0,
+-2
+],
+"min": [
+-2.2,
+17.5,
+-809.9
+],
+"max": [
+346.0,
+135.6,
+-440.7
+],
+"tris": 2076,
+"bytes": 75904,
+"groups": {
+"Props": 1384,
+"Shapes": 420,
+"Structures": 272
+}
+},
+"d_0_-3": {
+"kind": "d",
+"cell": [
+0,
+-3
+],
+"min": [
+-2.8,
+38.9,
+-1268.5
+],
+"max": [
+793.4,
+406.7,
+-823.8
+],
+"tris": 219,
+"bytes": 16076,
+"groups": {
+"RoadDecals": 79,
+"Structures": 140
+}
+},
+"d_0_-4": {
+"kind": "d",
+"cell": [
+0,
+-4
+],
+"min": [
+184.4,
+45.9,
+-1273.7
+],
+"max": [
+217.4,
+54.5,
+-1259.3
+],
+"tris": 354,
+"bytes": 24228,
+"groups": {
+"Props": 310,
+"Structures": 44
+}
+},
+"d_0_0": {
+"kind": "d",
+"cell": [
+0,
+0
+],
+"min": [
+-1.8,
+-16.0,
+-2.6
+],
+"max": [
+767.2,
+201.1,
+787.4
+],
+"tris": 206403,
+"bytes": 14868996,
+"groups": {
+"ArchTrim": 4504,
+"BuildingsHDModel": 168262,
+"ContactAO": 322,
+"KitTrim": 19136,
+"Props": 1476,
+"RoadDecals": 230,
+"RoadDecalsStreet": 1905,
+"Shapes": 160,
+"Structures": 10408
+}
+},
+"d_0_2": {
+"kind": "d",
+"cell": [
+0,
+2
+],
+"min": [
+27.3,
+13.0,
+799.9
+],
+"max": [
+764.9,
+28.3,
+1195.8
+],
+"tris": 2130,
+"bytes": 126448,
+"groups": {
+"Props": 1316,
+"RoadDecals": 64,
+"Shapes": 588,
+"Structures": 162
+}
+},
+"d_0_3": {
+"kind": "d",
+"cell": [
+0,
+3
+],
+"min": [
+342.4,
+18.8,
+1198.2
+],
+"max": [
+347.3,
+29.9,
+1210.4
+],
+"tris": 94,
+"bytes": 7188,
+"groups": {
+"Props": 94
+}
+},
+"d_1_-1": {
+"kind": "d",
+"cell": [
+1,
+-1
+],
+"min": [
+296.4,
+13.2,
+-303.9
+],
+"max": [
+836.5,
+58.0,
+12.5
+],
+"tris": 144550,
+"bytes": 10528588,
+"groups": {
+"BuildingsHDModel": 121830,
+"Structures": 22720
+}
+},
+"d_1_-2": {
+"kind": "d",
+"cell": [
+1,
+-2
+],
+"min": [
+326.0,
+46.5,
+-861.9
+],
+"max": [
+873.8,
+99.4,
+-565.2
+],
+"tris": 8092,
+"bytes": 296088,
+"groups": {
+"Props": 8092
+}
+},
+"d_1_-3": {
+"kind": "d",
+"cell": [
+1,
+-3
+],
+"min": [
+563.7,
+35.8,
+-1168.8
+],
+"max": [
+902.3,
+127.3,
+-908.1
+],
+"tris": 8582,
+"bytes": 309864,
+"groups": {
+"Props": 8582
+}
+},
+"d_1_0": {
+"kind": "d",
+"cell": [
+1,
+0
+],
+"min": [
+299.2,
+10.9,
+-0.2
+],
+"max": [
+901.2,
+55.0,
+309.0
+],
+"tris": 85347,
+"bytes": 6388108,
+"groups": {
+"BuildingsHDModel": 71500,
+"Structures": 13847
+}
+},
+"d_1_1": {
+"kind": "d",
+"cell": [
+1,
+1
+],
+"min": [
+356.7,
+12.9,
+290.5
+],
+"max": [
+915.2,
+58.8,
+913.4
+],
+"tris": 29934,
+"bytes": 1978432,
+"groups": {
+"ArchTrim": 10884,
+"KitTrim": 8072,
+"Props": 1988,
+"Shapes": 2060,
+"Structures": 6930
+}
+},
+"d_1_2": {
+"kind": "d",
+"cell": [
+1,
+2
+],
+"min": [
+295.8,
+11.8,
+748.2
+],
+"max": [
+902.7,
+33.5,
+1199.9
+],
+"tris": 28214,
+"bytes": 1159416,
+"groups": {
+"ArchTrim": 502,
+"ContactAO": 16,
+"KitTrim": 340,
+"Props": 7296,
+"Shapes": 392,
+"Structures": 1804,
+"Vegetation": 17864
+}
+},
+"d_1_3": {
+"kind": "d",
+"cell": [
+1,
+3
+],
+"min": [
+524.7,
+1.6,
+1210.1
+],
+"max": [
+888.1,
+6.3,
+1341.8
+],
+"tris": 528,
+"bytes": 20008,
+"groups": {
+"Shapes": 528
+}
+},
+"d_2_-1": {
+"kind": "d",
+"cell": [
+2,
+-1
+],
+"min": [
+815.9,
+15.9,
+-513.4
+],
+"max": [
+1390.0,
+36.3,
+-10.6
+],
+"tris": 950,
+"bytes": 68764,
+"groups": {
+"ArchTrim": 144,
+"ContactAO": 104,
+"KitTrim": 64,
+"Props": 174,
+"Structures": 464
+}
+},
+"d_2_-2": {
+"kind": "d",
+"cell": [
+2,
+-2
+],
+"min": [
+881.1,
+36.3,
+-578.9
+],
+"max": [
+970.1,
+51.2,
+-313.6
+],
+"tris": 958,
+"bytes": 40012,
+"groups": {
+"Props": 150,
+"Shapes": 616,
+"Structures": 192
+}
+},
+"d_2_-3": {
+"kind": "d",
+"cell": [
+2,
+-3
+],
+"min": [
+785.3,
+23.3,
+-1078.9
+],
+"max": [
+1443.2,
+125.1,
+-800.3
+],
+"tris": 927,
+"bytes": 35084,
+"groups": {
+"Props": 840,
+"RoadDecals": 43,
+"Structures": 44
+}
+},
+"d_2_0": {
+"kind": "d",
+"cell": [
+2,
+0
+],
+"min": [
+800.1,
+13.4,
+-0.3
+],
+"max": [
+1596.7,
+33.8,
+796.2
+],
+"tris": 8669,
+"bytes": 566916,
+"groups": {
+"ArchTrim": 1749,
+"Props": 36,
+"RoadDecals": 158,
+"Structures": 6726
+}
+},
+"d_2_1": {
+"kind": "d",
+"cell": [
+2,
+1
+],
+"min": [
+871.9,
+15.2,
+298.2
+],
+"max": [
+1217.8,
+37.1,
+893.4
+],
+"tris": 4009,
+"bytes": 257264,
+"groups": {
+"Props": 1600,
+"Structures": 2409
+}
+},
+"d_2_2": {
+"kind": "d",
+"cell": [
+2,
+2
+],
+"min": [
+801.3,
+9.2,
+814.0
+],
+"max": [
+1597.7,
+28.7,
+1156.2
+],
+"tris": 1220,
+"bytes": 49840,
+"groups": {
+"Props": 272,
+"RoadDecals": 82,
+"Shapes": 756,
+"Structures": 110
+}
+},
+"d_2_3": {
+"kind": "d",
+"cell": [
+2,
+3
+],
+"min": [
+911.8,
+2.3,
+1203.9
+],
+"max": [
+917.9,
+5.8,
+1210.3
+],
+"tris": 96,
+"bytes": 3616,
+"groups": {
+"Shapes": 96
+}
+},
+"d_3_-1": {
+"kind": "d",
+"cell": [
+3,
+-1
+],
+"min": [
+1214.8,
+15.2,
+-59.8
+],
+"max": [
+1235.2,
+23.9,
+-40.5
+],
+"tris": 332,
+"bytes": 20844,
+"groups": {
+"ArchTrim": 144,
+"KitTrim": 64,
+"Structures": 124
+}
+},
+"d_3_-2": {
+"kind": "d",
+"cell": [
+3,
+-2
+],
+"min": [
+818.8,
+15.5,
+-892.3
+],
+"max": [
+1594.0,
+50.6,
+-17.1
+],
+"tris": 6773,
+"bytes": 466508,
+"groups": {
+"ArchTrim": 1546,
+"KitTrim": 1432,
+"Props": 954,
+"RoadDecals": 165,
+"Structures": 2676
+}
+},
+"d_3_0": {
+"kind": "d",
+"cell": [
+3,
+0
+],
+"min": [
+1096.9,
+13.4,
+39.7
+],
+"max": [
+1682.7,
+37.3,
+302.6
+],
+"tris": 18080,
+"bytes": 1224516,
+"groups": {
+"ArchTrim": 3395,
+"ContactAO": 80,
+"KitTrim": 3696,
+"Structures": 10909
+}
+},
+"d_3_1": {
+"kind": "d",
+"cell": [
+3,
+1
+],
+"min": [
+1200.5,
+15.2,
+295.6
+],
+"max": [
+1699.0,
+30.3,
+801.3
+],
+"tris": 8701,
+"bytes": 595628,
+"groups": {
+"Structures": 8701
+}
+},
+"d_3_2": {
+"kind": "d",
+"cell": [
+3,
+2
+],
+"min": [
+1173.7,
+19.6,
+772.0
+],
+"max": [
+1482.8,
+36.5,
+946.0
+],
+"tris": 1190,
+"bytes": 55924,
+"groups": {
+"ArchTrim": 144,
+"ContactAO": 8,
+"KitTrim": 64,
+"Props": 234,
+"Shapes": 616,
+"Structures": 124
+}
+},
+"d_4_-1": {
+"kind": "d",
+"cell": [
+4,
+-1
+],
+"min": [
+1585.3,
+17.6,
+-641.8
+],
+"max": [
+1892.3,
+60.5,
+1.3
+],
+"tris": 950,
+"bytes": 56980,
+"groups": {
+"ArchTrim": 144,
+"ContactAO": 8,
+"KitTrim": 64,
+"Props": 104,
+"RoadDecals": 62,
+"Shapes": 32,
+"Structures": 344,
+"Vegetation": 192
+}
+},
+"d_4_0": {
+"kind": "d",
+"cell": [
+4,
+0
+],
+"min": [
+1829.5,
+10.5,
+34.3
+],
+"max": [
+1939.2,
+25.1,
+393.4
+],
+"tris": 1964,
+"bytes": 74532,
+"groups": {
+"Props": 1964
+}
+},
+"d_4_1": {
+"kind": "d",
+"cell": [
+4,
+1
+],
+"min": [
+1613.8,
+10.0,
+26.4
+],
+"max": [
+1977.8,
+25.9,
+796.2
+],
+"tris": 1862,
+"bytes": 130004,
+"groups": {
+"ArchTrim": 952,
+"KitTrim": 848,
+"RoadDecals": 62
+}
+},
+"d_4_2": {
+"kind": "d",
+"cell": [
+4,
+2
+],
+"min": [
+1598.1,
+5.6,
+818.7
+],
+"max": [
+1742.0,
+17.8,
+1037.0
+],
+"tris": 501,
+"bytes": 24564,
+"groups": {
+"RoadDecals": 10,
+"Shapes": 266,
+"Structures": 224,
+"Vegetation": 1
+}
+}
+}
+}

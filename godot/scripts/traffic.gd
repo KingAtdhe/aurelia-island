@@ -12,8 +12,10 @@ const PAINT = [Color(0.62, 0.63, 0.64), Color(0.45, 0.46, 0.48), Color(0.02, 0.0
 const LOD_SWITCH = 28.0
 # each model its own real engine recording (source/audio/sfx.py) and its own horn note
 const SOUND = { hatch = [1.05, 1.12], saloon = [0.95, 1.0], suv = [1.0, 0.92], van = [1.0, 0.84], pickup = [0.95, 0.88] }     # engine pitch at walking pace, horn pitch
-# road runs inside the coast slice: [road name, first point, last point, lane offset from the centre line]
-const RUNS = [["Ring", 439, 736, 3.4], ["Peninsula Road", 22, 144, 2.4], ["West Avenue", 191, 259, 2.4], ["Lighthouse Road", 0, 48, 2.4]]
+# every paved road of the island: [road name, first point, last point, lane offset from the centre line, closed loop]
+static var RUNS = []
+const TYPES = ["hwy", "road", "street", "rbt"]
+const NEAR = [140.0, 520.0]         # cars live this far from the player; one that falls further behind comes back in ahead, out of sight
 
 var lanes = []          # { p: PackedVector3Array, cum: PackedFloat32Array, len, off }
 var cars = []           # { n, lane, dir, d, v, vmax, wheels, r, half }
@@ -21,8 +23,26 @@ var scenes = {}
 var player: Car
 var coll: Coll
 
-func build(roads: Dictionary, count: int):
+func build(roads: Dictionary, count: int, world_roads: Array = []):
 	for m in MODELS: scenes[m] = load("res://assets/traffic/%s.glb" % m)
+	RUNS = []
+	var rbts = []          # roundabouts: roads that end in the middle of one stop at its ring
+	for r in world_roads:
+		if r["type"] != "rbt": continue
+		var c = Vector2.ZERO; var n = r["pts"].size() / 3
+		for i in n: c += Vector2(r["pts"][i * 3], r["pts"][i * 3 + 2])
+		c /= n; rbts.append([c, Vector2(r["pts"][0], r["pts"][2]).distance_to(c) + 6.0])
+	for r in world_roads:
+		if not (r["type"] in TYPES) or r["name"] in ["Pit Access"]: continue
+		var n = r["pts"].size() / 3; var a = 0; var b = n - 1
+		var inside = func(i): 
+			for rb in rbts:
+				if r["type"] != "rbt" and Vector2(r["pts"][i * 3], r["pts"][i * 3 + 2]).distance_to(rb[0]) < rb[1]: return true
+			return false
+		while a < b and inside.call(a): a += 1
+		while b > a and inside.call(b): b -= 1
+		if b - a < 4: continue
+		RUNS.append([r["name"], a, b, clampf(float(r["w"]) * 0.25 - 0.1, 1.9, 3.4), r["closed"]])
 	for run in RUNS:
 		if not roads.has(run[0]): continue
 		var src = roads[run[0]]; var p = PackedVector3Array(); var cum = PackedFloat32Array(); var acc = 0.0
@@ -30,7 +50,12 @@ func build(roads: Dictionary, count: int):
 			var q = Vector3(src[i * 3], src[i * 3 + 1], src[i * 3 + 2])
 			if p.size() > 0: acc += q.distance_to(p[p.size() - 1])
 			p.append(q); cum.append(acc)
-		lanes.append({ p = p, cum = cum, len = acc, off = run[3] })
+		if run[4]: acc += p[p.size() - 1].distance_to(p[0]); p.append(p[0]); cum.append(acc)          # loops close on themselves
+		var smp = PackedVector4Array(); var dd = 2.0
+		var ln = { p = p, cum = cum, len = acc, off = run[3], closed = run[4] }
+		while dd < acc - 2.0: var q = _at(ln, dd)[0]; smp.append(Vector4(q.x, q.y, q.z, dd)); dd += 25.0
+		ln.smp = smp; lanes.append(ln)
+	_link_lanes()
 	var total = 0.0
 	for l in lanes: total += l.len
 	var rng = RandomNumberGenerator.new(); rng.seed = 7
@@ -43,7 +68,7 @@ func build(roads: Dictionary, count: int):
 		c.v = c.vmax
 		for o in cars:
 			if o.lane == c.lane and abs(o.d - c.d) < 20.0: c.d = fmod(c.d + 40.0, lanes[li].len - 20.0) + 10.0
-		var n: Node3D = scenes[model].instantiate(); add_child(n); c.n = n; c.wheels = []
+		var n: Node3D = scenes[model].instantiate(); add_child(n); c.n = n; c.wheels = []; Car.car_layers(n)
 		_dress(n, rng.randi() % PAINT.size() if rng.randf() < 0.75 else -1, c)
 		var ap = AudioStreamPlayer3D.new(); ap.stream = CarAudio.loop_stream("res://assets/audio/traffic_%s.ogg" % model); c.model = model; ap.max_distance = 45.0; ap.unit_size = 4.0
 		ap.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE; ap.position = Vector3(1.2, 0.6, 0); n.add_child(ap); ap.play(rng.randf() * 10.0); c.snd = ap
@@ -51,6 +76,7 @@ func build(roads: Dictionary, count: int):
 		var sh = MeshInstance3D.new(); var q = QuadMesh.new(); q.size = Vector2(c.half.x * 2.5, c.half.y * 2.7); q.orientation = PlaneMesh.FACE_Y; sh.mesh = q
 		sh.material_override = blob_material(); sh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; sh.position = Vector3(0, 0.035, 0); sh.visibility_range_end = 70.0; n.add_child(sh)
 		cars.append(c)
+	for c in cars: _respawn(c, Vector3(player.px, player.py, player.pz) if player else Vector3.ZERO, true)
 
 # one paint per car, LOD ranges, wheel nodes for spinning
 func _dress(n: Node3D, paint: int, c: Dictionary):
@@ -88,20 +114,53 @@ func _dress(n: Node3D, paint: int, c: Dictionary):
 				var g: StandardMaterial3D = m.duplicate(); g.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA; g.albedo_color.a = 0.62; g.roughness = 0.04
 				mi.set_surface_override_material(i, g)
 
-func _respawn(c: Dictionary, pp: Vector3) -> bool:
+# where a road ends at another road: the ways a car can carry on (lane, distance, direction), found once at the start
+func _link_lanes():
+	for li in lanes.size():
+		var l = lanes[li]; l.links = [[], []]          # [at the start (d = 0), at the end (d = len)]
+		if l.closed: continue
+		for e in 2:
+			var P: Vector3 = l.p[0] if e == 0 else l.p[l.p.size() - 1]
+			for lj in lanes.size():
+				if lj == li: continue
+				var o = lanes[lj]; var best = 1e9; var bd = 0.0
+				for k in o.p.size():
+					var dd = Vector2(o.p[k].x - P.x, o.p[k].z - P.z).length()
+					if dd < best and abs(o.p[k].y - P.y) < 3.0: best = dd; bd = o.cum[k]
+				if best > 10.0: continue
+				var dirs = []
+				if o.closed or bd > 15.0: dirs.append(1)
+				if o.closed or bd < o.len - 15.0: dirs.append(-1)
+				for dr in dirs: l.links[e].append([lj, bd, dr])
+
+# carry on into a connecting road at a junction; false if there is none
+func _turn(c: Dictionary) -> bool:
+	var l = lanes[c.lane]; var e = 0 if c.d < 1.0 else 1
+	var opts: Array = l.links[e] if l.has("links") else []
+	if opts.is_empty(): return false
+	var o = opts[randi() % opts.size()]
+	c.lane = o[0]; c.d = clampf(o[1] + o[2] * 2.0, 1.5, lanes[o[0]].len - 1.5) if not lanes[o[0]].closed else fposmod(o[1] + o[2] * 2.0, lanes[o[0]].len); c.dir = o[2]
+	return true
+
+func _respawn(c: Dictionary, pp: Vector3, first := false) -> bool:
 	var cam = get_viewport().get_camera_3d()
 	var opts = []
 	for li in lanes.size():
-		for e in [[2.0, 1], [lanes[li].len - 2.0, -1]]:
-			var p: Vector3 = _at(lanes[li], e[0])[0]
-			if p.distance_to(pp) < 110.0 or p.distance_to(c.n.global_position) < 40.0: continue
-			if cam and cam.is_position_in_frustum(p + Vector3(0, 1, 0)) and p.distance_to(cam.global_position) < 400.0: continue      # never pop in where the player can see
-			var free = true
-			for o in cars:
-				if o != c and o.lane == li and abs(o.d - e[0]) < 14.0: free = false
-			if free: opts.append([li, e[0], e[1]])
+		for sm in lanes[li].smp:
+			var p = Vector3(sm.x, sm.y, sm.z); var d = sm.w
+			var dx = p.x - pp.x; var dz = p.z - pp.z
+			if abs(dx) > NEAR[1] or abs(dz) > NEAR[1]: continue
+			var dist = p.distance_to(pp)
+			if dist > NEAR[0] * (0.5 if first else 1.0) and dist < NEAR[1] and abs(p.y - pp.y) < 120.0:
+				var seen = cam and not first and cam.is_position_in_frustum(p + Vector3(0, 1, 0)) and p.distance_to(cam.global_position) < 450.0
+				var free = not seen
+				if free:
+					for o in cars:
+						if o != c and o.get("n") and o.n.global_position.distance_to(p) < 30.0: free = false; break
+				if free: opts.append([li, d])
 	if opts.is_empty(): return false
-	var o = opts[randi() % opts.size()]; c.lane = o[0]; c.d = o[1]; c.dir = o[2]; c.v = c.vmax * 0.6; c.erase("y")
+	var o = opts[randi() % opts.size()]; c.lane = o[0]; c.d = o[1]; c.dir = 1 if randf() < 0.5 else -1; c.v = c.vmax * 0.7; c.erase("y"); c.erase("up")
+	if c.has("n"): var a = _at(lanes[c.lane], c.d); c.n.global_position = a[0]
 	return true
 
 static var _blob_mat: StandardMaterial3D
@@ -163,10 +222,21 @@ func _physics_process(dt):
 			c.braking = braking
 			for tm in c.get("tails", []): tm.emission_energy_multiplier = (3.2 if braking else 0.6) * (1.0 if tm.resource_name == "TailLED" else 0.5)
 		c.d += c.v * c.dir * dt
-		if c.d < 1.0 or c.d > l.len - 1.0:                      # left the map slice: come back in at a road end far from the player
-			if not _respawn(c, pp): c.d = clampf(c.d, 1.0, l.len - 1.0); c.v = 0.0
+		if l.closed: c.d = fposmod(c.d, l.len)
+		var far = c.n.global_position.distance_to(pp) > NEAR[1] + 120.0
+		var at_end = c.d < 1.0 or c.d > l.len - 1.0
+		if at_end and not far and _turn(c):          # into the next road at the junction: the drawing glides over from where it was
+			var a2 = _at(lanes[c.lane], c.d); var t2_ = a2[1] * c.dir; var r2_ = Vector3(-t2_.z, 0, t2_.x).normalized()
+			c.blend = c.n.global_position - (a2[0] + r2_ * lanes[c.lane].off); c.blend.y = 0.0
+			l = lanes[c.lane]; a = a2; pos = a[0]; t = t2_; right = r2_
+		elif at_end or (far and ci % 4 == Engine.get_physics_frames() % 4):      # dead end, or left far behind: come back in near the player, out of sight
+			if not _respawn(c, pp): c.d = clampf(c.d, 1.0, l.len - 1.0); c.v = 0.0 if not far else c.v
 			l = lanes[c.lane]; a = _at(l, c.d); pos = a[0]; t = a[1] * c.dir; right = Vector3(-t.z, 0, t.x).normalized()
 		var at = pos + right * l.off
+		if c.has("blend"):
+			var bl: Vector3 = c.blend; c.blend = bl * exp(-dt * 4.0)
+			if bl.length() < 0.05 or bl.length() > 20.0: c.erase("blend")
+			else: at += bl
 		# stand on four wheels: ray down at each contact patch, the body takes the plane through them so no tyre sinks into the camber
 		var up = Vector3.UP; var t2 = Vector3(t.x, 0, t.z).normalized(); var r2 = Vector3(-t2.z, 0, t2.x)
 		var hs = []; var n_ok = 0
@@ -184,7 +254,10 @@ func _physics_process(dt):
 		at.y = (fy * c.wb.y + ry * c.wb.x) / (c.wb.x + c.wb.y) + 0.012     # height under the body centre, a hair above so the tread never clips
 		c.y = at.y if not c.has("y") else lerpf(c.y, at.y, clampf(dt * 8.0, 0.0, 1.0)); at.y = c.y           # no pops where the road mesh and the centre line disagree
 		c.up = c.get("up", up).lerp(up, clampf(dt * 6.0, 0.0, 1.0)).normalized(); up = c.up
-		var fw = (t - up * t.dot(up)).normalized(); var rt = fw.cross(up).normalized()
+		var fw = (t - up * t.dot(up)).normalized()
+		if c.has("fw") and c.has("blend"): fw = c.fw.slerp(fw, clampf(dt * 5.0, 0.0, 1.0)).normalized()          # turning into the next road: heading swings over
+		c.fw = fw
+		var rt = fw.cross(up).normalized()
 		var target = Transform3D(Basis(fw, up, rt), at)
 		c.n.global_transform = target
 		for w in c.wheels: w.rotate_object_local(Vector3(0, 0, 1), -c.v * dt / c.r)

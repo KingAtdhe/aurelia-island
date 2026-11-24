@@ -20,7 +20,7 @@ func load_data(path: String, road_pts: Dictionary):
 	var d = JSON.parse_string(FileAccess.get_file_as_string(path))
 	for o in d["box"]: _put("o", o, Vector2(o[2], o[3]).length() + 2)
 	for o in d["circ"]: _put("c", o, o[2] + 2)
-	for o in d["knock"]: var kk = [o[0], o[1], o[2], false]; _put("k", kk, o[2] + 2)
+	for o in d["knock"]: var kk = [o[0], o[1], o[2], false] + (o.slice(3) if o.size() > 3 else []); _put("k", kk, o[2] + 2)      # x z r hit [species, instance]
 	for name in d["roads"]:
 		if not road_pts.has(name): continue
 		var r = d["roads"][name]; var p = PackedFloat32Array(road_pts[name]); var n = p.size() / 3

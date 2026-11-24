@@ -56,6 +56,11 @@ func setup(id: String, o := {}):
 				d.roughness = 0.05; mi.set_surface_override_material(i, d)
 	if opts.has("paint"): _repaint(s, C.paint, opts.paint)
 	if opts.get("far", false): _add_far(s, C)
+	car_layers(body)
+
+# cars are drawn on render layer 2: they get their sunlight from the car sun, which follows the baked light where they are
+static func car_layers(root: Node):
+	for g in root.find_children("*", "GeometryInstance3D", true, false): (g as GeometryInstance3D).layers = 2
 
 # a rival's colour: every paint surface of the near model gets a copy of its material in the new colour
 func _repaint(s: Node3D, names: Array, col: Color):
@@ -195,7 +200,11 @@ func drive(dt: float):
 # ground under a point: ray down onto the map colliders; returns [height, surface]
 func ground(x: float, z: float, yref: float) -> Array:
 	var q = PhysicsRayQueryParameters3D.create(Vector3(x, yref + 3.0, z), Vector3(x, yref - 60.0, z)); q.collision_mask = 1
-	var hit = get_world_3d().direct_space_state.intersect_ray(q)
+	var space = get_world_3d().direct_space_state; var hit = space.intersect_ray(q)
+	if hit.is_empty():          # a ray exactly on the seam between two map pieces can slip through: look a few cm aside before calling it the edge
+		for o in [Vector3(0.06, 0, 0), Vector3(-0.06, 0, 0), Vector3(0, 0, 0.06), Vector3(0, 0, -0.06)]:
+			q.from = Vector3(x, yref + 3.0, z) + o; q.to = Vector3(x, yref - 60.0, z) + o; hit = space.intersect_ray(q)
+			if not hit.is_empty(): break
 	if hit.is_empty(): return [-100.0, "grass"]
 	return [hit.position.y, hit.collider.get_meta("surf", "grass")]
 

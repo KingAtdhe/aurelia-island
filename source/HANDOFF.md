@@ -250,3 +250,27 @@ open shells; DO NOT recalc normals (flips open shells). Pipeline in source/tripo
   prop_house_t_village), hides Landmark_Lighthouse for the new one, and tripoPlace() adds houses, cafe, barn, petrol canopy, slabs and
   cliffs beside Peninsula Road / Lighthouse Road / West Avenue / Ring in the Coastal Highway region. No per-instance tint (TPROPS).
 - Not placed yet: the bridge (no free crossing) and the pine (Tripo gave it broad fan leaves, not needles).
+
+## Godot: the whole island (24 Nov 2026)
+The Godot game (godot/) now has all of Aurelia Island, cut from the web game's map so it matches the approved art. Tools in
+source/godot_tools (run with the unpacked map: reassemble map/islandc*.bin etc. and unpack with gltf-transform dequantize, see
+glbcut.py header):
+- export_chunks.py islandc_raw.glb islanddc_raw.glb godot/assets/island -> chunks/b_* (ground, roads, water edge, far buildings),
+  bf_* (landmarks, tower crowns, wind turbines: always loaded), d_* (close-up buildings and street kit, streamed), index.json.
+  Every mesh goes to the 400 m cell of its box centre. Pictures go once to island/tex (tex/_src.json maps original md5 -> file).
+- export_flora.py florac_raw florakc_raw tprops_raw <repo> godot/assets/island -> flora_{flora,kit,tprops}.glb (S_<species>_LOD0/1)
+  and flora.bin/json (x y z scale yaw r g b). data/flora.json everywhere, the coast slice's own set (coast_flora.json: Tripo houses,
+  slabs, cliff) inside the coast rectangle; farmhouses -> Tripo village house; two Tripo cafes placed beside the coast roads; Tripo trees
+  replace pine/oak/plane/fruit/cypress; DROP list as in the web game.
+- gen_coll.py <repo> -> island/coll.json: world obstacles/circles + every flora collider (floraColliders rules) + road side limits.
+- shrink_tex.py + tex_imports.py: textures capped at 1024 colour / 512 normal+ORM, VRAM compressed.
+- bake_island.py (TILE=i,j, 4 x 3 tiles, Cycles top-down sun / no-shadow sun / sky) + combine_island.py -> bake_island.png
+  (R sun, G sky, 4096 x 2868 over the island) and bake_sun.bin (2048 x 1434 sun map read on the CPU). Bridges are visible to the bake
+  camera (decks), buildings/props only cast. Tunnel roads are painted dark after the render.
+Game side: scripts/island.gd (base always in, detail streamed on a thread within 950 m, dropped past 1250 m, at most one chunk put in
+per frame; draw ranges per group), flora.gd (250 m patches built near the car, buildings everywhere; impostor tree cards from the web
+game's atlas beyond 200 m), tunnels.gd (bore split out of the Bridges meshes: tiles, vault, lamp rows, light pools; eyes adjust
+inside), traffic on every paved road kept 140-520 m round the player, cars on render layer 2 lit by a car sun dimmed by bake_sun.bin.
+Races: coast, peninsula, lighthouse + Summit Pass, Eagle Descent, Desert Dash, Serpentine, Aurelia Grand Prix (2 laps; roundabout
+arcs instead of the fountain in the middle). Menu: RACES and TRAVEL (9 regions). Test tools: TOUR="Road:frac,..." (screenshots after
+streaming, prints draws/prims and the slowest chunk put-ins), RACETEST=<id> prints STREAM worst ms at the end.

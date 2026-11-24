@@ -22,14 +22,14 @@ static func conv(m: Material, has_col: bool) -> Material:
 			var t := ShaderMaterial.new(); t.shader = shader("terrain")
 			t.set_shader_parameter("detail", sm.albedo_texture); t.set_shader_parameter("detail_n", sm.normal_texture)
 			t.set_shader_parameter("tscale", TSCALE[base]); t.set_shader_parameter("grassy", 1.0 if base in ["Terrain", "TerrainField", "TerrainForest"] else 0.0)
-			t.set_shader_parameter("rough", sm.roughness); t.set_shader_parameter("bake", _bake())
+			t.set_shader_parameter("rough", sm.roughness); t.set_shader_parameter("bake", _bake()); t.set_shader_parameter("bake_rect", BAKE_RECT)
 			if nm.begins_with("TerrainBlend_"):
 				t.set_shader_parameter("blend_layer", 1.0); t.render_priority = 1
 				t.shader = _blend_variant()
 			out = t
 		elif nm == "Asphalt" or nm == "Shoulder" or nm == "Setts":
 			var r := ShaderMaterial.new(); r.shader = shader("road")
-			r.set_shader_parameter("bake", _bake()); r.set_shader_parameter("tex", sm.albedo_texture); r.set_shader_parameter("tex_n", sm.normal_texture); r.set_shader_parameter("asphalt", 1.0 if nm == "Asphalt" else 0.0)
+			r.set_shader_parameter("bake", _bake()); r.set_shader_parameter("bake_rect", BAKE_RECT); r.set_shader_parameter("tex", sm.albedo_texture); r.set_shader_parameter("tex_n", sm.normal_texture); r.set_shader_parameter("asphalt", 1.0 if nm == "Asphalt" else 0.0)
 			out = r
 		elif nm == "Water":
 			var w := ShaderMaterial.new(); w.shader = shader("water"); w.render_priority = 2; out = w
@@ -52,8 +52,10 @@ static func conv(m: Material, has_col: bool) -> Material:
 	_cache[key] = out
 	return out
 
+const BAKE = "res://assets/island/bake_island.png"
+const BAKE_RECT = Vector4(-2400.0, -1680.0, 4800.0, 3360.0)          # x0, z0, width, depth of the island light map
 static func _bake() -> Texture2D:
-	if bake_tex == null: bake_tex = load("res://assets/bake_coast.png")
+	if bake_tex == null: bake_tex = load(BAKE)
 	return bake_tex
 
 static var _bv: Shader

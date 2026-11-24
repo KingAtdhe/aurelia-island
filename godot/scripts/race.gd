@@ -1,6 +1,6 @@
 extends Node3D
 class_name Race
-# Point-to-point sprints on the coast slice with checkpoints, a timer and three rivals.
+# Sprints, hill climbs and circuit laps all over the island, with checkpoints, a timer and three rivals.
 # Rivals are real Car instances (same tyre model as the player) driven by a simple racing driver: they follow the route
 # with their own line, brake for corners from a speed profile worked out from the route's curvature, overtake round
 # slower cars and get put back on the road if they crash. The road is closed for the race (traffic is paused).
@@ -11,8 +11,18 @@ const RACES = {
 	peninsula = { name = "Peninsula Climb", blurb = "Down the highway, then hard right and up the peninsula.",
 		segs = [["Ring", 470, 600], ["Peninsula Road", 144, 22]], skill = 0.93 },
 	lighthouse = { name = "Lighthouse Run", blurb = "From the lighthouse onto the highway and into West Avenue.",
-		segs = [["Lighthouse Road", 48, 0], ["Ring", 546, 736], ["West Avenue", 259, 191]], skill = 0.96 } }
-const ORDER = ["coast", "peninsula", "lighthouse"]
+		segs = [["Lighthouse Road", 48, 0], ["Ring", 546, 736], ["West Avenue", 259, 191]], skill = 0.96 },
+	summit = { name = "Summit Pass", blurb = "Out of the city and over the mountain. Hairpins between rock walls.",
+		segs = [["Summit Pass", 2, 299]], skill = 0.93 },
+	descent = { name = "Eagle Descent", blurb = "Along the high ridge, through the tunnel and down the eagle's road. 70 metres of drop.",
+		segs = [["Skyline Road", 297, 178], ["Eagle Descent", 0, 104]], skill = 0.95 },
+	desert = { name = "Desert Dash", blurb = "Off the highway, across the dunes and past the mesas.",
+		segs = [["Dune Road", 126, 7], ["Mesa Roundabout", 3, 22, "arc"], ["Mesa Road", 6, 103], ["East Avenue", 105, 30]], skill = 0.95 },
+	serpentine = { name = "Serpentine", blurb = "The hill climb: switchbacks up to the summit, 80 metres of height.",
+		segs = [["Serpentine", 2, 226]], skill = 0.97 },
+	gp = { name = "Aurelia Grand Prix", blurb = "Two laps of the racing circuit. Flat out on the straight, brave in the esses.",
+		segs = [["Circuit", 50, 50, 2]], skill = 0.98 } }
+const ORDER = ["coast", "peninsula", "lighthouse", "summit", "descent", "desert", "serpentine", "gp"]
 const RIVALS = [
 	{ name = "M. Kade", car = "vortex", paint = Color(0.05, 0.16, 0.42), line = -0.45 },
 	{ name = "L. Varga", car = "calder", paint = Color(0.03, 0.03, 0.035), line = 0.4 },
@@ -70,26 +80,31 @@ func _racer(c: Car, nm: String, rival: bool, line: float) -> Dictionary:
 
 # route: the road runs in order, as one polyline with distance along it and half width at each point
 func _build_route(roads: Dictionary):
-	var joins = []
+	var joins = []; var prev_arc = false
 	for sg in R.segs:
-		if pts.size() > 0: joins.append(pts.size() - 1)
+		var is_arc = sg.size() > 3 and str(sg[3]) == "arc"
+		if pts.size() > 0: joins.append([pts.size() - 1, 3.5, 7 if (is_arc or prev_arc) else 5])      # into and out of a roundabout: rounded over a longer stretch, never pulled in onto the island in the middle
+		prev_arc = is_arc
 		var src = roads[sg[0]]; var a: int = sg[1]; var b: int = sg[2]; var st = 1 if b >= a else -1
-		var hw = 7.0 if sg[0] == "Ring" else 5.0
+		var hw = float(main.road_hw.get(sg[0], 5.0)) if main else 5.0
+		var n = src.size() / 3; var arc = sg.size() > 3 and str(sg[3]) == "arc"; var laps = int(sg[3]) if sg.size() > 3 and not arc else 0
+		var steps = n * laps + int(ceil((START_S + RUNOFF) / 5.0)) + 1 if laps > 0 else abs(b - a)        # laps of a closed road, plus the grid and the run-off
+		if arc: steps = posmod(b - a, n); laps = 1          # part of a roundabout, the way the traffic goes round
 		var i = a
-		while true:
+		for k in steps + 1:
 			var q = Vector3(src[i * 3], src[i * 3 + 1], src[i * 3 + 2])
 			if pts.size() == 0 or q.distance_to(pts[pts.size() - 1]) > 1.5:
 				if pts.size() > 0: length += q.distance_to(pts[pts.size() - 1])
 				pts.append(q); cum.append(length); hws.append(hw)
-			if i == b: break
-			i += st
+			i = (i + 1) % n if laps > 0 else i + st
 	# where two roads meet the polyline has a sharp kink: round it into an arc (corner pulled in by at most ~5 m)
-	for j in joins:
+	for jj in joins:
+		var j: int = jj[0]; var cap: float = jj[1]; var span: int = jj[2]
 		var corner = pts[j]
 		for it in 60:
-			for i in range(maxi(1, j - 5), mini(pts.size() - 1, j + 6)):
+			for i in range(maxi(1, j - span), mini(pts.size() - 1, j + span + 1)):
 				var q = pts[i] * 0.5 + (pts[i - 1] + pts[i + 1]) * 0.25; q.y = pts[i].y
-				if Vector2(q.x - corner.x, q.z - corner.z).length() < 3.5 or i != j: pts[i] = q
+				if Vector2(q.x - corner.x, q.z - corner.z).length() < cap or i != j: pts[i] = q
 	length = 0.0
 	for i in pts.size():
 		if i > 0: length += pts[i].distance_to(pts[i - 1])

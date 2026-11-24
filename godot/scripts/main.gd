@@ -1,5 +1,5 @@
 extends Node3D
-# Aurelia Island (Godot): coast slice, drivable
+# Aurelia Island (Godot): the whole island, drivable
 
 var cam: Camera3D
 var car: Car
@@ -13,6 +13,17 @@ var traffic: Traffic
 var coll: Coll
 var race: Race = null
 var audio: CarAudio
+var island: Island
+var flora: Flora
+var world_roads = []
+var road_hw = {}
+var tunnels: Tunnels
+var sun: DirectionalLight3D
+var environment: Environment
+var eyes = 0.0          # 0 in daylight, 1 deep in a tunnel
+var car_sun: DirectionalLight3D
+var probe: PackedByteArray; var probe_w = 0; var probe_h = 0; var shade = 1.0
+const START = ["Peninsula Road", 30]
 var view_car = -1          # test shots: look at this traffic car instead of following the player
 var touch = { left = false, right = false, gas = false, brake = false, hand = false }
 
@@ -23,28 +34,33 @@ func _ready():
 	e.sky.sky_material = sm; e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY; e.ambient_light_energy = 0.75; e.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC; e.tonemap_exposure = 1.0; e.fog_enabled = true; e.fog_light_color = Color(0.72, 0.8, 0.88); e.fog_density = 0.0005; e.fog_sky_affect = 0.0
 	e.glow_enabled = true; e.glow_intensity = 0.4; e.glow_bloom = 0.05; e.glow_hdr_threshold = 1.2
-	env.environment = e; add_child(env)
-	var sun = DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-38, -35, 0); sun.light_energy = 1.35; sun.light_color = Color(1.0, 0.95, 0.86); sun.shadow_enabled = true; sun.directional_shadow_max_distance = 30; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL; add_child(sun)
-	for f in ["res://assets/map/coast_base.glb", "res://assets/map/coast_detail.glb"]:
-		var s = load(f)
-		if s:
-			var n = s.instantiate(); add_child(n); Look.apply(n); colliders(n)
-	var fl = Flora.new(); add_child(fl); fl.build()
-	var sea = MeshInstance3D.new(); var pm = PlaneMesh.new(); pm.size = Vector2(6000, 6000); sea.mesh = pm
-	var wm = ShaderMaterial.new(); wm.shader = load("res://shaders/water.gdshader"); sea.material_override = wm; sea.position = Vector3(-1300, -0.25, 800); add_child(sea)
+	env.environment = e; add_child(env); environment = e
+	sun = DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-38, -35, 0); sun.light_energy = 1.35; sun.light_color = Color(1.0, 0.95, 0.86); sun.shadow_enabled = true; sun.directional_shadow_max_distance = 30; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL; sun.light_cull_mask = 1; add_child(sun)
+	# the car sun lights only the cars and dims where the island bake has shade; no shadow map of its own
+	# (on the Compatibility renderer a second shadowed sun draws the whole scene again)
+	car_sun = sun.duplicate(); car_sun.light_cull_mask = 2; car_sun.shadow_enabled = false; add_child(car_sun)
+	_load_probe()
 	var w = JSON.parse_string(FileAccess.get_file_as_string("res://assets/world.json"))
-	for r in w["roads"]: roads[r["name"]] = r["pts"]
+	for r in w["roads"]: roads[r["name"]] = r["pts"]; road_hw[r["name"]] = float(r["w"]) * 0.5
+	world_roads = w["roads"]
+	var sp0 = _road_pt(START[0], START[1])
+	island = Island.new(); add_child(island); island.load_base(sp0)
+	flora = Flora.new(); add_child(flora); flora.build(sp0)
+	tunnels = Tunnels.new(); add_child(tunnels); tunnels.build(w, island)
+	var sea = MeshInstance3D.new(); var pm = PlaneMesh.new(); pm.size = Vector2(16000, 16000); sea.mesh = pm
+	var wm = ShaderMaterial.new(); wm.shader = load("res://shaders/water.gdshader"); sea.material_override = wm; sea.position = Vector3(0, -0.25, 0); add_child(sea)
 	cam = Camera3D.new(); cam.far = 3000; cam.near = 0.12; cam.fov = 62; add_child(cam); cam.current = true
 	car = Car.new(); add_child(car)
-	var co = Coll.new(); co.load_data("res://assets/coast_coll.json", roads); car.coll = co; coll = co
+	var co = Coll.new(); co.load_data("res://assets/island/coll.json", roads); car.coll = co; coll = co
+	car.knocked.connect(func(o): if o.size() > 5: flora.hide_instance(o[4], o[5]))
 	car.crashed.connect(func(): shake = 0.35)
 	car.nearest_road = nearest_road
-	spawn("Peninsula Road", 30)
+	spawn(START[0], START[1])
 	audio = CarAudio.new(); audio.car = car; add_child(audio)
 	traffic = Traffic.new(); add_child(traffic); traffic.player = car; traffic.coll = co
-	traffic.build(roads, int(OS.get_environment("TRAFFIC")) if OS.get_environment("TRAFFIC") != "" else 10)
+	traffic.build(roads, int(OS.get_environment("TRAFFIC")) if OS.get_environment("TRAFFIC") != "" else 14, world_roads)
 	make_hud()
-	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == "" and OS.get_environment("FUZZ") == ""
+	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("TOUR") == "" and OS.get_environment("PROBE") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == "" and OS.get_environment("FUZZ") == ""
 	if menu_on or OS.get_environment("SHOTS") == "menu": open_menu()
 	if not menu_on: audio.ignition()
 	if OS.get_environment("CAR") != "" and OS.get_environment("DRIVETEST") != "": car.setup(OS.get_environment("CAR"))
@@ -57,6 +73,8 @@ func _ready():
 	if OS.get_environment("PHYSTEST") != "": phys_test(OS.get_environment("PHYSTEST"))
 	if OS.get_environment("FUZZ") != "": add_child(load("res://scripts/_fuzz.gd").new())
 	if OS.get_environment("FLOW") != "": add_child(load("res://scripts/_flow.gd").new())
+	if OS.get_environment("TOUR") != "": add_child(load("res://scripts/_tour.gd").new())
+	if OS.get_environment("PROBE") != "": add_child(load("res://scripts/_probe.gd").new())
 	if OS.get_environment("TIMING") != "": add_child(load("res://scripts/_timing.gd").new())
 	if OS.get_environment("ROUTECHECK") != "": var rc = load("res://scripts/_routecheck.gd").new(); add_child(rc)
 
@@ -93,16 +111,21 @@ func race_test(rid: String):     # headless or with SHOTS: the player's car driv
 			await RenderingServer.frame_post_draw; get_viewport().get_texture().get_image().save_png("/tmp/race_shot_%d.png" % k); k += 1
 		if race.panel != null or tt > 240:
 			for r in race.standings(): print("RESULT %s %s" % [r.name, Race.fmt(r.time) if r.done else "DNF s=%.0f" % r.s])
+			var worst = island.attach_ms.duplicate(); worst.sort_custom(func(a, b): return a[1] > b[1])
+			print("STREAM %d chunks put in, worst ms %s" % [worst.size(), str(worst.slice(0, 5))])
 			get_tree().quit(); return
 
-# nearest point on any road the coast slice has, facing along the road (the direction closer to the car's own heading)
+# nearest point on any road of the island, facing along the road (the direction closer to the car's own heading)
 func nearest_road(p: Vector3):
 	var best = null; var bd = 1e18
-	for r in Traffic.RUNS:
-		var a = roads[r[0]]
-		for i in range(r[1], r[2] + 1):
-			var q = Vector3(a[i * 3], a[i * 3 + 1], a[i * 3 + 2]); var d = (q - p).length_squared()
-			if d < bd: bd = d; best = [r[0], i, r[2]]
+	for r in world_roads:
+		if r["type"] in ["dirt", "circuit"] and r["name"] != "Circuit": continue
+		var a = roads[r["name"]]; var n = a.size() / 3
+		for i in range(0, n - 1):
+			var dx = a[i * 3] - p.x; var dz = a[i * 3 + 2] - p.z
+			if abs(dx) > 400 or abs(dz) > 400: continue
+			var d = dx * dx + dz * dz + pow(a[i * 3 + 1] - p.y, 2) * 4.0
+			if d < bd: bd = d; best = [r["name"], i, n - 1]
 	if best == null: return null
 	var a = roads[best[0]]; var i: int = mini(best[1], best[2] - 1)
 	var q0 = Vector3(a[i * 3], a[i * 3 + 1], a[i * 3 + 2]); var q1 = Vector3(a[i * 3 + 3], a[i * 3 + 4], a[i * 3 + 5])
@@ -110,22 +133,40 @@ func nearest_road(p: Vector3):
 	if abs(wrapf(h - car.hd, -PI, PI)) > PI / 2: h += PI
 	return [q0, h]
 
+# jump to the nearest road to a place: the map round it is loaded at once so the car never lands in an empty world
+func travel_to(p: Vector3):
+	var best = null; var bd = 1e18
+	for r in world_roads:
+		if not (r["type"] in ["hwy", "road", "street"]): continue
+		var a = roads[r["name"]]; var n = a.size() / 3
+		for i in range(1, n - 2):
+			var d = Vector2(a[i * 3] - p.x, a[i * 3 + 2] - p.z).length_squared()
+			if d < bd: bd = d; best = [r["name"], i]
+	spawn(best[0], best[1]); prime()
+
+func prime():
+	var fp = Vector3(car.px, car.py, car.pz)
+	island.focus = fp; flora.focus = fp; island.prime(); flora.prime()
+	for c in traffic.cars: traffic._respawn(c, fp, true)
+
+# sun visibility from the island light bake (assets/island/bake_sun.bin, 8-bit, island bounds): how much sun reaches a point
+func _load_probe():
+	var f = FileAccess.open("res://assets/island/bake_sun.bin", FileAccess.READ)
+	if f == null: return
+	probe_w = f.get_32(); probe_h = f.get_32(); probe = f.get_buffer(probe_w * probe_h)
+
+func sun_at(p: Vector3) -> float:
+	if probe_w == 0: return 1.0
+	var fx = clampf((p.x + 2400.0) / 4800.0 * probe_w - 0.5, 0.0, probe_w - 1.001); var fy = clampf((p.z + 1680.0) / 3360.0 * probe_h - 0.5, 0.0, probe_h - 1.001)
+	var ix = int(fx); var iy = int(fy); var u = fx - ix; var v = fy - iy; var i = iy * probe_w + ix
+	return ((probe[i] * (1 - u) + probe[i + 1] * u) * (1 - v) + (probe[i + probe_w] * (1 - u) + probe[i + probe_w + 1] * u) * v) / 255.0
+
+func _road_pt(road: String, i: int) -> Vector3:
+	var p = roads[road]; return Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
+
 func spawn(road: String, i: int):
 	var p = roads[road]; var a = Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]); var b = Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
 	car.place(a, atan2(b.x - a.x, b.z - a.z)); cam_yaw = car.hd; cam_pos = a - Vector3(sin(car.hd), 0, cos(car.hd)) * 9 + Vector3(0, 4, 0)
-
-# map pieces the car drives on get a collider; its surface type rides along as metadata
-func colliders(root: Node):
-	for n in root.find_children("*", "MeshInstance3D", true, false):
-		var nm = String(n.name)
-		var surf = ""
-		if nm.begins_with("Road") or nm.begins_with("Bridges") or nm.begins_with("Pavement") or nm.begins_with("TerrainPave") or nm.begins_with("TunnelPortal"): surf = "road"
-		elif nm.begins_with("Verge"): surf = "dirt"
-		elif nm.begins_with("TerrainSand"): surf = "sand"
-		elif nm.begins_with("Terrain__") or nm.begins_with("TerrainRock") or nm.begins_with("TerrainField") or nm.begins_with("TerrainForest") or nm.begins_with("Rocks") or nm.begins_with("Houses") or nm.begins_with("Structures") or nm.begins_with("Landmark"): surf = "grass"
-		if surf == "": continue
-		var sb = StaticBody3D.new(); sb.set_meta("surf", surf); var cs = CollisionShape3D.new(); cs.shape = n.mesh.create_trimesh_shape()
-		sb.add_child(cs); n.add_child(sb)
 
 func _physics_process(dt):
 	if race and race.autopilot: return          # test: the race drives the player's car
@@ -137,6 +178,14 @@ func _physics_process(dt):
 
 func _process(dt):
 	update_camera(dt)
+	var fp = Vector3(car.px, car.py, car.pz) if view_car < 0 else cam.global_position
+	island.focus = fp; flora.focus = fp
+	# eyes adjusting in a tunnel: the sun and the sky fade, exposure opens up a little
+	var tin = tunnels.inside(Vector3(car.px, car.py, car.pz)) if tunnels else 0.0
+	eyes = move_toward(eyes, tin, dt * (0.9 if tin > eyes else 0.6))
+	sun.light_energy = 1.35 * (1.0 - 0.88 * eyes); environment.ambient_light_energy = 0.75 * (1.0 - 0.75 * eyes); environment.tonemap_exposure = 1.0 + 0.12 * eyes
+	shade = lerpf(shade, sun_at(Vector3(car.px, car.py, car.pz)), clampf(dt * 5.0, 0.0, 1.0))
+	car_sun.light_energy = sun.light_energy * lerpf(0.1, 1.0, shade)
 	if view_car >= 0 and traffic and view_car < traffic.cars.size():
 		var tn: Node3D = traffic.cars[view_car].n; var b = tn.global_transform.basis
 		var ang = float(OS.get_environment("VANG")) if OS.get_environment("VANG") != "" else 0.75
@@ -228,7 +277,7 @@ func run_shots():          # test: drive with full throttle and a few steering i
 func drive_test():          # headless: physics only, prints the state
 	touch.gas = true
 	if OS.get_environment("DRIVETEST") == "crash":         # aim at the nearest tree off the road and hold the throttle
-		var d = JSON.parse_string(FileAccess.get_file_as_string("res://assets/coast_coll.json")); var best = null; var bd = 1e9
+		var d = JSON.parse_string(FileAccess.get_file_as_string("res://assets/island/coll.json")); var best = null; var bd = 1e9
 		for o in d["circ"]:
 			var dd = Vector2(o[0] - car.px, o[1] - car.pz).length()
 			if dd > 25 and dd < bd: bd = dd; best = o
@@ -270,6 +319,9 @@ func open_menu():
 	menu_on = true; hud.visible = false; touch = { left = false, right = false, gas = false, brake = false, hand = false }
 	menu = Menu.new(); add_child(menu)
 	menu.race.connect(func(rid): start_race(rid))
+	menu.travel.connect(func(rg):
+		travel_to(Vector3(rg[1], 0, rg[2]))
+		menu.queue_free(); menu = null; menu_on = false; hud.visible = true; audio.ignition())
 	menu.drive.connect(func(id):
 		if id.begins_with("preview:"): car.setup(id.substr(8)); spawn("Peninsula Road", 30); return
 		if car.car_id != id: car.setup(id); spawn("Peninsula Road", 30)
@@ -301,7 +353,7 @@ func phys_test(kind: String):    # test: log the car every physics frame through
 		shots = [[0.0, 14.5, 1, 0, false], [14.5, 16.5, 0, 1, false]] }.get(kind, [])
 	var tend = 16.5 if kind == "shots" else 9.0
 	if kind == "crash":            # aim at a tree off the road
-		var d = JSON.parse_string(FileAccess.get_file_as_string("res://assets/coast_coll.json")); var best = null; var bd = 1e9
+		var d = JSON.parse_string(FileAccess.get_file_as_string("res://assets/island/coll.json")); var best = null; var bd = 1e9
 		for o in d["circ"]:
 			var dd = Vector2(o[0] - car.px, o[1] - car.pz).length()
 			if dd > 35 and dd < bd: bd = dd; best = o
