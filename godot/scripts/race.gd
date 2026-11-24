@@ -344,12 +344,14 @@ func _results():
 	if new_best: cf.set_value(id, "time", me.time)
 	if b[1] == 0 or pos < b[1]: cf.set_value(id, "pos", pos)
 	cf.save(SAVE)
+	var prize = Progress.race_done(id, pos) if me.done else [0, ""]
 	var vs = get_viewport().get_visible_rect().size
-	panel = Panel.new(); var sb = StyleBoxFlat.new(); sb.bg_color = Color(0.03, 0.05, 0.08, 0.86); sb.set_corner_radius_all(16); panel.add_theme_stylebox_override("panel", sb)
+	panel = Panel.new(); var sb = Hud.panel_style(16); sb.bg_color = Color(0.03, 0.05, 0.08, 0.88); sb.border_color = Color(Hud.ACCENT.r, Hud.ACCENT.g, Hud.ACCENT.b, 0.5); sb.border_width_top = 3; panel.add_theme_stylebox_override("panel", sb)
 	panel.size = Vector2(620, 470); panel.position = (vs - panel.size) / 2; hud.add_child(panel)
 	var place = ["1st", "2nd", "3rd", "4th"][pos - 1]
 	_l(panel, "%s  ·  %s" % [place, R.name], 40, Vector2(32, 22)).add_theme_color_override("font_color", Color(1, 0.8, 0.2) if pos == 1 else Color(1, 1, 1))
 	_l(panel, ("New best time!  " if new_best else "Best  " + fmt(b[0]) + "   ") + "", 22, Vector2(34, 78)).modulate = Color(1, 1, 1, 0.75)
+	var pl = _l(panel, ("+%s credits" % Menu._n(prize[0])) + (("   ·   %s is open" % prize[1]) if prize[1] != "" else ""), 22, Vector2(300, 78)); pl.add_theme_color_override("font_color", Hud.ACCENT)
 	for k in st.size():
 		var r = st[k]; var y = 124 + k * 50
 		var row = _l(panel, "%d.  %s" % [k + 1, r.name], 28, Vector2(40, y)); if not r.rival: row.add_theme_color_override("font_color", Color(1, 0.8, 0.2))
@@ -357,14 +359,15 @@ func _results():
 		if r.done and k > 0 and st[0].done: tm += "   +%.2f" % (r.time - st[0].time)
 		_l(panel, tm, 28, Vector2(330, y))
 	_b(panel, "RETRY", Vector2(32, 360), func(): main.start_race(id))
-	_b(panel, "NEXT RACE", Vector2(222, 360), func(): main.start_race(ORDER[(ORDER.find(id) + 1) % ORDER.size()]))
+	var nx = ORDER[(ORDER.find(id) + 1) % ORDER.size()]
+	if Progress.is_open(nx): _b(panel, "NEXT RACE", Vector2(222, 360), func(): main.start_race(nx))
 	_b(panel, "FREE ROAM", Vector2(412, 360), func(): main.end_race())
 	emit_signal("finished")
 
 func _l(p: Control, s: String, sz: int, pos: Vector2) -> Label:
 	var l = Label.new(); l.text = s; l.add_theme_font_size_override("font_size", sz); l.position = pos; p.add_child(l); return l
 func _b(p: Control, s: String, pos: Vector2, cb: Callable):
-	var b = Button.new(); b.text = s; b.position = pos; b.size = Vector2(176, 72); b.add_theme_font_size_override("font_size", 24); b.pressed.connect(cb); p.add_child(b)
+	var b = Button.new(); b.text = s; b.position = pos; b.size = Vector2(176, 72); Hud.style_button(b); b.add_theme_font_size_override("font_size", 24); b.pressed.connect(cb); p.add_child(b)
 
 func stop():
 	for r in racers:

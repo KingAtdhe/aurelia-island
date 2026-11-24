@@ -17,6 +17,7 @@ var island: Island
 var flora: Flora
 var world_roads = []
 var road_hw = {}
+var landmarks = []          # [name, position] of the island's sights
 var tunnels: Tunnels
 var sun: DirectionalLight3D
 var environment: Environment
@@ -44,6 +45,7 @@ func _ready():
 	var w = JSON.parse_string(FileAccess.get_file_as_string("res://assets/world.json"))
 	for r in w["roads"]: roads[r["name"]] = r["pts"]; road_hw[r["name"]] = float(r["w"]) * 0.5
 	world_roads = w["roads"]
+	for l in w["landmarks"]: landmarks.append([l["name"], Vector3(l["pos"][0], l["pos"][1], l["pos"][2])])
 	var sp0 = _road_pt(START[0], START[1])
 	island = Island.new(); add_child(island); island.load_base(sp0)
 	flora = Flora.new(); add_child(flora); flora.build(sp0)
@@ -52,7 +54,8 @@ func _ready():
 	var wm = ShaderMaterial.new(); wm.shader = load("res://shaders/water.gdshader"); sea.material_override = wm; sea.position = Vector3(0, -0.25, 0); add_child(sea)
 	get_viewport().mesh_lod_threshold = 4.0          # simpler versions of far meshes (LODs made at import): no visible change on a phone screen
 	cam = Camera3D.new(); cam.far = 3000; cam.near = 0.12; cam.fov = 62; add_child(cam); cam.current = true
-	car = Car.new(); add_child(car)
+	Progress.load_save()
+	car = Car.new(); car.player = true; car.car_id = Progress.car if Progress.car in Progress.cars else "vortex"; add_child(car)
 	var co = Coll.new(); co.load_data("res://assets/island/coll.json", roads); car.coll = co; coll = co
 	car.knocked.connect(func(o): if o.size() > 5: flora.hide_instance(o[4], o[5]))
 	car.crashed.connect(func(): shake = 0.35)
@@ -114,6 +117,7 @@ func race_test(rid: String):     # headless or with SHOTS: the player's car driv
 		if race.panel != null or tt > 240:
 			for r in race.standings(): print("RESULT %s %s" % [r.name, Race.fmt(r.time) if r.done else "DNF s=%.0f" % r.s])
 			var worst = island.attach_ms.duplicate(); worst.sort_custom(func(a, b): return a[1] > b[1])
+			print("CAREER credits %d unlocked %s" % [Progress.cr, str(Progress.unlocked.keys())])
 			print("STREAM %d chunks put in, worst ms %s" % [worst.size(), str(worst.slice(0, 5))])
 			get_tree().quit(); return
 
@@ -163,6 +167,29 @@ func sun_at(p: Vector3) -> float:
 	var ix = int(fx); var iy = int(fy); var u = fx - ix; var v = fy - iy; var i = iy * probe_w + ix
 	return ((probe[i] * (1 - u) + probe[i + 1] * u) * (1 - v) + (probe[i + probe_w] * (1 - u) + probe[i + probe_w + 1] * u) * v) / 255.0
 
+# a short message at the top of the screen (credits earned, places found)
+var _toast: Label
+func toast(t: String, secs := 2.6):
+	if _toast == null:
+		_toast = Label.new(); _toast.add_theme_font_size_override("font_size", 28); _toast.add_theme_color_override("font_color", Hud.ACCENT)
+		_toast.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7)); _toast.add_theme_constant_override("outline_size", 6)
+		_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; _toast.size = Vector2(900, 40); _toast.position = Vector2(get_viewport().get_visible_rect().size.x / 2 - 450, 84); hud.add_child(_toast)
+	_toast.text = t; _toast.modulate.a = 1.0; _toast.set_meta("t", secs)
+
+# free roam: driving up to one of the island's landmarks for the first time pays a finder's fee
+var _lm_t = 0.0
+func _landmarks(dt: float):
+	if _toast:
+		var tt: float = _toast.get_meta("t", 0.0) - dt; _toast.set_meta("t", tt); _toast.modulate.a = clampf(tt / 0.6, 0.0, 1.0)
+	_lm_t -= dt
+	if _lm_t > 0 or race or menu_on: return
+	_lm_t = 0.5
+	for l in landmarks:
+		var key = "%s@%d,%d" % [l[0], int(l[1].x), int(l[1].z)]
+		if Progress.found.has(key): continue
+		if Vector2(l[1].x - car.px, l[1].z - car.pz).length() < 110.0:
+			Progress.found[key] = true; Progress.earn(Progress.LANDMARK); toast("Discovered: %s   +%d credits" % [l[0], Progress.LANDMARK])
+
 func _road_pt(road: String, i: int) -> Vector3:
 	var p = roads[road]; return Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
 
@@ -180,6 +207,7 @@ func _physics_process(dt):
 
 func _process(dt):
 	update_camera(dt)
+	_landmarks(dt)
 	var fp = Vector3(car.px, car.py, car.pz) if view_car < 0 else cam.global_position
 	island.focus = fp; flora.focus = fp
 	# eyes adjusting in a tunnel: the sun and the sky fade, exposure opens up a little
@@ -265,7 +293,7 @@ func run_shots():          # test: drive with full throttle and a few steering i
 	if OS.get_environment("SHOTS") == "trees": plan = [[0.0, 0.0, 0.0, 1.0]]; car.place(Vector3(-1405, 58, 862), 0.9)
 	if OS.get_environment("CAR") != "": car.setup(OS.get_environment("CAR")); spawn("Peninsula Road", 30)
 	if OS.get_environment("SHOTS") == "menu": plan = [[0.0, 0.0, 0.0, 1.5]]
-	if OS.get_environment("SHOTS") == "menu" and OS.get_environment("MENUVIEW") == "races" and menu: menu.show_races(true)
+	if OS.get_environment("SHOTS") == "menu" and OS.get_environment("MENUVIEW") != "" and menu: menu.show_page(OS.get_environment("MENUVIEW"))
 	if OS.get_environment("SHOTS") == "traffic":             # park on the Peninsula Road and line the five traffic cars up ahead
 		plan = [[0.0, 0.0, 0.0, 0.6], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0]]
 		for k in traffic.cars.size():
@@ -326,13 +354,17 @@ func perf_test():           # draw calls and triangles with each group switched 
 func open_menu():
 	menu_on = true; hud.visible = false; touch = { left = false, right = false, gas = false, brake = false, hand = false }
 	menu = Menu.new(); add_child(menu)
-	menu.race.connect(func(rid): start_race(rid))
+	menu.race.connect(func(rid):
+		if car.car_id != Progress.car: car.setup(Progress.car)          # the car on show may be one not bought yet
+		start_race(rid))
+	menu.changed.connect(func(): car.setup(car.car_id))
 	menu.travel.connect(func(rg):
+		if car.car_id != Progress.car: car.setup(Progress.car)
 		travel_to(Vector3(rg[1], 0, rg[2]))
 		menu.queue_free(); menu = null; menu_on = false; hud.visible = true; audio.ignition())
 	menu.drive.connect(func(id):
-		if id.begins_with("preview:"): car.setup(id.substr(8)); spawn("Peninsula Road", 30); return
-		if car.car_id != id: car.setup(id); spawn("Peninsula Road", 30)
+		if id.begins_with("preview:"): car.setup(id.substr(8)); spawn(START[0], START[1]); return
+		if car.car_id != id: car.setup(id); spawn(START[0], START[1])
 		menu.queue_free(); menu = null; menu_on = false; hud.visible = true; audio.ignition())
 
 func traffic_test():        # headless: watch every traffic car for jumps, sudden turns, overlaps and lost ground

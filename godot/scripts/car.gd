@@ -32,6 +32,7 @@ const CARS = {
 var car_id = "vortex"; var spin_axis = "x"; var spin_sgn = -1.0
 var opts = {}            # race rivals: { far = true (light model beyond FAR_AT), paint = Color }
 var frozen = false       # race countdown: the car holds still on the grid
+var player = false       # the player's car: its upgrades and paint come from the career save
 const NEAR_TO = 12.0; const MID_TO = 45.0      # rivals: full model, then ~45k, then ~16k triangles
 
 func _ready(): setup(car_id, opts)
@@ -39,6 +40,7 @@ func _ready(): setup(car_id, opts)
 func setup(id: String, o := {}):
 	car_id = id; opts = o; var C = CARS[id]
 	for k in C.veh: V[k] = C.veh[k]
+	if player: Progress.load_save(); Progress.tune(id, V)
 	spin_axis = C.axis; spin_sgn = C.sgn; wheels = []
 	if body: body.queue_free()
 	var s = load(C.file).instantiate()
@@ -55,6 +57,7 @@ func setup(id: String, o := {}):
 				d.albedo_color.a = 0.35 if m.resource_name.begins_with("Lens") else (0.55 if m.resource_name == "Glass_Tint" else 0.3)
 				d.roughness = 0.05; mi.set_surface_override_material(i, d)
 	if opts.has("paint"): _repaint(s, C.paint, opts.paint)
+	elif player and Progress.U(id).paint > 0: _repaint(s, C.paint, Progress.PAINTS[Progress.U(id).paint][1])
 	if opts.get("far", false): _add_far(s, C)
 	car_layers(body)
 

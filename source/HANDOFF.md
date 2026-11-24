@@ -274,3 +274,10 @@ inside), traffic on every paved road kept 140-520 m round the player, cars on re
 Races: coast, peninsula, lighthouse + Summit Pass, Eagle Descent, Desert Dash, Serpentine, Aurelia Grand Prix (2 laps; roundabout
 arcs instead of the fountain in the middle). Menu: RACES and TRAVEL (9 regions). Test tools: TOUR="Road:frac,..." (screenshots after
 streaming, prints draws/prims and the slowest chunk put-ins), RACETEST=<id> prints STREAM worst ms at the end.
+
+## Godot: career, garage and prize money (24 Nov 2026)
+scripts/progress.gd (user://progress.cfg; CAREERSAVE=<path> for tests): credits (new career starts with 5,000), cars owned
+(Calder GT 25,000), per-car upgrades (engine +8/16/25% torque, tyres +4/8% grip, drift kit lock, weight -50/-100 kg; same table
+as the web game) and paint (9 colours, 1,500 each, kept once bought). Race purse 1,200 + 900 per race in the list (Grand Prix x2),
+paid 100/60/35/12% by place; a podium opens the next race (first three always open, old podiums count). Landmarks found in free
+roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with the reason. Race results show the credits won.
