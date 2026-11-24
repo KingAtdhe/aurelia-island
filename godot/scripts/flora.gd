@@ -70,7 +70,7 @@ func build(spawn: Vector3):
 # impostor cards for every tree, merged into 480 m blocks (port of the web game's cards: same atlas, cells and proportions)
 const ASP = [0.66, 0.66, 1.3, 0.5, 1.0, 0.9]
 func _cards(info: Dictionary):
-	var mat = ShaderMaterial.new(); mat.shader = load("res://shaders/tree_card.gdshader"); mat.set_shader_parameter("atlas", load(DIR + "tex/tex_tree_atlas.png"))
+	var mat = ShaderMaterial.new(); mat.shader = load("res://shaders/tree_card.gdshader"); mat.set_shader_parameter("atlas", load(DIR + "tree_cards.png"))
 	mat.set_shader_parameter("near_d", KIND.tree[1] - 10.0)
 	var blocks := {}
 	for sp in species:

@@ -6,10 +6,10 @@ func _ready():
 	var a = OS.get_environment("PROBE").split(","); var P = Vector3(float(a[0]), float(a[1]), float(a[2]))
 	await get_tree().create_timer(0.5).timeout
 	var sp = m.get_world_3d().direct_space_state
-	for dz in [0.0, -0.5, -1.0, -2.0]:
+	for dz in [0.0, -0.5, -1.0, -2.0, 0.9, -0.9]:
 		var q = PhysicsRayQueryParameters3D.create(P + Vector3(0, 4.0, dz), P + Vector3(0, -60.0, dz)); var hh = sp.intersect_ray(q)
 		if hh: print("PROBE ray dz %.1f y %.2f %s / %s" % [dz, hh.position.y, hh.collider.get_parent().name, hh.collider.get_parent().get_parent().name])
-	for h in [PI, PI - 0.3, PI + 0.3]:
+	for h in ([float(OS.get_environment("PROBEH"))] if OS.get_environment("PROBEH") != "" else [PI, PI - 0.3, PI + 0.3]):
 		m.car.place(P, h); m.touch.gas = true
 		for k in 6:
 			await get_tree().create_timer(0.5).timeout

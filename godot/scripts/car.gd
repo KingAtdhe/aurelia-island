@@ -206,6 +206,9 @@ func ground(x: float, z: float, yref: float) -> Array:
 			q.from = Vector3(x, yref + 3.0, z) + o; q.to = Vector3(x, yref - 60.0, z) + o; hit = space.intersect_ray(q)
 			if not hit.is_empty(): break
 	if hit.is_empty(): return [-100.0, "grass"]
+	# a ray on a seam in the road surface can also drop through to the ground under it: a second ray a hair aside settles it
+	q.from = Vector3(x + 0.07, yref + 3.0, z + 0.05); q.to = Vector3(x + 0.07, yref - 60.0, z + 0.05); var h2 = space.intersect_ray(q)
+	if not h2.is_empty() and h2.position.y > hit.position.y + 0.3 and h2.position.y < hit.position.y + 3.0: hit = h2
 	return [hit.position.y, hit.collider.get_meta("surf", "grass")]
 
 func physics(dt: float):
