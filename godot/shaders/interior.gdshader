@@ -42,8 +42,8 @@ void fragment() {
 	vec3 N = normalize(cross(dFdx(wp), dFdy(wp))); if (dot(N, V) > 0.0) N = -N;
 	float lt; vec3 rc = room(wp, V, N, lt);
 	float cs = abs(dot(N, V)); float fr = 0.04 + 0.96 * pow(1.0 - cs, 5.0);
-	vec3 day = rc * 0.42, nt = rc * lt * vec3(1.25, 1.0, 0.72) * 1.35 + rc * 0.01;
+	vec3 day = rc * 0.5, nt = rc * lt * vec3(1.25, 1.0, 0.72) * 1.35 + rc * 0.01;
 	ALBEDO = vec3(0.02, 0.025, 0.03);
 	EMISSION = mix(day, nt, night) * (1.0 - fr);
-	ROUGHNESS = 0.06; METALLIC = 0.0; SPECULAR = 0.6;
+	ROUGHNESS = 0.08; METALLIC = 0.0; SPECULAR = 0.32;
 }

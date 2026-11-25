@@ -293,3 +293,5 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
   which streams with the detail Shapes (420 m), so blades never hang in the sky.
 - Shop prefabs (prop_shop_*) stay dropped as in the web game: their records sit inside the tower podium walls.
 - Test hooks: TOUR spot "P:x:y:z:heading[:cx;cy;cz]" (free camera), HIDEGRP=Group,Group hides map groups, LODT=mesh LOD threshold.
+- City ground floors: source/godot_tools/fix_podium.py (after export_chunks.py) moves the near-black podium panels of the city
+  Structures into a WindowGlass primitive, drawn as glass with rooms behind it instead of blank grey slabs.
