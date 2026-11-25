@@ -346,3 +346,17 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
   and a real thunder roll 0.6-2.8 s later. Sounds: source/audio/weather.py (credits in CREDITS.md).
 - Look.props: flora/prop library materials KitWindow/WindowGlass get plain dark glass (parked cars, kiosks, boats had
   glowing rooms in their windows at night).
+
+## Godot: crash handling, crash sounds, speed-ups, sharper ground (25 Nov 2026)
+- Crashes (coll.gd, car.gd): less bounce (restitution ~0.15), sliding along a wall scrubbed off, yaw kick halved and capped;
+  Car.settle: for up to 0.9 s after a hit the spin dies away and sideways slip is pulled out, so the car stays drivable.
+  Car-car: traffic velocity known (Traffic.vel via Coll.traffic_vel), one blow per car per frame, so a hit car is pushed
+  with momentum shared instead of being kicked again every frame; knocked cars stay put while the player is within 110 m.
+- Crash sounds: source/audio/crashes.py cuts 5 new hits from the craigsmith recordings at the moment of impact (car into
+  car, into a rail, a hard hit); car_audio picks by what was hit (Car.impact_kind: car / rail / solid) and speed, layers glass
+  on big hits and ducks the engine briefly.
+- CPU: grass cells cache their MultiMesh rows, check only nearby road segments, the ring shrinks at speed and the buffer is
+  rebuilt only when the cell set changes (grass 100-145 -> 10-20 ms per second); car body pitch/roll from 4 corner rays at
+  30 Hz; traffic ground rays short and only within 110 m; detail chunks are instanced and materialised on a worker thread
+  (main-thread attach ~0.03 ms). PROF=1 prints time per system with RACETEST / PHYSTEST.
+- Ground/road photo textures back at full size (colour 2048, normal 1024), anisotropic 8x; mobile shadow map 2048.

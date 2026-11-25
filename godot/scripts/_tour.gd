@@ -25,6 +25,7 @@ func _ready():
 			var cp = a[5].split(";"); var cam := Camera3D.new(); m.add_child(cam); cam.far = 4000.0
 			cam.global_position = Vector3(float(cp[0]), float(cp[1]), float(cp[2])); cam.look_at(Vector3(float(a[1]), float(a[2]), float(a[3]))); cam.make_current()
 		for w in 20: await get_tree().process_frame
+		m.car.place(Vector3(m.car.px, m.car.py + 0.8, m.car.pz), m.car.hd)          # stand on the detail colliders that came in meanwhile
 		await RenderingServer.frame_post_draw
 		var nm = "/tmp/%s_%02d.png" % [OS.get_environment("TOURPFX") if OS.get_environment("TOURPFX") != "" else "tour", k]
 		get_viewport().get_texture().get_image().save_png(nm)

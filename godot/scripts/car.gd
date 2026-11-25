@@ -231,8 +231,12 @@ func physics(dt: float):
 	var gn0 = ground(nx, nz, py + 1.0)[0]
 	if not air and (gn0 < -50.0 or (gn0 < -0.15 and gn0 <= py + 0.02)):          # the edge of the map, or the sea (surface at -0.25): stop at the edge / waterline
 		nx = px; nz = pz; var sp0 = Vector2(vx, vz).length(); vx *= -0.25; vz *= -0.25; yr *= 0.5
-		if sp0 > 3.0: bump(sp0)
+		if sp0 > 3.0: bump(sp0, "solid")
 	px = nx; pz = nz; bump_t -= dt
+	if settle > 0.0:          # a crash knocks the car round, but the tyres soon take hold again: the spin dies away instead of sliding on
+		settle -= dt; yr *= exp(-dt * 4.0)
+		var lat = vx * cos(hd) - vz * sin(hd); var lk = 1.0 - exp(-dt * 3.0)
+		vx -= cos(hd) * lat * lk; vz += sin(hd) * lat * lk
 	var Gn = ground(px, pz, py + 1.0)
 	if not air:
 		var dy: float = Gn[0] - py
@@ -245,10 +249,14 @@ func physics(dt: float):
 		if py <= Gn[0]:
 			if vy < -4.0: landed.emit(-vy)
 			py = Gn[0]; air = false; vy = 0
-	var a0 = ground(px + fx * 1.4, pz + fz * 1.4, py + 1)[0]; var a1 = ground(px - fx * 1.4, pz - fz * 1.4, py + 1)[0]
-	var a2 = ground(px + fz * 0.85, pz - fx * 0.85, py + 1)[0]; var a3 = ground(px - fz * 0.85, pz + fx * 0.85, py + 1)[0]
+	_odd = not _odd
 	var tp = pitch; var tr = roll; var lift = 0.0
-	if not air:
+	if not air and _odd:          # body pitch and roll from the ground at the four corners: 30 times a second is plenty
+		var a0 = ground(px + fx * 1.4, pz + fz * 1.4, py + 1)[0]; var a1 = ground(px - fx * 1.4, pz - fz * 1.4, py + 1)[0]
+		var a2 = ground(px + fz * 0.85, pz - fx * 0.85, py + 1)[0]; var a3 = ground(px - fz * 0.85, pz + fx * 0.85, py + 1)[0]
+		_corners = [a0 - Gn[0], a1 - Gn[0], a2 - Gn[0], a3 - Gn[0]]          # kept as heights relative to the ground under the car
+	if not air and _corners.size() == 4:
+		var a0 = Gn[0] + _corners[0]; var a1 = Gn[0] + _corners[1]; var a2 = Gn[0] + _corners[2]; var a3 = Gn[0] + _corners[3]
 		var sp = rest(py, a0, a1, 1.4); var sr = rest(py, a2, a3, 0.85); tp = sp[0]; tr = sr[0]; lift = maxf(sp[1], sr[1])
 	pitch = lerpf(pitch, tp, 1 - exp(-dt * 9)); roll = lerpf(roll, tr, 1 - exp(-dt * 9)); body_lift = lerpf(body_lift, lift, 1 - exp(-dt * 12))
 	speed = Vector2(vx, vz).length()
@@ -262,6 +270,8 @@ func physics(dt: float):
 
 var acc = 0.0
 func _physics_process(dt):
+	var _p0 = Time.get_ticks_usec(); _physics_process_body(dt); Prof.add("car", Time.get_ticks_usec() - _p0)
+func _physics_process_body(dt):
 	acc = min(acc + dt, 0.1)
 	while acc >= 1.0 / 120.0: physics(1.0 / 120.0); acc -= 1.0 / 120.0
 	position = Vector3(px, py, pz); rotation = Vector3(0, hd, 0)
@@ -276,8 +286,13 @@ func _physics_process(dt):
 var body_lift := 0.0
 var nearest_road: Callable          # set by the game: position -> [road point, heading] nearest to it
 var impact := 0.0         # speed into the last thing hit (m/s), for the crash sound
+var impact_kind := "solid"   # car, rail or solid: which crash recordings fit
+var settle := 0.0
+var _odd := false; var _corners := []         # after a crash: the car straightens out instead of spinning on
 signal landed(v)          # back on the ground after a jump, with the speed it came down at
-func bump(v := 8.0):
+func bump(v := 8.0, kind := ""):
+	if kind != "": impact_kind = kind
+	if v > 6.0: settle = clampf(v / 20.0, 0.35, 0.9); drift = 0.0
 	if bump_t <= 0: bump_t = 0.5 if v < 6.0 else 0.8; impact = v; crashed.emit()
 
 static var _merged = {}

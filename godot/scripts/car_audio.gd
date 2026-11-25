@@ -10,7 +10,9 @@ class_name CarAudio
 const PROFILES = {
 	vortex = { rpms = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8100], off = true, crank = 1.06, skid = 1.06, vol = 0.0 },
 	calder = { rpms = [800, 1600, 2400, 3200, 4000, 4900, 5900, 7000], off = false, crank = 0.9, skid = 0.92, vol = 1.0 } }
-const CRASH = ["crash_light", "crash_mid", "crash_heavy_a", "crash_heavy_b"]
+const CRASH = ["crash_light", "crash_mid", "crash_heavy_a", "crash_heavy_b", "crash_car_a", "crash_car_b", "crash_rail_a", "crash_rail_b", "crash_hard"]
+# what was hit picks the recording: another car, a rail or wall, or something solid (building, tree, rock); speed sets the weight
+const KIND = { car = [4, 5], rail = [6, 7], solid = [1, 8] }
 var car: Car
 var positional = false        # rivals: 3D players on their car
 var id = ""; var P = {}
@@ -78,16 +80,26 @@ func ignition():
 	if wind: wind.play(randf() * 5.0); wind.stream_paused = true
 
 func _on_crash():
-	var v: float = car.impact
-	_hit(0 if v < 9.0 else (1 if v < 16.0 else 2 + randi() % 2), lerpf(-18.0, 0.0, clampf((v - 2.5) / 19.0, 0.0, 1.0)))
+	var v: float = car.impact; var kind: String = car.impact_kind if "impact_kind" in car else "solid"
+	var w = clampf((v - 2.5) / 16.0, 0.0, 1.0)
+	if v < 4.5: _hit(0, lerpf(-14.0, -8.0, w)); return                      # a nudge: a light knock
+	var pick: Array = KIND.get(kind, KIND.solid)
+	_hit(pick[randi() % pick.size()], lerpf(-9.0, 2.0, w), lerpf(1.08, 0.94, w))   # bigger hits sound heavier and lower
+	if v > 17.0: _hit(2 + randi() % 2, lerpf(-8.0, 0.0, clampf((v - 17.0) / 10.0, 0.0, 1.0)))   # a big one: glass and bodywork on top
+	duck = 0.45                                                               # the engine drops back under the crash for a moment
 
+var duck := 0.0
 func _hit(k: int, db: float, pitch := 1.0):
 	if crash.is_empty(): return
 	var p = crash[k]; p.pitch_scale = randf_range(0.93, 1.05) * pitch; p.volume_db = db + (6.0 if positional else 0.0); p.play()
 
 func _process(dt):
+	var _p0 = Time.get_ticks_usec(); _process_body(dt); Prof.add("car_audio", Time.get_ticks_usec() - _p0)
+func _process_body(dt):
 	if not car: return
 	if car.car_id != id: _build(); ignition()
+	if not positional and (duck > 0.0 or AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Engine")) < 0.0):
+		duck = maxf(0.0, duck - dt); AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Engine"), -8.0 * duck / 0.45)
 	if not on: return
 	fade = minf(1.0, fade + dt / (0.5 if crank else 0.3))
 	# the physics rpm jitters with wheelspin and traction control: the ear gets a damped follower (about 0.1 s)

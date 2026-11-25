@@ -54,6 +54,14 @@ func setup_spinners(world: Dictionary):
 			tw.visibility_range_begin = 400.0; tw.visibility_range_begin_margin = 20.0; tw.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 			tw.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
+var _task := -1; var _prep := []
+var _look_lock := Mutex.new()
+func _ready_chunk(scene: PackedScene, cs: PackedScene):          # worker thread: build the chunk's nodes and materials away from the frame
+	var n = scene.instantiate()
+	_look_lock.lock(); Look.apply(n); _look_lock.unlock()
+	ranges(n)
+	_prep[1] = n; _prep[2] = cs.instantiate() if cs else null
+
 func _coll_path(nm: String) -> String: return DIR + "coll/%s.scn" % nm
 
 func _attach(nm: String, scene: PackedScene, cs: PackedScene = null, deferred := false):
@@ -70,13 +78,27 @@ func _attach(nm: String, scene: PackedScene, cs: PackedScene = null, deferred :=
 
 # detail streaming: a look round every quarter second, at most one chunk put in per frame
 func _process(dt):
+	var _p0 = Time.get_ticks_usec(); _process_body(dt); Prof.add("island", Time.get_ticks_usec() - _p0)
+func _process_body(dt):
 	for sp in spinners: sp[0].rotate(sp[1], sp[2] * dt)
 	if not _coll_queue.is_empty():          # one piece of work per frame: a chunk's colliders, or the next chunk
 		var q = _coll_queue.pop_front()
-		if is_instance_valid(q[0]): q[0].add_child(q[1].instantiate())
+		if is_instance_valid(q[0]): q[0].add_child(q[2] if q.size() > 2 else q[1].instantiate())
+	elif _task >= 0:          # a chunk being made ready on a worker thread: put it in once done (the main thread only adds it)
+		if WorkerThreadPool.is_task_completed(_task):
+			WorkerThreadPool.wait_for_task_completion(_task); _task = -1
+			var nm = _prep[0]; var c = chunks[nm]
+			if c.state == 3 and _prep[1] != null:
+				var t0 = Time.get_ticks_usec()
+				add_child(_prep[1]); c.node = _prep[1]; c.state = 2; loaded_tris += c.tris
+				if _prep[2]: _coll_queue.append([_prep[1], null, _prep[2]])
+				attach_ms.append([nm, (Time.get_ticks_usec() - t0) / 1000.0])
+			elif _prep[1] != null: _prep[1].free()
 	elif not _queue.is_empty():
 		var q = _queue.pop_front(); var c = chunks[q[0]]
-		if c.state == 3: _attach(q[0], q[1], q[2], true)
+		if c.state == 3:
+			_prep = [q[0], null, null]
+			_task = WorkerThreadPool.add_task(_ready_chunk.bind(q[1], q[2]))
 	_t -= dt
 	if _t > 0: return
 	_t = 0.25

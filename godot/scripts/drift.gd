@@ -36,6 +36,8 @@ func _flash(a: String, b: String, c: Color):
 	pts.text = a; sub.text = b; pts.add_theme_color_override("font_color", c); show = 1.6
 
 func _process(dt):
+	var _p0 = Time.get_ticks_usec(); _process_body(dt); Prof.add("drift", Time.get_ticks_usec() - _p0)
+func _process_body(dt):
 	if car == null: return
 	var kmh = car.speed * 3.6; var ab = abs(car.beta) * 57.3
 	var ok = on and not car.air and car.vf > 1.0 and kmh > 25.0 and ab > 12.0 and ab < 100.0 and not car.frozen

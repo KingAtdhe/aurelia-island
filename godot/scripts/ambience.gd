@@ -39,6 +39,8 @@ func _region(p: Vector3) -> Dictionary:          # how much the car is in each r
 	return out
 
 func _process(dt):
+	var _p0 = Time.get_ticks_usec(); _process_body(dt); Prof.add("ambience", Time.get_ticks_usec() - _p0)
+func _process_body(dt):
 	if main == null or main.car == null: return
 	_t -= dt
 	if _t <= 0.0:

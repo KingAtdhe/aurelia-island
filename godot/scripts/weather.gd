@@ -57,6 +57,8 @@ func apply():
 	next_bolt = randf_range(6.0, 14.0)
 
 func _process(dt):
+	var _p0 = Time.get_ticks_usec(); _process_body(dt); Prof.add("weather", Time.get_ticks_usec() - _p0)
+func _process_body(dt):
 	if main == null or main.cam == null: return
 	var l = get_level()
 	if l == 0: return

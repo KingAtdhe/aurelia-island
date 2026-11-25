@@ -59,18 +59,21 @@ func walls(nx: float, nz: float, car) -> Array:
 		var lim: float = r.hw - 1.1
 		if abs(q.d) > lim and abs(car.py - q.y) < 3:
 			var over: float = q.d - sign(q.d) * lim; nx -= px * over; nz -= pz * over
-			var vn: float = car.vx * px + car.vz * pz; car.vx -= px * vn * 1.2; car.vz -= pz * vn * 1.2; car.vx *= 0.985; car.vz *= 0.985
+			var vn: float = car.vx * px + car.vz * pz; car.vx -= px * vn * 1.15; car.vz -= pz * vn * 1.15; car.vx *= 0.985; car.vz *= 0.985
+			if abs(vn) > 2.5: car.bump(abs(vn), "rail")
 	elif r.lim != null:
 		var si = 0 if q.d > 0 else 1; var lim: float = maxf(r.lim[si][i], r.lim[si][j])
 		if lim > 0 and abs(q.d) > lim and abs(q.d) < lim + 3:
 			var sg: float = sign(q.d); var over: float = q.d - sg * lim; nx -= px * over; nz -= pz * over
 			var vn: float = (car.vx * px + car.vz * pz) * sg
-			if vn > 0: car.vx -= px * sg * vn * 1.25; car.vz -= pz * sg * vn * 1.25; if vn > 2.5: car.bump(vn)
+			if vn > 0: car.vx -= px * sg * vn * 1.15; car.vz -= pz * sg * vn * 1.15; if vn > 2.5: car.bump(vn, "rail")
 			car.vx *= 0.99; car.vz *= 0.99
 	return [nx, nz]
 
 # buildings, props and trees: three circles along the car so the bodywork does not sink into things
+var traffic_vel: Callable          # traffic index -> its velocity (x, z), so a car hit at the same speed is not a wall
 func obstacles(nx: float, nz: float, car) -> Array:
+	var done := {}
 	var R = 1.0; var hl = 1.75; var cfx = sin(car.hd); var cfz = cos(car.hd)
 	for off in [hl, 0.0, -hl]:
 		var sx = nx + cfx * off; var sz = nz + cfz * off
@@ -97,6 +100,7 @@ func obstacles(nx: float, nz: float, car) -> Array:
 		for p in pushes:
 			var ax: float = p[0]; var az: float = p[1]; var pen: float = p[2]
 			if p[3] != null and p[3] < 0: pen = minf(pen, 0.08)          # a traffic car overlapping us: separate over a few frames, never a pop
+			if p[3] != null and done.has(p[3]): nx += p[0] * pen; nz += p[1] * pen; continue          # one blow per car per frame
 			nx += ax * pen; nz += az * pen; sx += ax * pen; sz += az * pen
 			var vn: float = car.vx * ax + car.vz * az
 			var who = p[3]
@@ -105,18 +109,22 @@ func obstacles(nx: float, nz: float, car) -> Array:
 				var other = instance_from_id(who) if who > 0 else null
 				var ovn = 0.0
 				if other: ovn = other.vx * ax + other.vz * az
+				elif who < 0 and traffic_vel.is_valid(): var tv: Vector2 = traffic_vel.call(-1 - who); ovn = tv.x * ax + tv.y * az
+				done[who] = true
 				var rel = vn - ovn
 				if rel < 0:
 					var J = -rel * 0.58; car.vx += ax * J; car.vz += az * J
 					var ox = cfx * off; var oz = cfz * off; var tq = (oz * ax - ox * az) * J * car.V.m
-					car.yr = clampf(car.yr + tq / car.V.Iz * 0.25, -2.5, 2.5)
+					car.yr = clampf(car.yr + tq / car.V.Iz * 0.15, -1.6, 1.6)
 					if other: other.vx -= ax * J; other.vz -= az * J
 					elif who < 0: hits.append([-1 - who, -ax * J, -az * J])
-					if rel < -4: car.bump(-rel)
+					if rel < -4: car.bump(-rel, "car")
 			elif vn < 0:
-				var J = -vn * 1.3; car.vx += ax * J; car.vz += az * J
+				var J = -vn * 1.15; car.vx += ax * J; car.vz += az * J          # little bounce: crumpling bodywork takes the energy
 				var ox = cfx * off; var oz = cfz * off; var tq = (oz * ax - ox * az) * J * car.V.m
-				car.yr = clampf(car.yr + tq / car.V.Iz * 0.3, -2.5, 2.5)
-				if vn < -6: car.vx *= 0.6; car.vz *= 0.6
-				if vn < -2.5: car.bump(-vn)          # light knocks get a light sound too
+				car.yr = clampf(car.yr + tq / car.V.Iz * 0.15, -1.6, 1.6)
+				if vn < -6:          # a real hit: most of the speed goes, sliding along the wall is scrubbed off too
+					var tx = car.vx - ax * (car.vx * ax + car.vz * az); var tz = car.vz - az * (car.vx * ax + car.vz * az)
+					car.vx -= tx * 0.35; car.vz -= tz * 0.35; car.vx *= 0.65; car.vz *= 0.65
+				if vn < -2.5: car.bump(-vn, "solid")          # light knocks get a light sound too
 	return [nx, nz]

@@ -123,6 +123,8 @@ func prime():
 	for key in cells: _update_cell(cells[key], 999)
 
 func _process(dt):
+	var _p0 = Time.get_ticks_usec(); _process_body(dt); Prof.add("flora", Time.get_ticks_usec() - _p0)
+func _process_body(dt):
 	_t -= dt
 	if _t > 0: return
 	_t = 0.2

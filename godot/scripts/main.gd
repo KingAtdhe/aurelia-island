@@ -27,6 +27,7 @@ var car_sun: DirectionalLight3D
 var lamps: Lamps
 var ambience: Ambience
 var weather: Weather
+var worst_ms := 0.0; var _last_us := 0          # test: longest frame since the last report
 var drift: DriftScore          # drift points in free roam and in the Touge Drift event
 var head: SpotLight3D          # the player's headlights at night
 var probe: PackedByteArray; var probe_w = 0; var probe_h = 0; var shade = 1.0
@@ -62,14 +63,14 @@ func _ready():
 	cam = Camera3D.new(); cam.far = 3000; cam.near = 0.12; cam.fov = 62; add_child(cam); cam.current = true
 	Progress.load_save()
 	car = Car.new(); car.player = true; car.car_id = Progress.car if Progress.car in Progress.cars else "vortex"; add_child(car)
-	var co = Coll.new(); co.load_data("res://assets/island/coll.json", roads); car.coll = co; coll = co; grass.coll = co
+	var co = Coll.new(); co.load_data("res://assets/island/coll.json", roads); car.coll = co; coll = co; grass.coll = co; grass.main_car = car
 	car.knocked.connect(func(o): if o.size() > 5: flora.hide_instance(o[4], o[5]))
 	car.crashed.connect(func(): shake = 0.35; if drift and drift.cur > 0.0: drift.fail("CRASHED"))
 	car.nearest_road = nearest_road
 	spawn(START[0], START[1])
 	audio = CarAudio.new(); audio.car = car; add_child(audio)
 	ambience = Ambience.new(); add_child(ambience); ambience.build(self, w)          # waves, water, birds, crickets, wind
-	traffic = Traffic.new(); add_child(traffic); traffic.player = car; traffic.coll = co
+	traffic = Traffic.new(); add_child(traffic); traffic.player = car; traffic.coll = co; co.traffic_vel = traffic.vel
 	traffic.build(roads, int(OS.get_environment("TRAFFIC")) if OS.get_environment("TRAFFIC") != "" else Gfx.cars(), world_roads)
 	lamps = Lamps.new(); add_child(lamps); lamps.build(w)
 	head = SpotLight3D.new(); head.spot_range = 55.0; head.spot_angle = 30.0; head.spot_attenuation = 0.6; head.spot_angle_attenuation = 1.6; head.light_color = Color(1.0, 0.95, 0.85)
@@ -123,7 +124,7 @@ func race_test(rid: String):     # headless or with SHOTS: the player's car driv
 	if shots and OS.get_environment("RACESHOTS") != "1": times = []; for x in OS.get_environment("RACESHOTS").split(","): times.append(float(x))
 	while true:
 		await get_tree().create_timer(1.0).timeout; tt += 1.0
-		var line = "T %3d %-6s draws %d prims %d" % [int(tt), race.state, Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)]
+		var line = "T %3d %-6s draws %d prims %d proc %.1fms phys %.1fms worst %.1fms%s" % [int(tt), race.state, Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0, worst_ms, Prof.report()]; worst_ms = 0.0
 		for r in race.racers: line += " | %s s%.0f v%.0f%s" % [r.name.substr(0, 6), r.s, r.car.speed * 3.6, (" FIN " + Race.fmt(r.time)) if r.done else ""]
 		print(line)
 		if shots and (tt in times or race.panel != null):
@@ -221,6 +222,8 @@ func _physics_process(dt):
 	car.in_hand = touch.hand or Input.is_key_pressed(KEY_SPACE)
 
 func _process(dt):
+	var now = Time.get_ticks_usec(); if _last_us > 0: worst_ms = maxf(worst_ms, (now - _last_us) / 1000.0)
+	_last_us = now
 	update_camera(dt)
 	_landmarks(dt)
 	var fp = Vector3(car.px, car.py, car.pz) if view_car < 0 else cam.global_position
@@ -408,7 +411,7 @@ func traffic_test():        # headless: watch every traffic car for jumps, sudde
 func phys_test(kind: String):    # test: log the car every physics frame through a scripted scenario
 	var t = 0.0; var last = Vector3(car.px, car.py, car.pz); var lp = [car.pitch, car.roll]
 	var plan = { start = [[0.0, 3.0, 0, 0, false], [3.0, 7.0, 1, 0, false], [7.0, 9.0, 0, 1, false]],
-		crash = [[0.0, 9.0, 1, 0, false]], traffic = [[0.0, 9.0, 1, 0, false]],
+		crash = [[0.0, 9.0, 1, 0, false]], glance = [[0.0, 3.6, 1, 0, false], [3.6, 9.0, 0, 0, false]], traffic = [[0.0, 9.0, 1, 0, false]],
 		drift = [[0.0, 4.0, 1, 0, false], [4.0, 4.6, 1, 0, true], [4.6, 9.0, 1, 0, false]],
 		reverse = [[0.0, 3.0, 0, 1, false], [3.0, 5.0, 0, 0, false], [5.0, 7.0, 1, 0, false], [7.0, 9.0, 0, 1, false]],
 		shots = [[0.0, 14.5, 1, 0, false], [14.5, 16.5, 0, 1, false]], offroad = [[0.0, 14.0, 1, 0, false]] }.get(kind, [])
@@ -416,12 +419,12 @@ func phys_test(kind: String):    # test: log the car every physics frame through
 	car.crashed.connect(func(): print("EV CRASH t%.2f impact %.1f surf %s air %s v %.1f at %s" % [t, car.impact, car.surf, car.air, car.speed * 3.6, Vector3(car.px, car.py, car.pz)]))
 	car.landed.connect(func(v): print("EV LANDED t%.2f vy %.1f surf %s v %.1f" % [t, v, car.surf, car.speed * 3.6]))
 	var lsurf = car.surf
-	if kind == "crash":            # aim at a tree off the road
+	if kind == "crash" or kind == "glance":            # aim at a tree off the road (glance: a little to one side of it)
 		var d = JSON.parse_string(FileAccess.get_file_as_string("res://assets/island/coll.json")); var best = null; var bd = 1e9
 		for o in d["circ"]:
 			var dd = Vector2(o[0] - car.px, o[1] - car.pz).length()
 			if dd > 35 and dd < bd: bd = dd; best = o
-		car.place(Vector3(car.px, car.py, car.pz), atan2(best[0] - car.px, best[1] - car.pz))
+		car.place(Vector3(car.px, car.py, car.pz), atan2(best[0] - car.px, best[1] - car.pz) + (atan2(best[2] + 0.4, bd) if kind == "glance" else 0.0))
 	if kind == "traffic":          # line up behind the nearest traffic car on its lane, 45 m back
 		await get_tree().create_timer(0.3).timeout
 		var c = traffic.cars[0]; var l = traffic.lanes[c.lane]; var a = traffic._at(l, clampf(c.d - 45.0 * c.dir, 2.0, l.len - 2.0))
@@ -448,9 +451,10 @@ func phys_test(kind: String):    # test: log the car every physics frame through
 		if flag != "" or int(t * 60) % 15 == 0 or nd < 6.0 or t < 0.3:
 			print("TR nearest traffic %.1f m" % nd) if nd < 8.0 else null
 			print("   AU " + audio.debug())
-			if kind == "traffic": var c0 = traffic.cars[0]; print("   T0 free %s v %.1f pos %s" % [c0.get("free", false), c0.v, c0.n.global_position])
+			if kind == "traffic": var c0 = traffic.cars[0]; print("   T0 free %s v %.1f pos %s fv %s" % [c0.get("free", false), c0.v, c0.n.global_position, c0.get("fv", Vector2.ZERO)])
 			print("PH t%.3f vx%+.2f vz%+.2f hd%.3f yr%+.3f y%.3f dy%+.3f v%.1f vy%+.2f pitch%+.3f roll%+.3f gear%d rpm%d surf %s%s" % [t, car.vx, car.vz, car.hd, car.yr, car.py, d.y, car.speed * 3.6, car.vy, car.pitch, car.roll, car.gear + 1, car.rpm, car.surf, flag])
 		last = p; lp = [car.pitch, car.roll]
+		if Prof.on and int(round(t * 60)) % 60 == 0: print("PROF t%.0f%s" % [t, Prof.report()])
 		if drift.cur > 0.0 and int(t * 60) % 30 == 0: print("DS t%.1f cur %.0f x%.1f beta %.0f" % [t, drift.cur, drift.mul, abs(car.beta) * 57.3])
 	print("DS total %d" % drift.total)
 	get_tree().quit()

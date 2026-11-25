@@ -183,6 +183,8 @@ func _at(l: Dictionary, d: float) -> Array:
 	return [p[lo].lerp(p[hi], t), (p[hi] - p[lo]).normalized()]
 
 func _physics_process(dt):
+	var _p0 = Time.get_ticks_usec(); _physics_process_body(dt); Prof.add("traffic", Time.get_ticks_usec() - _p0)
+func _physics_process_body(dt):
 	if lanes.is_empty(): return
 	var pp = player.global_position if player else Vector3(1e9, 0, 0)
 	var dyn = []
@@ -240,12 +242,14 @@ func _physics_process(dt):
 		# stand on four wheels: ray down at each contact patch, the body takes the plane through them so no tyre sinks into the camber
 		var up = Vector3.UP; var t2 = Vector3(t.x, 0, t.z).normalized(); var r2 = Vector3(-t2.z, 0, t2.x)
 		var hs = []; var n_ok = 0
+		var near_p = at.distance_squared_to(pp) < 110.0 * 110.0          # far cars ride on the lane line (rays only where they can be seen up close)
 		for q in [[c.wb.x, 1.0], [c.wb.x, -1.0], [-c.wb.y, 1.0], [-c.wb.y, -1.0]]:
 			var wp = at + t2 * q[0] + r2 * (q[1] * c.half.y * 0.85)
-			var hit = space.intersect_ray(PhysicsRayQueryParameters3D.create(wp + Vector3(0, 3.0, 0), wp - Vector3(0, 60.0, 0)))
+			if not near_p: hs.append(at.y); continue
+			var hit = space.intersect_ray(PhysicsRayQueryParameters3D.create(wp + Vector3(0, 2.0, 0), wp - Vector3(0, 3.0, 0)))
 			if hit and abs(hit.position.y - at.y) < 0.8 and hit.collider.get_meta("surf", "") == "road": hs.append(hit.position.y); n_ok += 1
 			else: hs.append(at.y)
-		c.ground = n_ok > 0
+		c.ground = n_ok > 0 or not near_p
 		var fy = (hs[0] + hs[1]) * 0.5; var ry = (hs[2] + hs[3]) * 0.5; var ly = (hs[0] + hs[2]) * 0.5; var ryy = (hs[1] + hs[3]) * 0.5
 		var ax = t2 * (c.wb.x + c.wb.y) + Vector3(0, fy - ry, 0); var az = r2 * (2 * c.half.y * 0.85) + Vector3(0, ryy - ly, 0)
 		up = az.cross(ax).normalized()
@@ -267,13 +271,20 @@ func _physics_process(dt):
 
 # knocked out of its lane: keeps its own speed plus the blow, spins a little, slides to a stop on the tyres' grip,
 # then (once nobody is looking) comes back in at a road end
+func vel(i: int) -> Vector2:          # a traffic car's velocity on the ground, for crashes (Coll.traffic_vel)
+	var c = cars[i]
+	if c.get("free", false): return c.fv
+	if not c.get("n"): return Vector2.ZERO
+	var fw: Vector3 = c.n.global_transform.basis.x
+	return Vector2(fw.x, fw.z).normalized() * c.v
+
 func _knock(c: Dictionary, dv: Vector2):
 	if not c.get("free", false):
 		var fw: Vector3 = c.n.global_transform.basis.x
 		c.free = true; c.ft = 0.0; c.fp = c.n.global_position; c.fh = atan2(fw.x, fw.z); c.fs = 0.0
 		c.fv = Vector2(fw.x, fw.z).normalized() * c.v
 		for tm in c.get("tails", []): tm.emission_energy_multiplier = 3.2 * (1.0 if tm.resource_name == "TailLED" else 0.5)
-	c.fv += dv; c.fs += clampf(dv.length() * 0.12, 0.0, 2.5) * (1.0 if randf() < 0.5 else -1.0); c.ft = 0.0
+	c.fv += dv.limit_length(30.0); c.fs += clampf(dv.length() * 0.08, 0.0, 1.6) * (1.0 if randf() < 0.5 else -1.0); c.ft = 0.0
 
 func _slide(c: Dictionary, ci: int, dt: float, pp: Vector3, space, dyn: Array):
 	c.ft += dt; c.fv = c.fv.move_toward(Vector2.ZERO, 7.0 * dt); c.fs *= exp(-2.5 * dt); c.fh += c.fs * dt
@@ -285,6 +296,7 @@ func _slide(c: Dictionary, ci: int, dt: float, pp: Vector3, space, dyn: Array):
 	for w in c.wheels: w.rotate_object_local(Vector3(0, 0, 1), -c.v * dt / c.r)
 	c.snd.pitch_scale = SOUND[c.model][0] * 0.8; c.snd.volume_db = -16.0
 	dyn.append([c.fp.x, c.fp.z, c.half.x, c.half.y, atan2(-fw.z, fw.x), -1 - ci])
-	if c.v < 0.2 and c.ft > 4.0 and _respawn(c, pp):
+	var seen = c.fp.distance_to(pp) < 110.0          # a crashed car stays where it ended up while the player is near; it is moved away out of sight
+	if c.v < 0.2 and c.ft > 4.0 and (not seen or c.ft > 40.0) and _respawn(c, pp):
 		c.free = false
 		for tm in c.get("tails", []): tm.emission_energy_multiplier = 0.6 * (1.0 if tm.resource_name == "TailLED" else 0.5)

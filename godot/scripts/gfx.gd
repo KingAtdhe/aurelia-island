@@ -6,7 +6,7 @@ class_name Gfx
 #   HIGH   everything: full resolution, two shadow splits to 60 m, grass to 40 m, full draw distances, 14 cars
 const NAMES = ["LOW", "MEDIUM", "HIGH"]
 const SCALE = [0.7, 0.85, 1.0]
-const DIST = [0.6, 0.8, 1.0]
+const DIST = [0.55, 0.72, 1.0]
 const LOD = [8.0, 6.0, 4.0]
 const GRASS = [0.0, 30.0, 40.0]
 const CARS = [8, 11, 14]

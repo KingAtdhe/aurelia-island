@@ -216,6 +216,8 @@ static func _checker() -> ImageTexture:
 
 # ---------------------------------------------------------------- driving
 func _physics_process(dt):
+	var _p0 = Time.get_ticks_usec(); _physics_process_body(dt); Prof.add("race", Time.get_ticks_usec() - _p0)
+func _physics_process_body(dt):
 	if state == "count":
 		count -= dt
 		for r in racers:
