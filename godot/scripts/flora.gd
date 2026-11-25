@@ -68,10 +68,21 @@ func build(spawn: Vector3):
 	print("flora: %d objects, %d species, %d patches" % [n_inst, species.size(), cells.size()])
 
 # impostor cards for every tree, merged into 480 m blocks (port of the web game's cards: same atlas, cells and proportions)
+static func _r(kind: String) -> Array:          # draw distances of a kind at the current graphics level
+	var k = Gfx.dist(); return [KIND[kind][0] * k, KIND[kind][1] * k]
+var card_mat: ShaderMaterial
+func refresh():          # graphics level changed: rebuild the patches with the new distances
+	if card_mat: card_mat.set_shader_parameter("near_d", _r("tree")[1] - 10.0)
+	for key in cells:
+		for kind in cells[key].built:
+			for n in cells[key].built[kind]: n.queue_free()
+		cells[key].built.clear()
+	prime()
+
 const ASP = [0.66, 0.66, 1.3, 0.5, 1.0, 0.9]
 func _cards(info: Dictionary):
 	var mat = ShaderMaterial.new(); mat.shader = load("res://shaders/tree_card.gdshader"); mat.set_shader_parameter("atlas", load(DIR + "tree_cards.png"))
-	mat.set_shader_parameter("near_d", KIND.tree[1] - 10.0)
+	mat.set_shader_parameter("near_d", _r("tree")[1] - 10.0); card_mat = mat
 	var blocks := {}
 	for sp in species:
 		var cl = int(info.get(sp, {}).get("card", -1))
@@ -133,7 +144,7 @@ static func _tinted(m: Material) -> Material:
 func _update_cell(c: Dictionary, budget: int) -> int:
 	var d = Vector2(focus.x, focus.z).distance_to(c.c)
 	for kind in KIND:
-		var r = KIND[kind]; var reach = maxf(r[0], r[1])
+		var r = _r(kind); var reach = maxf(r[0], r[1])
 		var want = d < reach + 180.0; var keep = d < reach + 380.0
 		if c.built.has(kind):
 			if not keep:
@@ -145,7 +156,7 @@ func _update_cell(c: Dictionary, budget: int) -> int:
 
 func _make(c: Dictionary, kind: String) -> Array:
 	var nodes := []
-	var r = KIND[kind]
+	var r = _r(kind)
 	for sp in c.sp:
 		var s = species[sp]
 		if s.kind != kind: continue

@@ -54,7 +54,6 @@ func _ready():
 	grass = Grass.new(); add_child(grass); grass.build(w)
 	var sea = MeshInstance3D.new(); var pm = PlaneMesh.new(); pm.size = Vector2(16000, 16000); sea.mesh = pm
 	var wm = ShaderMaterial.new(); wm.shader = load("res://shaders/water.gdshader"); sea.material_override = wm; sea.position = Vector3(0, -0.25, 0); add_child(sea)
-	get_viewport().mesh_lod_threshold = float(OS.get_environment("LODT")) if OS.get_environment("LODT") != "" else 4.0         # simpler versions of far meshes (LODs made at import): no visible change on a phone screen
 	cam = Camera3D.new(); cam.far = 3000; cam.near = 0.12; cam.fov = 62; add_child(cam); cam.current = true
 	Progress.load_save()
 	car = Car.new(); car.player = true; car.car_id = Progress.car if Progress.car in Progress.cars else "vortex"; add_child(car)
@@ -65,7 +64,8 @@ func _ready():
 	spawn(START[0], START[1])
 	audio = CarAudio.new(); audio.car = car; add_child(audio)
 	traffic = Traffic.new(); add_child(traffic); traffic.player = car; traffic.coll = co
-	traffic.build(roads, int(OS.get_environment("TRAFFIC")) if OS.get_environment("TRAFFIC") != "" else 14, world_roads)
+	traffic.build(roads, int(OS.get_environment("TRAFFIC")) if OS.get_environment("TRAFFIC") != "" else Gfx.cars(), world_roads)
+	Gfx.apply(self)          # graphics level (start screen): render scale, shadows, draw distances, grass, mesh LOD
 	make_hud()
 	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("TOUR") == "" and OS.get_environment("PROBE") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == "" and OS.get_environment("FUZZ") == ""
 	if menu_on or OS.get_environment("SHOTS") == "menu": open_menu()
@@ -360,6 +360,7 @@ func open_menu():
 		if car.car_id != Progress.car: car.setup(Progress.car)          # the car on show may be one not bought yet
 		start_race(rid))
 	menu.changed.connect(func(): car.setup(car.car_id))
+	menu.gfx.connect(func(): Gfx.apply(self))
 	menu.travel.connect(func(rg):
 		if car.car_id != Progress.car: car.setup(Progress.car)
 		travel_to(Vector3(rg[1], 0, rg[2]))

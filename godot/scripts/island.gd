@@ -126,11 +126,11 @@ static func group_of(nm: String) -> String:
 static func ranges(root: Node):
 	for n in root.find_children("*", "GeometryInstance3D", true, false):
 		var g = group_of(String(n.name))
-		if g.begins_with("TerrainBlend"): (n as GeometryInstance3D).visibility_range_end = 900.0
+		if g.begins_with("TerrainBlend"): (n as GeometryInstance3D).visibility_range_end = 900.0 * Gfx.dist()
 		if OS.get_environment("HIDEGRP") != "" and g in OS.get_environment("HIDEGRP").split(","): n.visible = false   # test: look behind a group
 		if not RANGE.has(g): continue
-		var r = RANGE[g]; var gi := n as GeometryInstance3D
-		gi.visibility_range_begin = r[0]; gi.visibility_range_end = r[1]
+		var r = RANGE[g]; var gi := n as GeometryInstance3D; var k = Gfx.dist()          # graphics level shortens every draw distance
+		gi.visibility_range_begin = r[0] * k; gi.visibility_range_end = r[1] * k
 		gi.visibility_range_begin_margin = 20.0 if r[0] > 0 else 0.0; gi.visibility_range_end_margin = 20.0 if r[1] > 0 else 0.0
 		gi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 

@@ -29,6 +29,21 @@ func _ready():
 		var nm = "/tmp/tour_%02d.png" % k
 		get_viewport().get_texture().get_image().save_png(nm)
 		print("TOUR %d %s pos %s tris %d draws %d prims %d (%.1f s)" % [k, s, Vector3(m.car.px, m.car.py, m.car.pz), m.island.loaded_tris, Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME), (Time.get_ticks_msec() - t0) / 1000.0])
+		if OS.get_environment("DRAWSPLIT") != "":          # what the draws go to: hide one map group (or flora, grass, traffic) at a time
+			var base = Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME); var by := {}
+			for n in m.island.find_children("*", "GeometryInstance3D", true, false):
+				var g = Island.group_of(String(n.name)); if not by.has(g): by[g] = []
+				by[g].append(n)
+			by["(flora)"] = [m.flora]; by["(grass)"] = [m.grass]; by["(traffic)"] = [m.traffic]; by["(tunnels)"] = [m.tunnels]
+			var out = []
+			for g in by:
+				var was = []
+				for n in by[g]: was.append(n.visible); n.visible = false
+				for w in 3: await get_tree().process_frame
+				out.append([g, base - Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)])
+				for i in by[g].size(): by[g][i].visible = was[i]
+			out.sort_custom(func(a, b): return a[1] > b[1])
+			print("DRAWSPLIT ", out.slice(0, 16))
 		k += 1
 	var worst = m.island.attach_ms.duplicate(); worst.sort_custom(func(a, b): return a[1] > b[1])
 	print("ATTACH worst ", worst.slice(0, 6))

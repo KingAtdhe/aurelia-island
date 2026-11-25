@@ -6,11 +6,12 @@ signal drive(car_id)
 signal race(race_id)
 signal travel(region)
 signal changed          # upgrades or paint bought: the car on show is rebuilt
+signal gfx              # graphics level changed
 const REGIONS = [["Coastal Highway", -1300, 780], ["City", 0, 20], ["Harbour", -350, 700], ["Mountain Roads", -150, -900], ["Forest Trails", -1350, -420],
 	["Desert", 1380, -620], ["Racing Circuit", 1260, 355], ["Countryside", 700, 900], ["Heliport", 1715, 1010]]
 var ids = ["vortex", "calder"]; var idx = 0
 var title: Label; var name_lbl: Label; var blurb: Label; var stats: Label; var credits: Label; var note: Label; var root: Control
-var go_btn: Button; var garage_btn: Button
+var go_btn: Button; var garage_btn: Button; var gfx_btn: Button
 var car_ui = []; var race_ui = []; var travel_ui = []; var garage_ui = []; var shade: ColorRect
 
 func _ready():
@@ -28,7 +29,8 @@ func _ready():
 	go_btn = _btn("FREE ROAM", Vector2(40, 446), Vector2(300, 68), _go); car_ui.append(go_btn)
 	car_ui.append(_btn("RACES", Vector2(40, 524), Vector2(146, 60), func(): show_page("races")))
 	car_ui.append(_btn("TRAVEL", Vector2(194, 524), Vector2(146, 60), func(): show_page("travel")))
-	garage_btn = _btn("GARAGE", Vector2(40, 594), Vector2(300, 60), func(): show_page("garage")); car_ui.append(garage_btn)
+	garage_btn = _btn("GARAGE", Vector2(40, 594), Vector2(146, 60), func(): show_page("garage")); car_ui.append(garage_btn)
+	gfx_btn = _btn("", Vector2(194, 594), Vector2(146, 60), _gfx); gfx_btn.add_theme_font_size_override("font_size", 20); car_ui.append(gfx_btn); _gfx_text()
 	for k in REGIONS.size():
 		var rg = REGIONS[k]
 		var bt = _btn(rg[0], Vector2(40 + (k / 5) * 400, 150 + (k % 5) * 90), Vector2(385, 80), func(): if _owned(): emit_signal("travel", rg)); bt.add_theme_font_size_override("font_size", 24); travel_ui.append(bt)
@@ -36,6 +38,10 @@ func _ready():
 	_build_races()
 	show_page("")
 	pick(0)
+
+func _gfx():          # graphics LOW -> MEDIUM -> HIGH -> LOW
+	Gfx.set_level((Gfx.get_level() + 1) % 3); _gfx_text(); emit_signal("gfx")
+func _gfx_text(): gfx_btn.text = "GRAPHICS\n" + Gfx.NAMES[Gfx.get_level()]
 
 # ---------------------------------------------------------------- pages
 func show_page(p: String):

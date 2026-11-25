@@ -296,3 +296,13 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
 - Test hooks: TOUR spot "P:x:y:z:heading[:cx;cy;cz]" (free camera), HIDEGRP=Group,Group hides map groups, LODT=mesh LOD threshold.
 - City ground floors: source/godot_tools/fix_podium.py (after export_chunks.py) moves the near-black podium panels of the city
   Structures into a WindowGlass primitive, drawn as glass with rooms behind it instead of blank grey slabs.
+
+## Godot: graphics settings (25 Nov 2026)
+- scripts/gfx.gd (class Gfx): LOW / MEDIUM / HIGH, button on the start screen, saved in user://settings.cfg (phones start on
+  MEDIUM, desktop on HIGH; GFX=LOW|MEDIUM|HIGH env overrides for tests). Sets render scale (0.7/0.85/1), MSAA, mesh LOD
+  threshold, sun shadows (off / 1 split 45 m / 2 splits 60 m), bloom, haze and camera reach (1500/2200/3000 m), draw distances
+  of every map group and flora kind (x0.6/0.8/1), modelled grass (off/30/40 m) and traffic cars (8/11/14, at start).
+- source/godot_tools/merge_hd.py (after export_chunks/fix_podium): the HD city buildings are merged per 200 m quarter and
+  material in the detail chunks: 1274 -> 479 primitives. A city street: 1440 -> 1091 draws on HIGH, 890 MEDIUM, 679 LOW.
+- Test hook: DRAWSPLIT=1 with TOUR prints the draw calls per map group.
+- Order after a fresh export_chunks.py: fix_rivers.py, fix_podium.py, merge_hd.py, export_shops.py.

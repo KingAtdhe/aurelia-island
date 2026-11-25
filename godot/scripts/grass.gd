@@ -6,7 +6,7 @@ class_name Grass
 # the map colliders) and the region: meadow on fields and coast, lawn in the city and on the mountains, dry grass in the
 # desert and the countryside's dry patches, forest grass under the trees, marram grass on the dunes.
 const CELL = 12.0
-const R_FAR = 40.0
+var R_FAR := 40.0           # set by the graphics level (0 = no modelled grass)
 const R_NEAR = 10.0
 const TYPES = ["meadow", "lawn", "dry", "forest", "dune"]
 const SPACING = 1.2          # metres between clumps on full ground
@@ -19,11 +19,15 @@ var coll: Coll          # roads and trails stay clear of grass
 var _last := Vector3(1e9, 0, 0)
 var _t := 0.0
 var _pending := []
+var gmat: ShaderMaterial
+func set_radius(r: float):
+	R_FAR = r; visible = r > 0.0; set_process(r > 0.0); if gmat: gmat.set_shader_parameter("fade_far", maxf(r, 1.0))
+	cells.clear(); _last = Vector3(1e9, 0, 0)
 
 func build(world: Dictionary):
 	regions = world["regions"]
 	var sc = load("res://assets/grass.glb").instantiate()
-	var mat = ShaderMaterial.new(); mat.shader = load("res://shaders/grass.gdshader"); mat.set_shader_parameter("bake", Look._bake()); mat.set_shader_parameter("fade_far", R_FAR)
+	var mat = ShaderMaterial.new(); mat.shader = load("res://shaders/grass.gdshader"); mat.set_shader_parameter("bake", Look._bake()); mat.set_shader_parameter("fade_far", R_FAR); gmat = mat
 	for t in TYPES:
 		for lod in [0, 1]:
 			var mi: MeshInstance3D = sc.find_child("G_%s_LOD%d" % [t, lod], true, false)
