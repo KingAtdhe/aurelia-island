@@ -291,7 +291,8 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
 - Road: sunlit asphalt was near white; albedo capped and desaturated in road.gdshader. Grass ring blends to ground green with distance.
 - Wind turbines: rotors spin (island.setup_spinners, all world.json spinners); past 400 m a plain mast stands in for the tower,
   which streams with the detail Shapes (420 m), so blades never hang in the sky.
-- Shop prefabs (prop_shop_*) stay dropped as in the web game: their records sit inside the tower podium walls.
+- Shop prefabs (prop_shop_*): source/godot_tools/export_shops.py (after fix_podium.py) moves the 234 that stood 1-6 m behind a
+  podium wall out onto it and merges all 1,542 per 100 m cell (LOD1) into s_<cx>_<cz>.glb chunks (group Shops, drawn to 280 m).
 - Test hooks: TOUR spot "P:x:y:z:heading[:cx;cy;cz]" (free camera), HIDEGRP=Group,Group hides map groups, LODT=mesh LOD threshold.
 - City ground floors: source/godot_tools/fix_podium.py (after export_chunks.py) moves the near-black podium panels of the city
   Structures into a WindowGlass primitive, drawn as glass with rooms behind it instead of blank grey slabs.
