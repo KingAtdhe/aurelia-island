@@ -26,6 +26,7 @@ var eyes = 0.0          # 0 in daylight, 1 deep in a tunnel
 var car_sun: DirectionalLight3D
 var lamps: Lamps
 var ambience: Ambience
+var drift: DriftScore          # drift points in free roam and in the Touge Drift event
 var head: SpotLight3D          # the player's headlights at night
 var probe: PackedByteArray; var probe_w = 0; var probe_h = 0; var shade = 1.0
 const START = ["Peninsula Road", 30]
@@ -62,7 +63,7 @@ func _ready():
 	car = Car.new(); car.player = true; car.car_id = Progress.car if Progress.car in Progress.cars else "vortex"; add_child(car)
 	var co = Coll.new(); co.load_data("res://assets/island/coll.json", roads); car.coll = co; coll = co; grass.coll = co
 	car.knocked.connect(func(o): if o.size() > 5: flora.hide_instance(o[4], o[5]))
-	car.crashed.connect(func(): shake = 0.35)
+	car.crashed.connect(func(): shake = 0.35; if drift and drift.cur > 0.0: drift.fail("CRASHED"))
 	car.nearest_road = nearest_road
 	spawn(START[0], START[1])
 	audio = CarAudio.new(); audio.car = car; add_child(audio)
@@ -75,6 +76,7 @@ func _ready():
 	Tod.apply(self)          # time of day: sky, sun or moon, city lights
 	Gfx.apply(self)          # graphics level (start screen): render scale, shadows, draw distances, grass, mesh LOD
 	make_hud()
+	drift = DriftScore.new(); drift.car = car; hud.add_child(drift)
 	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("TOUR") == "" and OS.get_environment("PROBE") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == "" and OS.get_environment("FUZZ") == "" and OS.get_environment("AMBTEST") == ""
 	if menu_on or OS.get_environment("SHOTS") == "menu": open_menu()
 	if not menu_on: audio.ignition()
@@ -446,4 +448,6 @@ func phys_test(kind: String):    # test: log the car every physics frame through
 			if kind == "traffic": var c0 = traffic.cars[0]; print("   T0 free %s v %.1f pos %s" % [c0.get("free", false), c0.v, c0.n.global_position])
 			print("PH t%.3f vx%+.2f vz%+.2f hd%.3f yr%+.3f y%.3f dy%+.3f v%.1f vy%+.2f pitch%+.3f roll%+.3f gear%d rpm%d surf %s%s" % [t, car.vx, car.vz, car.hd, car.yr, car.py, d.y, car.speed * 3.6, car.vy, car.pitch, car.roll, car.gear + 1, car.rpm, car.surf, flag])
 		last = p; lp = [car.pitch, car.roll]
+		if drift.cur > 0.0 and int(t * 60) % 30 == 0: print("DS t%.1f cur %.0f x%.1f beta %.0f" % [t, drift.cur, drift.mul, abs(car.beta) * 57.3])
+	print("DS total %d" % drift.total)
 	get_tree().quit()

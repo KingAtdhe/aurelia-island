@@ -69,13 +69,14 @@ func _build_races():
 	var y = 140; var k = 0
 	for rid in Race.ORDER:
 		var R = Race.RACES[rid]; var b = Race.best(rid); var open = Progress.is_open(rid)
-		var bt = _btn("", Vector2(40 + (k / 4) * 400, y + (k % 4) * 104), Vector2(385, 94), func(): if open and _owned(): emit_signal("race", rid)); bt.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		var bt = _btn("", Vector2(40 + (k / 5) * 400, y + (k % 5) * 92), Vector2(385, 84), func(): if open and _owned(): emit_signal("race", rid)); bt.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		var line2 = ("best %s · %s" % [Race.fmt(b[0]), ["1st", "2nd", "3rd", "4th"][b[1] - 1]]) if b[0] > 0 else "prize %s credits" % _n(Progress.purse(rid))
+		if R.has("mode") and b[0] > 0: line2 = "best %s · %s" % [_n(int(b[0])) if R.mode == "drift" else Race.fmt(b[0]), Race.MEDAL[b[1] - 1].to_lower()]
 		if not open: line2 = "podium in %s to open" % Race.RACES[R.get("after", Race.ORDER[k - 1])].name
 		bt.text = "  %s%s\n  %s" % [R.name, Race.tag(rid), line2]; bt.add_theme_font_size_override("font_size", 22)
 		if not open: bt.modulate = Color(1, 1, 1, 0.45)
 		race_ui.append(bt); k += 1
-	race_ui.append(_btn("BACK", Vector2(40, y + 4 * 104 + 6), Vector2(180, 64), func(): show_page("")))
+	race_ui.append(_btn("BACK", Vector2(840, y + 3 * 92 + 6), Vector2(180, 64), func(): show_page("")))
 	for c in race_ui: c.visible = false
 
 func _build_garage():

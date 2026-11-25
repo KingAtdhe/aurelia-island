@@ -28,9 +28,22 @@ const RACES = {
 	harbour = { name = "Harbour Lights", blurb = "At night along the south coast: the harbour lights, then the dark climb west.",
 		segs = [["Ring", 100, 560]], skill = 0.96, tod = 2, after = "summit" },
 	midnight = { name = "Midnight City", blurb = "Round the edge of the city at night. Four streets, four hard corners, lamps all the way.",
-		segs = [["Street N-480", 2, 112], ["Street E260", 0, 192], ["Street N480", 112, 0], ["Street E-300", 192, 8]], skill = 0.97, tod = 2, after = "desert" } }
-const ORDER = ["coast", "peninsula", "lighthouse", "summit", "descent", "desert", "serpentine", "gp", "golden", "harbour", "midnight"]
-static func tag(rid: String) -> String: return ["", " · SUNSET", " · NIGHT"][RACES[rid].get("tod", 0)]
+		segs = [["Street N-480", 2, 112], ["Street E260", 0, 192], ["Street N480", 112, 0], ["Street E-300", 192, 8]], skill = 0.97, tod = 2, after = "desert" },
+	# solo challenges: medals instead of places (gold, silver, bronze count as 1st, 2nd, 3rd for prize money and unlocks)
+	touge = { name = "Touge Drift", blurb = "Down the Summit Pass alone. Angle, speed and linked drifts score; crash or spin and the drift is lost.",
+		segs = [["Summit Pass", 298, 2]], skill = 0.93, mode = "drift", medals = [9000, 5000, 2000], after = "summit" },
+	trial = { name = "Circuit Time Trial", blurb = "One lap of the racing circuit against the clock, from a standing start. No rivals, no excuses.",
+		segs = [["Circuit", 50, 50, 1]], skill = 0.98, mode = "trial", medals = [76.0, 81.0, 87.0], after = "desert" } }
+const ORDER = ["coast", "peninsula", "lighthouse", "summit", "descent", "desert", "serpentine", "gp", "golden", "harbour", "midnight", "touge", "trial"]
+static func tag(rid: String) -> String:
+	var m = RACES[rid].get("mode", "")
+	return " · DRIFT" if m == "drift" else (" · TIME TRIAL" if m == "trial" else ["", " · SUNSET", " · NIGHT"][RACES[rid].get("tod", 0)])
+static func medal(rid: String, v: float) -> int:          # 1 gold, 2 silver, 3 bronze, 4 none (score: higher is better; time: lower)
+	var md = RACES[rid].medals
+	for k in 3:
+		if (v >= md[k]) if RACES[rid].mode == "drift" else (v > 0.0 and v <= md[k]): return k + 1
+	return 4
+const MEDAL = ["GOLD", "SILVER", "BRONZE", "NO MEDAL"]
 const RIVALS = [
 	{ name = "M. Kade", car = "vortex", paint = Color(0.05, 0.16, 0.42), line = -0.45 },
 	{ name = "L. Varga", car = "calder", paint = Color(0.03, 0.03, 0.035), line = 0.4 },
@@ -74,11 +87,15 @@ func start(rid: String, m: Node):
 	var grid = [[START_S - 9.0, -0.35], [START_S - 9.0, 0.35], [START_S - 18.0, -0.35], [START_S - 18.0, 0.35]]
 	var slots = [grid[2], grid[0], grid[1], grid[3]]       # the player starts on the second row: something to chase
 	racers.append(_racer(player, "You", false, 0.0))
-	for k in RIVALS.size():
+	var solo = R.has("mode")
+	if solo:
+		main.drift.on = R.mode == "drift"; main.drift.pay = false; main.drift.reset()
+	for k in (0 if solo else RIVALS.size()):
 		var rv = RIVALS[k]; var c = Car.new(); c.car_id = rv.car; c.opts = { far = true, paint = rv.paint }; add_child(c); c.coll = coll
 		var r = _racer(c, rv.name, true, rv.line)
 		var au = CarAudio.new(); au.car = c; au.positional = true; c.add_child(au); au.ignition(); r.snd = au      # its own engine, as 3D sound
 		racers.append(r)
+	if solo: slots = [[START_S - 9.0, 0.0]]
 	for k in racers.size():
 		var sl = slots[k]; var a = at(sl[0]); var p: Vector3 = a[0] + a[2] * (sl[1] * a[3] * 2.0)
 		racers[k].car.place(p, atan2(a[1].x, a[1].z)); racers[k].s = sl[0]; racers[k].car.frozen = true
@@ -332,7 +349,12 @@ func _process(dt):
 	if not info: return
 	var me = racers[0]; var st = standings(); var pos = st.find(me) + 1
 	var b = best(id)
-	info.text = "POS %d/%d   ·   CP %d/%d   ·   %s%s" % [pos, racers.size(), mini(next_cp, cps.size()), cps.size(), fmt(me.time if me.done else t), ("   ·   BEST " + fmt(b[0])) if b[0] > 0 else ""]
+	if R.get("mode", "") == "drift":
+		info.text = "SCORE %s   ·   %d%%%s" % [Menu._n(main.drift.total), int(100.0 * clampf((me.s - START_S) / (finish_s - START_S), 0, 1)), ("   ·   BEST " + Menu._n(int(b[0]))) if b[0] > 0 else ""]
+	elif R.get("mode", "") == "trial":
+		info.text = "CP %d/%d   ·   %s   ·   GOLD %s%s" % [mini(next_cp, cps.size()), cps.size(), fmt(me.time if me.done else t), fmt(R.medals[0]), ("   ·   BEST " + fmt(b[0])) if b[0] > 0 else ""]
+	else:
+		info.text = "POS %d/%d   ·   CP %d/%d   ·   %s%s" % [pos, racers.size(), mini(next_cp, cps.size()), cps.size(), fmt(me.time if me.done else t), ("   ·   BEST " + fmt(b[0])) if b[0] > 0 else ""]
 	var mt: float = msg.get_meta("t", 0.0)
 	if mt > 0: msg.set_meta("t", mt - dt)
 	if state == "count":
@@ -347,6 +369,7 @@ func _process(dt):
 		if panel == null and (all_done or result_t > 9.0): _results()
 
 func _results():
+	if R.has("mode"): _challenge_results(); return
 	big.visible = false
 	var st = standings(); var pos = st.find(racers[0]) + 1; var me = racers[0]
 	var b = best(id); var new_best = b[0] <= 0.0 or me.time < b[0]
@@ -374,6 +397,32 @@ func _results():
 	_b(panel, "FREE ROAM", Vector2(412, 360), func(): main.end_race())
 	emit_signal("finished")
 
+func _challenge_results():          # drift score or lap time, a medal, and the prize for it
+	big.visible = false; var me = racers[0]; var drift = R.mode == "drift"
+	if drift: main.drift.bank()
+	var v: float = float(main.drift.total) if drift else me.time
+	var md = medal(id, v); var cf = ConfigFile.new(); cf.load(SAVE)
+	var old: float = cf.get_value(id, "time", 0.0); var new_best = old <= 0.0 or (v > old if drift else v < old)
+	if new_best: cf.set_value(id, "time", v)
+	var bp = cf.get_value(id, "pos", 0)
+	if bp == 0 or md < bp: cf.set_value(id, "pos", md)
+	cf.save(SAVE)
+	var prize = Progress.race_done(id, md) if md <= 3 else [0, ""]
+	if OS.get_environment("RACETEST") != "": print("CHALLENGE %s value %.2f medal %s prize %s" % [id, v, MEDAL[md - 1], str(prize)])
+	var vs = get_viewport().get_visible_rect().size
+	panel = Panel.new(); var sb = Hud.panel_style(16); sb.bg_color = Color(0.03, 0.05, 0.08, 0.88); sb.border_color = Color(Hud.ACCENT.r, Hud.ACCENT.g, Hud.ACCENT.b, 0.5); sb.border_width_top = 3; panel.add_theme_stylebox_override("panel", sb)
+	panel.size = Vector2(620, 400); panel.position = (vs - panel.size) / 2; hud.add_child(panel)
+	var mcol = [Color(1, 0.8, 0.2), Color(0.85, 0.88, 0.92), Color(0.85, 0.55, 0.3), Color(1, 1, 1, 0.7)][md - 1]
+	_l(panel, "%s  ·  %s" % [MEDAL[md - 1], R.name], 40, Vector2(32, 22)).add_theme_color_override("font_color", mcol)
+	_l(panel, ("%s points" % Menu._n(int(v))) if drift else fmt(v), 56, Vector2(34, 84))
+	_l(panel, ("New best!" if new_best else "Best  " + (Menu._n(int(old)) if drift else fmt(old))), 22, Vector2(36, 160)).modulate = Color(1, 1, 1, 0.75)
+	var md_s = "Gold %s  ·  Silver %s  ·  Bronze %s" % ([Menu._n(R.medals[0]), Menu._n(R.medals[1]), Menu._n(R.medals[2])] if drift else [fmt(R.medals[0]), fmt(R.medals[1]), fmt(R.medals[2])])
+	_l(panel, md_s, 20, Vector2(36, 196)).modulate = Color(1, 1, 1, 0.6)
+	var pl = _l(panel, ("+%s credits" % Menu._n(prize[0])) + (("   ·   %s is open" % prize[1]) if prize[1] != "" else ""), 22, Vector2(36, 234)); pl.add_theme_color_override("font_color", Hud.ACCENT)
+	_b(panel, "RETRY", Vector2(32, 300), func(): main.start_race(id))
+	_b(panel, "FREE ROAM", Vector2(412, 300), func(): main.end_race())
+	emit_signal("finished")
+
 func _l(p: Control, s: String, sz: int, pos: Vector2) -> Label:
 	var l = Label.new(); l.text = s; l.add_theme_font_size_override("font_size", sz); l.position = pos; p.add_child(l); return l
 func _b(p: Control, s: String, pos: Vector2, cb: Callable):
@@ -385,5 +434,6 @@ func stop():
 	player.frozen = false; coll.dyn2 = []
 	traffic.visible = true; traffic.process_mode = Node.PROCESS_MODE_INHERIT
 	if tod_was >= 0: Tod.level = tod_was; Tod.apply(main)
+	main.drift.on = true; main.drift.pay = true; main.drift.reset()
 	if hud: hud.queue_free()
 	queue_free()

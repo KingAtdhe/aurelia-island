@@ -328,3 +328,10 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
 - Export fix: export_presets include_filter "assets/island/*.bin". Before this, flora.bin, bake_sun.bin (and now ambience.bin)
   were not packed into the APK, so on phones the trees, rocks and street props were missing and the car light ignored shade.
 - Test hook: AMBTEST=1 prints the ambience levels at a few places.
+
+## Godot: drift scoring, Touge Drift, Circuit Time Trial (25 Nov 2026)
+- scripts/drift.gd (DriftScore, on the HUD): port of the web game's DS. Free roam: banked drifts of 50+ pay 1 credit per 10
+  points. Car crash -> "CRASHED" loses the drift. PHYSTEST runs print DS lines.
+- race.gd solo challenges (RACES[...].mode, .medals): touge (Summit Pass downhill, drift score; gold 9000 / silver 5000 /
+  bronze 2000, opens after summit) and trial (one lap of the circuit, gold 1:16 / silver 1:21 / bronze 1:27, opens after
+  desert). Medals count as 1st/2nd/3rd for prize money and unlocks; best score/time saved in races.cfg like race times.
