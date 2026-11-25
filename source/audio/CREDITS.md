@@ -25,3 +25,13 @@ deeper and rounder. The Vortex also has off-throttle loops from its real overrun
 - Horn: "Horn 3" #3506, BigSoundBank (CC0)
 
 Only real recordings go in: the scripts trim, loop, crossfade, re-space firings by a few percent, filter and set levels.
+
+## Ambience (ambience.py) — CC0 / public domain field recordings
+Taken from the loops of two open collections (each credits the original recordings):
+- funcoder/omarchy-ambient (Freesound, CC0): sea waves "Crashing Waves - Pacific Ocean" by SecureSubset (https://freesound.org/s/817075/),
+  forest birds "Forest quiet atmosphere with some birds" by felix.blume (https://freesound.org/s/414098/), wind "Wind on bushes ...
+  close to desert ground" by felix.blume (https://freesound.org/s/711106/), crickets "Crickets (close recording)" by felix.blume
+  (https://freesound.org/s/476672/), stream "Relaxing River Sound" by IceVFX (https://freesound.org/s/722875/)
+- RinvalAi/brown-noise-library (Wikimedia Commons, CC0): wind in the trees "245286 dbspin grunewald.wav" by dbspin
+ambience.py cuts a steady 60-80 s stretch of each (the window with the fewest loud events), crossfades the end into the start
+and levels them all to the same loudness.

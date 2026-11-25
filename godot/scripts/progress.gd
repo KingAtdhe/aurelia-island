@@ -64,14 +64,17 @@ static func purse(rid: String) -> int:
 static func is_open(rid: String) -> bool:
 	var k = Race.ORDER.find(rid)
 	if k < 3 or unlocked.has(rid): return true
-	var pb = Race.best(Race.ORDER[k - 1])[1]          # a podium from before the career existed counts too
+	var pb = Race.best(Race.RACES[rid].get("after", Race.ORDER[k - 1]))[1]          # a podium from before the career existed counts too
 	return pb >= 1 and pb <= 3
 static func race_done(rid: String, pos: int) -> Array:          # [credits won, name of a race this unlocked or ""]
 	var won = int(round(purse(rid) * PRIZE[pos - 1] / 50.0)) * 50; earn(won)
 	var k = Race.ORDER.find(rid); var opened = ""
-	if pos <= 3 and k + 1 < Race.ORDER.size():
-		var nx = Race.ORDER[k + 1]
-		if not is_open(nx): unlocked[nx] = true; opened = Race.RACES[nx].name; save()
+	if pos <= 3:
+		for nx in Race.ORDER:          # the next race in the career, or an event that opens after this one
+			var by = Race.RACES[nx].get("after", "" if Race.ORDER.find(nx) == 0 else Race.ORDER[Race.ORDER.find(nx) - 1])
+			if by == rid and not unlocked.has(nx) and opened == "":
+				var was_open = is_open(nx); unlocked[nx] = true; save()
+				if not was_open: opened = Race.RACES[nx].name
 	return [won, opened]
 
 # vehicle numbers for a car with its upgrades (applied on top of the car's base set)

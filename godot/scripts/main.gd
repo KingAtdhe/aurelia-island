@@ -25,6 +25,7 @@ var environment: Environment
 var eyes = 0.0          # 0 in daylight, 1 deep in a tunnel
 var car_sun: DirectionalLight3D
 var lamps: Lamps
+var ambience: Ambience
 var head: SpotLight3D          # the player's headlights at night
 var probe: PackedByteArray; var probe_w = 0; var probe_h = 0; var shade = 1.0
 const START = ["Peninsula Road", 30]
@@ -65,6 +66,7 @@ func _ready():
 	car.nearest_road = nearest_road
 	spawn(START[0], START[1])
 	audio = CarAudio.new(); audio.car = car; add_child(audio)
+	ambience = Ambience.new(); add_child(ambience); ambience.build(self, w)          # waves, water, birds, crickets, wind
 	traffic = Traffic.new(); add_child(traffic); traffic.player = car; traffic.coll = co
 	traffic.build(roads, int(OS.get_environment("TRAFFIC")) if OS.get_environment("TRAFFIC") != "" else Gfx.cars(), world_roads)
 	lamps = Lamps.new(); add_child(lamps); lamps.build(w)
@@ -73,7 +75,7 @@ func _ready():
 	Tod.apply(self)          # time of day: sky, sun or moon, city lights
 	Gfx.apply(self)          # graphics level (start screen): render scale, shadows, draw distances, grass, mesh LOD
 	make_hud()
-	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("TOUR") == "" and OS.get_environment("PROBE") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == "" and OS.get_environment("FUZZ") == ""
+	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("TOUR") == "" and OS.get_environment("PROBE") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == "" and OS.get_environment("FUZZ") == "" and OS.get_environment("AMBTEST") == ""
 	if menu_on or OS.get_environment("SHOTS") == "menu": open_menu()
 	if not menu_on: audio.ignition()
 	if OS.get_environment("CAR") != "" and OS.get_environment("DRIVETEST") != "": car.setup(OS.get_environment("CAR"))
@@ -88,6 +90,7 @@ func _ready():
 	if OS.get_environment("FLOW") != "": add_child(load("res://scripts/_flow.gd").new())
 	if OS.get_environment("TOUR") != "": add_child(load("res://scripts/_tour.gd").new())
 	if OS.get_environment("PROBE") != "": add_child(load("res://scripts/_probe.gd").new())
+	if OS.get_environment("AMBTEST") != "": add_child(load("res://scripts/_ambtest.gd").new())
 	if OS.get_environment("TIMING") != "": add_child(load("res://scripts/_timing.gd").new())
 	if OS.get_environment("ROUTECHECK") != "": var rc = load("res://scripts/_routecheck.gd").new(); add_child(rc)
 

@@ -57,7 +57,7 @@ func show_page(p: String):
 	for c in garage_ui: c.visible = p == "garage"
 	if p == "garage": _build_garage()
 	if p == "races": _build_races(); for c in race_ui: c.visible = true
-	shade.size.x = 460 if p == "" else (620 if p == "garage" else 880)
+	shade.size.x = 460 if p == "" else (620 if p == "garage" else (1240 if p == "races" else 880))
 	_refresh()
 
 func _refresh():
@@ -71,8 +71,8 @@ func _build_races():
 		var R = Race.RACES[rid]; var b = Race.best(rid); var open = Progress.is_open(rid)
 		var bt = _btn("", Vector2(40 + (k / 4) * 400, y + (k % 4) * 104), Vector2(385, 94), func(): if open and _owned(): emit_signal("race", rid)); bt.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		var line2 = ("best %s · %s" % [Race.fmt(b[0]), ["1st", "2nd", "3rd", "4th"][b[1] - 1]]) if b[0] > 0 else "prize %s credits" % _n(Progress.purse(rid))
-		if not open: line2 = "podium in %s to open" % Race.RACES[Race.ORDER[k - 1]].name
-		bt.text = "  %s\n  %s" % [R.name, line2]; bt.add_theme_font_size_override("font_size", 22)
+		if not open: line2 = "podium in %s to open" % Race.RACES[R.get("after", Race.ORDER[k - 1])].name
+		bt.text = "  %s%s\n  %s" % [R.name, Race.tag(rid), line2]; bt.add_theme_font_size_override("font_size", 22)
 		if not open: bt.modulate = Color(1, 1, 1, 0.45)
 		race_ui.append(bt); k += 1
 	race_ui.append(_btn("BACK", Vector2(40, y + 4 * 104 + 6), Vector2(180, 64), func(): show_page("")))

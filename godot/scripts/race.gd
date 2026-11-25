@@ -21,8 +21,16 @@ const RACES = {
 	serpentine = { name = "Serpentine", blurb = "The hill climb: switchbacks up to the summit, 80 metres of height.",
 		segs = [["Serpentine", 2, 226]], skill = 0.97 },
 	gp = { name = "Aurelia Grand Prix", blurb = "Two laps of the racing circuit. Flat out on the straight, brave in the esses.",
-		segs = [["Circuit", 50, 50, 2]], skill = 0.98 } }
-const ORDER = ["coast", "peninsula", "lighthouse", "summit", "descent", "desert", "serpentine", "gp"]
+		segs = [["Circuit", 50, 50, 2]], skill = 0.98 },
+	# time-of-day events: raced at sunset or at night whatever the clock says; each opens with a podium in the race it names
+	golden = { name = "Golden Fields", blurb = "Sunset on the farm road, past the barns, then north along the coast into the low sun.",
+		segs = [["Farm Road", 6, 217], ["Ring", 2000, 1790]], skill = 0.94, tod = 1, after = "lighthouse" },
+	harbour = { name = "Harbour Lights", blurb = "At night along the south coast: the harbour lights, then the dark climb west.",
+		segs = [["Ring", 100, 560]], skill = 0.96, tod = 2, after = "summit" },
+	midnight = { name = "Midnight City", blurb = "Round the edge of the city at night. Four streets, four hard corners, lamps all the way.",
+		segs = [["Street N-480", 2, 112], ["Street E260", 0, 192], ["Street N480", 112, 0], ["Street E-300", 192, 8]], skill = 0.97, tod = 2, after = "desert" } }
+const ORDER = ["coast", "peninsula", "lighthouse", "summit", "descent", "desert", "serpentine", "gp", "golden", "harbour", "midnight"]
+static func tag(rid: String) -> String: return ["", " · SUNSET", " · NIGHT"][RACES[rid].get("tod", 0)]
 const RIVALS = [
 	{ name = "M. Kade", car = "vortex", paint = Color(0.05, 0.16, 0.42), line = -0.45 },
 	{ name = "L. Varga", car = "calder", paint = Color(0.03, 0.03, 0.035), line = 0.4 },
@@ -42,6 +50,7 @@ var state = "count"; var count = 3.6; var t = 0.0; var next_cp = 0; var result_t
 var autopilot = false   # test: the player's car is driven by the same racing driver
 var hud: Control; var info: Label; var big: Label; var msg: Label; var panel: Control
 var wrong_t = 0.0; var off_t = 0.0
+var tod_was = -1
 
 static func best(rid: String) -> Array:
 	var cf = ConfigFile.new(); cf.load(SAVE)
@@ -52,6 +61,7 @@ static func fmt(x: float) -> String:
 
 func start(rid: String, m: Node):
 	id = rid; R = RACES[rid]; main = m; player = m.car; coll = m.coll; traffic = m.traffic
+	if R.has("tod"): tod_was = Tod.get_level(); Tod.level = R.tod; Tod.apply(m)          # sunset or night event (not saved)
 	_build_route(m.roads)
 	_speed_profile()
 	traffic.visible = false; traffic.process_mode = Node.PROCESS_MODE_DISABLED; coll.dyn = []
@@ -374,5 +384,6 @@ func stop():
 		if r.rival: r.car.queue_free()
 	player.frozen = false; coll.dyn2 = []
 	traffic.visible = true; traffic.process_mode = Node.PROCESS_MODE_INHERIT
+	if tod_was >= 0: Tod.level = tod_was; Tod.apply(main)
 	if hud: hud.queue_free()
 	queue_free()

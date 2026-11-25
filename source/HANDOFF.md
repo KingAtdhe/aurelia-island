@@ -317,3 +317,14 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
   (Tod.light_car: player, rivals, traffic) follow the time of day. Street lamps: scripts/lamps.gd + shaders/lamp.gdshader
   (glow + ground pool for the 364 world.json lamps, 2 draws). Player headlights: SpotLight3D at night only.
 - Test hook: TOURPFX=name sets the tour picture names.
+
+## Godot: time-of-day races, ambience, packed data fix (25 Nov 2026)
+- Races (race.gd): golden (Golden Fields, sunset, opens after lighthouse), harbour (Harbour Lights, night, after summit),
+  midnight (Midnight City, night, round the city edge, after desert). RACES[...].tod forces the time of day for the race and
+  puts the player's back after (Tod.level is set, not saved); .after names the race whose podium opens it (progress.gd).
+- Ambience (scripts/ambience.gd): six real field-recording loops (source/audio/ambience.py, credits in CREDITS.md): waves,
+  stream, birds, crickets, wind in trees, open wind. Levels from assets/island/ambience.bin (source/godot_tools/ambience_map.py:
+  distance to sea and to rivers/lakes on a 12 m grid), regions, height and time of day; ducked by speed and in tunnels.
+- Export fix: export_presets include_filter "assets/island/*.bin". Before this, flora.bin, bake_sun.bin (and now ambience.bin)
+  were not packed into the APK, so on phones the trees, rocks and street props were missing and the car light ignored shade.
+- Test hook: AMBTEST=1 prints the ambience levels at a few places.
