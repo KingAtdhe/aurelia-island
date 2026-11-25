@@ -5,6 +5,7 @@ static var _cache := {}
 static var _sh := {}
 
 static var bake_tex: Texture2D
+static var props := false          # set while the flora / props library is converted
 const DECALS = ["Markings", "RoadDecals", "RoadDecalsStreet", "Skids", "Puddles", "ContactAO", "ShoreFoam"]
 static var _dsh := {}
 static func _decal_shader(blend: bool) -> Shader:
@@ -19,7 +20,7 @@ static func shader(name: String) -> Shader:
 
 static func conv(m: Material, has_col: bool) -> Material:
 	if m == null: return m
-	var key = str(m.get_instance_id()) + str(has_col)
+	var key = str(m.get_instance_id()) + str(has_col) + str(props)
 	if _cache.has(key): return _cache[key]
 	var out: Material = m
 	var nm: String = m.resource_name
@@ -45,6 +46,8 @@ static func conv(m: Material, has_col: bool) -> Material:
 			dm.set_shader_parameter("col", sm.albedo_color); dm.set_shader_parameter("rough", sm.roughness); dm.set_shader_parameter("bake", _bake()); dm.set_shader_parameter("bake_rect", BAKE_RECT)
 			if blend: dm.render_priority = 2
 			out = dm
+		elif props and nm in ["WindowGlass", "KitWindow"]:          # parked cars, boats, kiosks: plain dark glass, no rooms behind it
+			var gl := StandardMaterial3D.new(); gl.albedo_color = Color(0.04, 0.05, 0.06); gl.roughness = 0.08; gl.metallic_specular = 0.7; out = gl
 		elif nm in ["WindowGlass", "KitWindow", "HeroCurtain"]:
 			var im := ShaderMaterial.new(); im.shader = shader("interior"); out = im
 		elif nm == "FacadeWindows" or nm == "FacadeGlass":          # facades: windows light up at night

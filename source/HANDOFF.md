@@ -335,3 +335,14 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
 - race.gd solo challenges (RACES[...].mode, .medals): touge (Summit Pass downhill, drift score; gold 9000 / silver 5000 /
   bronze 2000, opens after summit) and trial (one lap of the circuit, gold 1:16 / silver 1:21 / bronze 1:27, opens after
   desert). Medals count as 1st/2nd/3rd for prize money and unlocks; best score/time saved in races.cfg like race times.
+
+## Godot: weather (25 Nov 2026)
+- scripts/weather.gd (Weather): CLEAR / RAIN / STORM, WEATHER button on the start screen (settings.cfg, WEATHER env).
+  Rain streaks: shaders/rain.gdshader on a 3200-instance MultiMesh round the camera (instances need identity transforms:
+  MultiMesh buffers start zeroed). Overcast skies sky_rain.png / sky_rain_night.png (source/godot_tools/sky_rain.py).
+  Tod.apply picks the rain sky, haze (Gfx.FOG x Weather.FOG_K), soft shadows; sun and ambient scaled by Weather.SUN_K/AMB_K.
+- Global shader value wx_wet: road (darker, glossy, standing water in low spots), decals, terrain.
+- Grip: Car mu x Weather.GRIP (asphalt 0.86 / 0.8) and GRIP_OFF off the road. Storm: lightning flashes (sky and ambient)
+  and a real thunder roll 0.6-2.8 s later. Sounds: source/audio/weather.py (credits in CREDITS.md).
+- Look.props: flora/prop library materials KitWindow/WindowGlass get plain dark glass (parked cars, kiosks, boats had
+  glowing rooms in their windows at night).

@@ -131,7 +131,7 @@ func torque_at(r: float) -> float:
 	return V.tqPeak * max(0.5, 1.0 - x * x * 0.85)
 
 func drive(dt: float):
-	mu_s = move_toward(mu_s, MU.get(surf, 0.7), dt * 2.5)          # grip changes over a few tenths of a second: crossing a verge or a seam never jerks the car
+	mu_s = move_toward(mu_s, MU.get(surf, 0.7) * (Weather.GRIP[Weather.get_level()] if surf == "road" else Weather.GRIP_OFF[Weather.get_level()]), dt * 2.5)          # grip changes over a few tenths of a second: crossing a verge or a seam never jerks the car
 	var L = V.a + V.b; var g = 9.81; var mu = V.mu * mu_s
 	var stT = -in_steer; var thT = in_gas; var brT = in_brake
 	var spd0 = Vector2(vx, vz).length(); var srate = (9.0 if stT * st_in < 0 else 5.5) / (1.0 + spd0 / 40.0)

@@ -1,5 +1,6 @@
 shader_type spatial;
-global uniform float tod_sunbake;          // time of day: the baked sun shadows fade out at sunset and night
+global uniform float tod_sunbake;
+global uniform float wx_wet;          // weather: rain makes the ground darker and glossy          // time of day: the baked sun shadows fade out at sunset and night
 // Aurelia ground: map colour (vertex colour) x photo detail, large-scale variation, side projection on steep slopes
 uniform sampler2D detail : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D detail_n : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -36,6 +37,6 @@ void fragment() {
 	ALBEDO = baked(base * d * 1.75 * (0.9 + 0.2 * fine));
 	NORMAL_MAP = texture(detail_n, q * tscale).rgb;
 	NORMAL_MAP_DEPTH = 0.8;
-	ROUGHNESS = rough; METALLIC = 0.0; SPECULAR = 0.3;
+	ALBEDO *= mix(1.0, 0.8, wx_wet); ROUGHNESS = mix(rough, rough * 0.65, wx_wet); METALLIC = 0.0; SPECULAR = mix(0.3, 0.45, wx_wet);
 	//BLEND_ALPHA
 }

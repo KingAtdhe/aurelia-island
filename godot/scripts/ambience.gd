@@ -54,6 +54,8 @@ func _process(dt):
 		want.crickets = clampf(night * 1.2 - 0.15, 0.0, 1.0) * (1.0 - 0.75 * city) * (1.0 - 0.8 * high) * (1.0 - 0.5 * desert)
 		want.trees = clampf(maxf(forest * 0.75, mount * 0.6) + high * 0.4, 0.0, 1.0) * (1.0 - 0.8 * desert)
 		want.wind = clampf(desert * 0.9 + high * 0.8 + 0.15 * (1.0 - city), 0.0, 1.0)
+		if Weather.get_level() > 0:          # rain: the birds and crickets go quiet, the storm wind picks up
+			want.birds *= 0.1; want.crickets *= 0.3; want.wind = minf(1.0, want.wind + 0.25 * (Weather.get_level() - 1))
 	var spd = main.car.speed; var duck = lerpf(1.0, 0.35, clampf((spd - 8.0) / 40.0, 0.0, 1.0))      # the engine and the wind of speed take over
 	var tun = 1.0 - (main.eyes if "eyes" in main else 0.0)
 	var on = 0.0 if main.menu_on and false else 1.0

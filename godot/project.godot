@@ -30,3 +30,7 @@ tod_sunbake={
 "type": "float",
 "value": 1.0
 }
+wx_wet={
+"type": "float",
+"value": 0.0
+}

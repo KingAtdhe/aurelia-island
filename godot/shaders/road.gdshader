@@ -1,5 +1,6 @@
 shader_type spatial;
-global uniform float tod_sunbake;          // time of day: the baked sun shadows fade out at sunset and night
+global uniform float tod_sunbake;
+global uniform float wx_wet;          // weather: rain makes the ground darker and glossy          // time of day: the baked sun shadows fade out at sunset and night
 // asphalt and gravel shoulders: photo texture x map colour, faded stretches, tar repairs, cracks, dust
 uniform sampler2D tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D tex_n : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -27,5 +28,8 @@ void fragment() {
 		float l = dot(c, vec3(0.3, 0.5, 0.2)); c = mix(vec3(l), c, 0.65);           // grey, not green-tinted, and never paler than old worn asphalt
 		c *= min(1.0, 0.17 / max(l, 0.001));
 	} else { c *= 0.75 + 0.5 * big; }
-	ALBEDO = baked(c * (0.88 + 0.24 * fine)); NORMAL_MAP = texture(tex_n, UV).rgb; NORMAL_MAP_DEPTH = 0.7; ROUGHNESS = r; SPECULAR = 0.35;
+	float pool = smoothstep(0.52, 0.7, fbm(q * 0.06 + 3.1)) * wx_wet;          // wet: standing water in the low spots
+	c *= mix(1.0, 0.6, wx_wet) * mix(1.0, 0.75, pool);
+	ALBEDO = baked(c * (0.88 + 0.24 * fine)); NORMAL_MAP = texture(tex_n, UV).rgb; NORMAL_MAP_DEPTH = mix(0.7, 0.25, wx_wet);
+	ROUGHNESS = mix(mix(r, 0.22, wx_wet), 0.04, pool); SPECULAR = mix(0.35, 0.7, wx_wet);
 }

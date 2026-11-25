@@ -37,9 +37,13 @@ static func set_level(l: int):
 	level = clampi(l, 0, 2)
 	var c = ConfigFile.new(); c.load(CFG); c.set_value("tod", "level", level); c.save(CFG)
 
+const SKY_RAIN = ["res://assets/sky_rain.png", "res://assets/sky_rain.png", "res://assets/sky_rain_night.png"]
+const SKY_RAIN_E = [1.0, 0.62, 1.0]
+const FOG_RAIN = [Color(0.62, 0.65, 0.68), Color(0.5, 0.46, 0.45), Color(0.04, 0.045, 0.055)]
 static func night() -> float: return NIGHT[get_level()]
-static func sun_e() -> float: return SUN_E[get_level()]
-static func amb_e() -> float: return AMB_E[get_level()]
+static func sun_e() -> float: return SUN_E[get_level()] * Weather.SUN_K[Weather.get_level()]
+static func amb_e() -> float: return AMB_E[get_level()] * Weather.AMB_K[Weather.get_level()]
+static func sky_e() -> float: return SKY_RAIN_E[get_level()] if Weather.get_level() > 0 else SKY_E[get_level()]
 static func expo() -> float: return EXPO[get_level()]
 
 static func _energy(e: Array) -> float: return lerpf(e[0], e[1], night())
@@ -69,8 +73,12 @@ static func light_car(root: Node):
 
 static func apply(m: Node):
 	var l = get_level(); var e: Environment = m.environment
-	var sm := e.sky.sky_material as PanoramaSkyMaterial; sm.panorama = load(SKY[l]); sm.energy_multiplier = SKY_E[l]
-	e.fog_light_color = FOG[l]; e.ambient_light_sky_contribution = AMB_SKY[l]; e.ambient_light_color = AMB_COL[l]
+	var wx = Weather.get_level()
+	var sm := e.sky.sky_material as PanoramaSkyMaterial; sm.panorama = load(SKY_RAIN[l] if wx > 0 else SKY[l]); sm.energy_multiplier = sky_e()
+	e.fog_light_color = FOG_RAIN[l] if wx > 0 else FOG[l]; e.ambient_light_sky_contribution = AMB_SKY[l]; e.ambient_light_color = AMB_COL[l]
+	e.fog_density = Gfx.FOG[Gfx.get_level()] * Weather.FOG_K[wx]
+	m.sun.shadow_opacity = 0.35 if wx > 0 else 1.0          # overcast: soft, faint shadows
+	if m.weather: m.weather.apply()
 	for s in [m.sun, m.car_sun]:
 		s.light_color = SUN_COL[l]
 		s.global_transform = Transform3D(Basis.looking_at(-SUN_DIR[l].normalized(), Vector3.UP), Vector3.ZERO)

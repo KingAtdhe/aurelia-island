@@ -35,3 +35,8 @@ Taken from the loops of two open collections (each credits the original recordin
 - RinvalAi/brown-noise-library (Wikimedia Commons, CC0): wind in the trees "245286 dbspin grunewald.wav" by dbspin
 ambience.py cuts a steady 60-80 s stretch of each (the window with the fewest loud events), crossfades the end into the start
 and levels them all to the same loudness.
+
+## Weather (weather.py) — CC0 / public domain field recordings
+- Rain bed: "Light Rain Distant Thunder July 5th 2016" by kvgarlic (CC0, via Wikimedia Commons; loop from RinvalAi/brown-noise-library)
+- Storm bed: "Thunderstorm after hot summer day" by stephan (public domain, Wikimedia Commons; loop from RinvalAi/brown-noise-library)
+- Thunder rolls: four cut from "Rain and Thunder Ambience Tübingen" by Sheyvan (https://freesound.org/s/369547/, CC0; via funcoder/omarchy-ambient)

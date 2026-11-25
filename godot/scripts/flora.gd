@@ -29,7 +29,7 @@ func build(spawn: Vector3):
 	focus = spawn
 	var untinted := {}          # Saba's Tripo models are textured and shaded in Blender: no per-instance tint (as in the web game)
 	for f in ["flora_flora", "flora_kit", "flora_tprops"]:
-		var sc = load(DIR + f + ".glb").instantiate(); add_child(sc); Look.apply(sc); sc.visible = false
+		var sc = load(DIR + f + ".glb").instantiate(); add_child(sc); Look.props = true; Look.apply(sc); Look.props = false; sc.visible = false
 		for n in sc.get_children():
 			var m = String(n.name)
 			if not m.begins_with("S_"): continue

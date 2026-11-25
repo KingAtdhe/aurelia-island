@@ -26,6 +26,7 @@ var eyes = 0.0          # 0 in daylight, 1 deep in a tunnel
 var car_sun: DirectionalLight3D
 var lamps: Lamps
 var ambience: Ambience
+var weather: Weather
 var drift: DriftScore          # drift points in free roam and in the Touge Drift event
 var head: SpotLight3D          # the player's headlights at night
 var probe: PackedByteArray; var probe_w = 0; var probe_h = 0; var shade = 1.0
@@ -73,6 +74,7 @@ func _ready():
 	lamps = Lamps.new(); add_child(lamps); lamps.build(w)
 	head = SpotLight3D.new(); head.spot_range = 55.0; head.spot_angle = 30.0; head.spot_attenuation = 0.6; head.spot_angle_attenuation = 1.6; head.light_color = Color(1.0, 0.95, 0.85)
 	head.shadow_enabled = false; head.visible = false; add_child(head)
+	weather = Weather.new(); add_child(weather); weather.build(self)
 	Tod.apply(self)          # time of day: sky, sun or moon, city lights
 	Gfx.apply(self)          # graphics level (start screen): render scale, shadows, draw distances, grass, mesh LOD
 	make_hud()
@@ -376,6 +378,7 @@ func open_menu():
 	menu.changed.connect(func(): car.setup(car.car_id))
 	menu.gfx.connect(func(): Gfx.apply(self))
 	menu.tod.connect(func(): Tod.apply(self))
+	menu.wx.connect(func(): Tod.apply(self))
 	menu.travel.connect(func(rg):
 		if car.car_id != Progress.car: car.setup(Progress.car)
 		travel_to(Vector3(rg[1], 0, rg[2]))

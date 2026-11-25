@@ -40,7 +40,7 @@ static func apply(m: Node):
 	m.sun.shadow_enabled = l > 0
 	m.sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS if l == 2 else DirectionalLight3D.SHADOW_ORTHOGONAL
 	m.sun.directional_shadow_max_distance = 60.0 if l == 2 else 45.0
-	if m.environment: m.environment.glow_enabled = l > 0; m.environment.fog_density = FOG[l]
+	if m.environment: m.environment.glow_enabled = l > 0; m.environment.fog_density = FOG[l] * Weather.FOG_K[Weather.get_level()]
 	if m.cam: m.cam.far = FAR[l]
 	if m.island: Island.ranges(m.island)
 	if m.flora: m.flora.refresh()
