@@ -263,7 +263,9 @@ func _physics_process_body(dt):
 		c.fw = fw
 		var rt = fw.cross(up).normalized()
 		var target = Transform3D(Basis(fw, up, rt), at)
+		var jumped = c.n.global_position.distance_squared_to(at) > 64.0
 		c.n.global_transform = target
+		if jumped: c.n.reset_physics_interpolation()          # put back near the player: appear there, no streak across the map
 		for w in c.wheels: w.rotate_object_local(Vector3(0, 0, 1), -c.v * dt / c.r)
 		c.snd.pitch_scale = SOUND[c.model][0] * (0.85 + c.v / 30.0); c.snd.volume_db = -14.0 + 5.0 * clampf(c.v / 15.0, 0.0, 1.0)
 		dyn.append([at.x, at.z, c.half.x, c.half.y, atan2(-fw.z, fw.x), -1 - ci])

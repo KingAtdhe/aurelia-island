@@ -9,12 +9,13 @@ signal changed          # upgrades or paint bought: the car on show is rebuilt
 signal gfx              # graphics level changed
 signal tod              # time of day changed
 signal wx               # weather changed
+signal ctl              # control options changed
 const REGIONS = [["Coastal Highway", -1300, 780], ["City", 0, 20], ["Harbour", -350, 700], ["Mountain Roads", -150, -900], ["Forest Trails", -1350, -420],
 	["Desert", 1380, -620], ["Racing Circuit", 1260, 355], ["Countryside", 700, 900], ["Heliport", 1715, 1010]]
 var ids = ["vortex", "calder"]; var idx = 0
 var title: Label; var name_lbl: Label; var blurb: Label; var stats: Label; var credits: Label; var note: Label; var root: Control
 var go_btn: Button; var garage_btn: Button; var gfx_btn: Button; var tod_btn: Button; var wx_btn: Button
-var car_ui = []; var race_ui = []; var travel_ui = []; var garage_ui = []; var shade: ColorRect
+var car_ui = []; var race_ui = []; var travel_ui = []; var garage_ui = []; var ctl_ui = []; var shade: ColorRect
 
 func _ready():
 	Progress.load_save(); idx = maxi(0, ids.find(Progress.car))
@@ -28,7 +29,8 @@ func _ready():
 	car_ui = [name_lbl, blurb, stats]
 	car_ui.append(_btn("◀", Vector2(40, 368), Vector2(80, 64), func(): pick(-1)))
 	car_ui.append(_btn("▶", Vector2(130, 368), Vector2(80, 64), func(): pick(1)))
-	go_btn = _btn("FREE ROAM", Vector2(40, 446), Vector2(300, 68), _go); car_ui.append(go_btn)
+	go_btn = _btn("FREE ROAM", Vector2(40, 446), Vector2(250, 68), _go); car_ui.append(go_btn)
+	var cb = _btn("CONTROLS", Vector2(298, 446), Vector2(150, 68), func(): show_page("controls")); cb.add_theme_font_size_override("font_size", 20); car_ui.append(cb)
 	car_ui.append(_btn("RACES", Vector2(40, 524), Vector2(146, 60), func(): show_page("races")))
 	car_ui.append(_btn("TRAVEL", Vector2(194, 524), Vector2(146, 60), func(): show_page("travel")))
 	wx_btn = _btn("", Vector2(348, 524), Vector2(100, 60), _wx); wx_btn.add_theme_font_size_override("font_size", 16); car_ui.append(wx_btn); _wx_text()
@@ -60,9 +62,11 @@ func show_page(p: String):
 	for c in race_ui: c.visible = p == "races"
 	for c in travel_ui: c.visible = p == "travel"
 	for c in garage_ui: c.visible = p == "garage"
+	for c in ctl_ui: c.visible = p == "controls"
 	if p == "garage": _build_garage()
+	if p == "controls": _build_controls()
 	if p == "races": _build_races(); for c in race_ui: c.visible = true
-	shade.size.x = 470 if p == "" else (620 if p == "garage" else (1240 if p == "races" else 880))
+	shade.size.x = 470 if p == "" else (620 if p in ["garage", "controls"] else (1240 if p == "races" else 880))
 	_refresh()
 
 func _refresh():
@@ -123,6 +127,27 @@ func _build_garage():
 			u.paint = k; Progress.save(); emit_signal("changed"); _build_garage(); _show(garage_ui); _refresh())
 		root.add_child(b); garage_ui.append(b)
 	garage_ui.append(_btn("BACK", Vector2(40, y + 90), Vector2(180, 60), func(): show_page("")))
+
+# control options: one row each, the button shows the setting and changes it
+func _build_controls():
+	for c in ctl_ui: c.queue_free()
+	ctl_ui = []
+	ctl_ui.append(_lbl("Controls", 30, Vector2(40, 130)))
+	var rows = [
+		["Steering", Controls.STEER[Controls.steer()], func(): Controls.set_steer(Controls.steer() + 1), "Tilt: turn the phone like a wheel. Level is how you hold it at the start."],
+		["Sensitivity", "%d %%" % int(Controls.sens() * 100), func(): Controls.set_sens((Controls.sens_i() + 1) % Controls.SENS.size()), "How fast and how far the front wheels turn."],
+		["Steering assist", "ON" if Controls.assist() else "OFF", func(): Controls.set_assist(not Controls.assist()), "Catches slides, holds drifts. Off: it is all you."],
+		["Traction control", "ON" if Controls.traction() else "OFF", func(): Controls.set_traction(not Controls.traction()), "Off: full throttle spins the rear wheels."],
+		["Gearbox", Controls.GEARBOX[1 if Controls.manual() else 0], func(): Controls.set_manual(not Controls.manual()), "Manual: + and − buttons above the throttle."]]
+	var y = 186
+	for r in rows:
+		ctl_ui.append(_lbl(r[0], 22, Vector2(40, y + 6)))
+		var h = Label.new(); h.autowrap_mode = TextServer.AUTOWRAP_WORD; h.size = Vector2(285, 44); h.text = r[3]; h.add_theme_font_size_override("font_size", 14)
+		h.position = Vector2(40, y + 34); h.modulate = Color(1, 1, 1, 0.55); root.add_child(h); ctl_ui.append(h)
+		var b = _btn(r[1], Vector2(340, y), Vector2(250, 56), func(): r[2].call(); emit_signal("ctl"); _build_controls(); _show(ctl_ui))
+		b.add_theme_font_size_override("font_size", 20); ctl_ui.append(b)
+		y += 84
+	ctl_ui.append(_btn("BACK", Vector2(40, y + 6), Vector2(180, 60), func(): show_page("")))
 
 func _show(a: Array):
 	for c in a: c.visible = true

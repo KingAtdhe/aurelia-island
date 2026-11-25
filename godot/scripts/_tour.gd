@@ -48,4 +48,5 @@ func _ready():
 		k += 1
 	var worst = m.island.attach_ms.duplicate(); worst.sort_custom(func(a, b): return a[1] > b[1])
 	print("ATTACH worst ", worst.slice(0, 6))
+	print("SHADERCACHE %d" % Warmup.cache_count())
 	get_tree().quit()

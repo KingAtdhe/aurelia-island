@@ -28,6 +28,9 @@ var lamps: Lamps
 var ambience: Ambience
 var weather: Weather
 var worst_ms := 0.0; var _last_us := 0          # test: longest frame since the last report
+var carenv: CarEnv          # what the player's car reflects: sky above, ground and hills below the horizon
+var showroom: Showroom          # the studio with the turntable behind the start screen and garage
+var warm: Warmup          # shader warm-up behind the loading cover (no first-sight stutters)
 var drift: DriftScore          # drift points in free roam and in the Touge Drift event
 var head: SpotLight3D          # the player's headlights at night
 var probe: PackedByteArray; var probe_w = 0; var probe_h = 0; var shade = 1.0
@@ -54,13 +57,13 @@ func _ready():
 	world_roads = w["roads"]
 	for l in w["landmarks"]: landmarks.append([l["name"], Vector3(l["pos"][0], l["pos"][1], l["pos"][2])])
 	var sp0 = _road_pt(START[0], START[1])
-	island = Island.new(); add_child(island); island.load_base(sp0); island.setup_spinners(w)
+	island = Island.new(); island.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF; add_child(island); island.load_base(sp0); island.setup_spinners(w)
 	flora = Flora.new(); add_child(flora); flora.build(sp0)
 	tunnels = Tunnels.new(); add_child(tunnels); tunnels.build(w, island)
 	grass = Grass.new(); add_child(grass); grass.build(w)
 	var sea = MeshInstance3D.new(); var pm = PlaneMesh.new(); pm.size = Vector2(16000, 16000); sea.mesh = pm
 	var wm = ShaderMaterial.new(); wm.shader = load("res://shaders/water.gdshader"); sea.material_override = wm; sea.position = Vector3(0, -0.25, 0); add_child(sea)
-	cam = Camera3D.new(); cam.far = 3000; cam.near = 0.12; cam.fov = 62; add_child(cam); cam.current = true
+	cam = Camera3D.new(); cam.far = 3000; cam.near = 0.12; cam.fov = 62; cam.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF; cam.cull_mask = 0xFFFFF & ~CarEnv.LAYER; add_child(cam); cam.current = true
 	Progress.load_save()
 	car = Car.new(); car.player = true; car.car_id = Progress.car if Progress.car in Progress.cars else "vortex"; add_child(car)
 	var co = Coll.new(); co.load_data("res://assets/island/coll.json", roads); car.coll = co; coll = co; grass.coll = co; grass.main_car = car
@@ -74,13 +77,16 @@ func _ready():
 	traffic.build(roads, int(OS.get_environment("TRAFFIC")) if OS.get_environment("TRAFFIC") != "" else Gfx.cars(), world_roads)
 	lamps = Lamps.new(); add_child(lamps); lamps.build(w)
 	head = SpotLight3D.new(); head.spot_range = 55.0; head.spot_angle = 30.0; head.spot_attenuation = 0.6; head.spot_angle_attenuation = 1.6; head.light_color = Color(1.0, 0.95, 0.85)
-	head.shadow_enabled = false; head.visible = false; add_child(head)
+	head.shadow_enabled = false; head.visible = false; head.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF; add_child(head)
 	weather = Weather.new(); add_child(weather); weather.build(self)
+	if OS.get_environment("CARENV") != "0": carenv = CarEnv.new(); add_child(carenv); carenv.build(car)
 	Tod.apply(self)          # time of day: sky, sun or moon, city lights
 	Gfx.apply(self)          # graphics level (start screen): render scale, shadows, draw distances, grass, mesh LOD
+	showroom = Showroom.new(self); add_child(showroom); showroom.build()
 	make_hud()
 	drift = DriftScore.new(); drift.car = car; hud.add_child(drift)
-	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("TOUR") == "" and OS.get_environment("PROBE") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == "" and OS.get_environment("FUZZ") == "" and OS.get_environment("AMBTEST") == ""
+	apply_controls()
+	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("TOUR") == "" and OS.get_environment("PROBE") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == "" and OS.get_environment("FUZZ") == "" and OS.get_environment("AMBTEST") == "" and OS.get_environment("JITTER") == "" and OS.get_environment("CTLTEST") == ""
 	if menu_on or OS.get_environment("SHOTS") == "menu": open_menu()
 	if not menu_on: audio.ignition()
 	if OS.get_environment("CAR") != "" and OS.get_environment("DRIVETEST") != "": car.setup(OS.get_environment("CAR"))
@@ -89,6 +95,8 @@ func _ready():
 	if OS.get_environment("DRIVETEST") != "": drive_test()
 	if OS.get_environment("TRAFFICTEST") != "": traffic_test()
 	_prewarm()
+	warm = Warmup.new(self); add_child(warm)
+	_warm_then_showroom()
 	if OS.get_environment("RACETEST") != "": race_test(OS.get_environment("RACETEST"))
 	if OS.get_environment("PHYSTEST") != "": phys_test(OS.get_environment("PHYSTEST"))
 	if OS.get_environment("FUZZ") != "": add_child(load("res://scripts/_fuzz.gd").new())
@@ -96,6 +104,8 @@ func _ready():
 	if OS.get_environment("TOUR") != "": add_child(load("res://scripts/_tour.gd").new())
 	if OS.get_environment("PROBE") != "": add_child(load("res://scripts/_probe.gd").new())
 	if OS.get_environment("AMBTEST") != "": add_child(load("res://scripts/_ambtest.gd").new())
+	if OS.get_environment("CTLTEST") != "": add_child(load("res://scripts/_ctltest.gd").new())
+	if OS.get_environment("JITTER") != "": add_child(load("res://scripts/_jitter.gd").new())
 	if OS.get_environment("TIMING") != "": add_child(load("res://scripts/_timing.gd").new())
 	if OS.get_environment("ROUTECHECK") != "": var rc = load("res://scripts/_routecheck.gd").new(); add_child(rc)
 
@@ -106,12 +116,25 @@ func _prewarm():
 		if not Car._merged.has(id):
 			var c = Car.new(); c.car_id = id; c.process_mode = Node.PROCESS_MODE_DISABLED; add_child(c); c.queue_free()
 
+# shaders first (behind the loading cover), then the car goes up onto the turntable if the start screen is open
+func _warm_then_showroom():
+	if OS.get_environment("NOWARM") == "": await warm.run(OS.get_environment("SHOTS") == "" and OS.get_environment("TOUR") == "" and OS.get_environment("RACESHOTS") == "")
+	if menu_on and menu: showroom.enter()
+
+func _input(e):          # showroom: drag across the picture (right of the menu panel) to turn the car
+	if not (menu_on and showroom and showroom.active): return
+	if e is InputEventScreenDrag and e.position.x > 480: showroom.drag(e.relative.x)
+	elif e is InputEventMouseMotion and (e.button_mask & MOUSE_BUTTON_MASK_LEFT) and e.position.x > 480: showroom.drag(e.relative.x)
+
 func start_race(rid: String):
+	if showroom.active: showroom.leave()
 	if race: race.stop(); race = null
 	if menu: menu.queue_free(); menu = null
 	menu_on = false; hud.visible = true; touch = { left = false, right = false, gas = false, brake = false, hand = false }
 	race = Race.new(); add_child(race); race.start(rid, self)
+	if warm: warm.run(false)          # the rivals, gates and any new lights: compiled during the countdown
 	if not audio.on: audio.ignition()
+	Controls.zero_tilt()          # tilt steering: straight ahead is how the phone is held now
 
 func end_race():
 	if race: race.stop(); race = null
@@ -213,10 +236,23 @@ func spawn(road: String, i: int):
 	var p = roads[road]; var a = Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]); var b = Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
 	car.place(a, atan2(b.x - a.x, b.z - a.z)); cam_yaw = car.hd; cam_pos = a - Vector3(sin(car.hd), 0, cos(car.hd)) * 9 + Vector3(0, 4, 0)
 
+var _keys_shift = [false, false]
+var touch_btns = {}          # HUD touch buttons by name (left/right hide in tilt mode, shift buttons only with the manual gearbox)
+func apply_controls():          # control options changed (or the game starts): the car's driving aids, the buttons on screen
+	Controls.apply(car)
+	var tilt = Controls.steer() > 0
+	for k in ["left", "right"]: if touch_btns.has(k): touch_btns[k].visible = not tilt
+	for k in ["up", "down"]: if touch_btns.has(k): touch_btns[k].visible = Controls.manual()
+
 func _physics_process(dt):
 	if race and race.autopilot: return          # test: the race drives the player's car
 	var l = touch.left or Input.is_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_A); var r = touch.right or Input.is_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_D)
 	car.in_steer = (-1.0 if l else 0.0) + (1.0 if r else 0.0)
+	if Controls.steer() > 0 and car.in_steer == 0.0 and not menu_on: car.in_steer = Controls.tilt_steer()          # tilt steering (keys still work)
+	var su = Input.is_key_pressed(KEY_E) or Input.is_key_pressed(KEY_PAGEUP); var sd = Input.is_key_pressed(KEY_Q) or Input.is_key_pressed(KEY_PAGEDOWN)
+	if su and not _keys_shift[0]: car.shift(1)
+	if sd and not _keys_shift[1]: car.shift(-1)
+	_keys_shift = [su, sd]
 	car.in_gas = 1.0 if (touch.gas or Input.is_key_pressed(KEY_UP) or Input.is_key_pressed(KEY_W)) else 0.0
 	car.in_brake = 1.0 if (touch.brake or Input.is_key_pressed(KEY_DOWN) or Input.is_key_pressed(KEY_S)) else 0.0
 	car.in_hand = touch.hand or Input.is_key_pressed(KEY_SPACE)
@@ -227,13 +263,14 @@ func _process(dt):
 	update_camera(dt)
 	_landmarks(dt)
 	var fp = Vector3(car.px, car.py, car.pz) if view_car < 0 else cam.global_position
+	if showroom and showroom.active: fp = showroom.focus()          # the island stays loaded where the car was
 	island.focus = fp; flora.focus = fp; grass.focus = fp
 	# eyes adjusting in a tunnel: the sun and the sky fade, exposure opens up a little
 	var tin = tunnels.inside(Vector3(car.px, car.py, car.pz)) if tunnels else 0.0
 	eyes = move_toward(eyes, tin, dt * (0.9 if tin > eyes else 0.6))
 	sun.light_energy = Tod.sun_e() * (1.0 - 0.88 * eyes); environment.ambient_light_energy = Tod.amb_e() * (1.0 - 0.75 * eyes); environment.tonemap_exposure = Tod.expo() + 0.12 * eyes
 	if head.visible:          # headlights: low beam ahead of the car
-		var fw = Vector3(sin(car.hd), 0.0, cos(car.hd)); var hp = Vector3(car.px, car.py + 0.75, car.pz) + fw * 2.1
+		var vh0 = car.vis_hd(); var fw = Vector3(sin(vh0), 0.0, cos(vh0)); var hp = car.vis_pos() + Vector3(0, 0.75, 0) + fw * 2.1
 		head.global_position = hp; head.look_at(hp + fw * 12.0 + Vector3(0, -1.4, 0))
 	shade = lerpf(shade, sun_at(Vector3(car.px, car.py, car.pz)), clampf(dt * 5.0, 0.0, 1.0))
 	car_sun.light_energy = sun.light_energy * lerpf(0.1, 1.0, shade)
@@ -245,21 +282,22 @@ func _process(dt):
 	if speed_lbl: speed_lbl.text = "%d" % int(car.speed * 3.6); gear_lbl.text = "R" if car.vf < -0.5 and car.in_brake > 0 else str(car.gear + 1)
 
 func update_camera(dt: float):          # port of the web chase camera: swings round the car, follows the slide in a drift
-	if menu_on:            # garage: slow orbit round the parked car, framed to the right of the panel
+	if menu_on and showroom.active: showroom.update(cam, dt); return
+	if menu_on:            # start screen before the showroom opens: slow orbit round the parked car
 		orbit += dt * 0.25; var c0 = Vector3(car.px, car.py, car.pz)
 		cam.position = c0 + Vector3(sin(orbit) * 7.0, 2.2, cos(orbit) * 7.0); cam.look_at(c0 + Vector3(0, 0.6, 0)); cam.h_offset = -1.6
 		return
 	cam.h_offset = 0.0
-	var fx = sin(car.hd); var fz = cos(car.hd); var sp = car.speed; var dist: float = CAMS[cam_mode][0]; var hgt: float = CAMS[cam_mode][1]
-	var c = Vector3(car.px, car.py, car.pz)
+	var c = car.vis_pos(); var hdv = car.vis_hd()          # the car as drawn this frame (between physics steps): no judder
+	var fx = sin(hdv); var fz = cos(hdv); var sp = car.speed; var dist: float = CAMS[cam_mode][0]; var hgt: float = CAMS[cam_mode][1]
 	if cam_mode == 2:
 		cam.position = c + Vector3(fx * dist, hgt, fz * dist); cam.look_at(c + Vector3(fx * 30, hgt * 0.9, fz * 30)); return
-	var vh = atan2(car.vx, car.vz) if sp > 3 else car.hd
-	var dh = wrapf(vh - car.hd, -PI, PI)
-	var ch = car.hd + clamp(dh, -0.85, 0.85) * 0.62 * (0.0 if car.vf < -1 else 1.0); var d = dist + min(sp, 60.0) * 0.022
+	var vh = atan2(car.vx, car.vz) if sp > 3 else hdv
+	var dh = wrapf(vh - hdv, -PI, PI)
+	var ch = hdv + clamp(dh, -0.85, 0.85) * 0.62 * (0.0 if car.vf < -1 else 1.0); var d = dist + min(sp, 60.0) * 0.022
 	cam_yaw += wrapf(ch - cam_yaw, -PI, PI) * (1 - exp(-dt * 4.2))
-	var cs = sin(cam_yaw); var cc = cos(cam_yaw); var ty = car.py + hgt + min(sp, 60.0) * 0.004
-	cam_pos.x = car.px - cs * d; cam_pos.z = car.pz - cc * d; cam_pos.y = lerpf(cam_pos.y, ty, 1 - exp(-dt * 6))
+	var cs = sin(cam_yaw); var cc = cos(cam_yaw); var ty = c.y + hgt + min(sp, 60.0) * 0.004
+	cam_pos.x = c.x - cs * d; cam_pos.z = c.z - cc * d; cam_pos.y = lerpf(cam_pos.y, ty, 1 - exp(-dt * 6))
 	var gq = car.ground(cam_pos.x, cam_pos.z, cam_pos.y + 2)
 	cam_pos.y = max(cam_pos.y, gq[0] + 0.6)
 	shake = maxf(0.0, shake - dt * 1.2)
@@ -289,7 +327,9 @@ func make_hud():
 	var mk = func(key: String, pos: Vector2, rad: int, txt: String):
 		var b = TouchScreenButton.new(); b.texture_normal = circle_tex(rad, Color(0.08, 0.1, 0.13, 0.45)); b.texture_pressed = circle_tex(rad, Color(0.9, 0.9, 0.95, 0.35))
 		var sh = CircleShape2D.new(); sh.radius = rad; b.shape = sh; b.shape_centered = true; b.position = pos - Vector2(rad, rad)
-		b.pressed.connect(func(): touch[key] = true); b.released.connect(func(): touch[key] = false)
+		if key == "up" or key == "down": b.pressed.connect(func(): car.shift(1 if key == "up" else -1))
+		else: b.pressed.connect(func(): touch[key] = true); b.released.connect(func(): touch[key] = false)
+		touch_btns[key] = b
 		var lb = Label.new(); lb.text = txt; lb.add_theme_font_size_override("font_size", int(rad * 0.5)); lb.size = Vector2(rad * 2, rad * 2)
 		lb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; lb.vertical_alignment = VERTICAL_ALIGNMENT_CENTER; lb.modulate = Color(1, 1, 1, 0.9); b.add_child(lb)
 		hud.add_child(b)
@@ -298,6 +338,8 @@ func make_hud():
 	mk.call("gas", Vector2(vs.x - 110, vs.y - 130), 74, "▲")
 	mk.call("brake", Vector2(vs.x - 270, vs.y - 100), 58, "▼")
 	mk.call("hand", Vector2(vs.x - 390, vs.y - 90), 44, "D")
+	mk.call("up", Vector2(vs.x - 110, vs.y - 275), 46, "+")          # manual gearbox: shift up / down
+	mk.call("down", Vector2(vs.x - 215, vs.y - 228), 40, "−")
 	var gauge = Hud.Gauge.new(); gauge.car = car; gauge.size = Vector2(186, 186); gauge.position = Vector2(338, vs.y - 196); gauge.mouse_filter = Control.MOUSE_FILTER_IGNORE; hud.add_child(gauge)
 	minimap = Hud.MiniMap.new(self, 230.0); minimap.position = Vector2(vs.x - 250, 20); hud.add_child(minimap)
 	var x = 20.0
@@ -305,6 +347,7 @@ func make_hud():
 		var b = Button.new(); b.text = bdef[0]; b.position = Vector2(x, 20); b.custom_minimum_size = Vector2(96, 48); Hud.style_button(b); b.pressed.connect(bdef[1]); hud.add_child(b); x += 108.0
 
 func reset_car():
+	Controls.zero_tilt()
 	if race:
 		if race.state != "count": race.reset_player()
 	else: car.place(Vector3(car.safe.x, car.safe.y, car.safe.z), car.safe.w)
@@ -375,21 +418,25 @@ func perf_test():           # draw calls and triangles with each group switched 
 func open_menu():
 	menu_on = true; hud.visible = false; touch = { left = false, right = false, gas = false, brake = false, hand = false }
 	menu = Menu.new(); add_child(menu)
+	if warm and not warm.busy: showroom.enter()
 	menu.race.connect(func(rid):
 		if car.car_id != Progress.car: car.setup(Progress.car)          # the car on show may be one not bought yet
 		start_race(rid))
-	menu.changed.connect(func(): car.setup(car.car_id))
-	menu.gfx.connect(func(): Gfx.apply(self))
+	menu.changed.connect(func(): car.setup(car.car_id); showroom.car_changed())
+	menu.gfx.connect(func(): Gfx.apply(self); warm.reset(); warm.run())
 	menu.tod.connect(func(): Tod.apply(self))
 	menu.wx.connect(func(): Tod.apply(self))
+	menu.ctl.connect(apply_controls)
 	menu.travel.connect(func(rg):
 		if car.car_id != Progress.car: car.setup(Progress.car)
+		showroom.leave(false)
 		travel_to(Vector3(rg[1], 0, rg[2]))
-		menu.queue_free(); menu = null; menu_on = false; hud.visible = true; audio.ignition())
+		menu.queue_free(); menu = null; menu_on = false; hud.visible = true; audio.ignition(); Controls.zero_tilt())
 	menu.drive.connect(func(id):
-		if id.begins_with("preview:"): car.setup(id.substr(8)); spawn(START[0], START[1]); return
-		if car.car_id != id: car.setup(id); spawn(START[0], START[1])
-		menu.queue_free(); menu = null; menu_on = false; hud.visible = true; audio.ignition())
+		if id.begins_with("preview:"): car.setup(id.substr(8)); showroom.car_changed(); return
+		if car.car_id != id: car.setup(id)
+		showroom.leave()
+		menu.queue_free(); menu = null; menu_on = false; hud.visible = true; audio.ignition(); Controls.zero_tilt())
 
 func traffic_test():        # headless: watch every traffic car for jumps, sudden turns, overlaps and lost ground
 	var last = {}

@@ -12,6 +12,17 @@ const RRS := { road = 1.0, dirt = 2.5, grass = 10.0, sand = 13.0, snow = 6.0 }
 # input (set by the HUD): steer -1..1 (left negative), gas, brake 0..1, hand bool
 var in_steer = 0.0; var in_gas = 0.0; var in_brake = 0.0; var in_hand = false
 var assist = true
+var tc = true            # traction control in grip driving (player option)
+var sens = 1.0           # steering sensitivity: speed and reach of the wheels for an input (player option)
+var manual = false       # manual gearbox: gears change only by shift() (player option)
+func shift(d: int):
+	if not manual or shiftT > 0.0: return
+	var g = gear + d
+	if g < 0 or g > V.gears.size() - 1: return
+	if d < 0:          # no downshift that would throw the engine far past the red line
+		var wr = abs(vf) / V.r * 9.5493 * V.gears[g] * V.fd
+		if wr > V.red + 400.0: return
+	gear = g; shiftT = 0.16 if d > 0 else 0.1
 
 var px = 0.0; var py = 0.0; var pz = 0.0; var hd = 0.0; var vx = 0.0; var vz = 0.0; var vy = 0.0; var yr = 0.0
 var delta_ = 0.0; var st_in = 0.0; var thr = 0.0; var brk = 0.0; var af = 0.0; var ar = 0.0; var axf = 0.0; var ayf = 0.0
@@ -107,6 +118,7 @@ func place(p: Vector3, h: float):
 		var a0 = ground(px + fx * 1.4, pz + fz * 1.4, py + 1)[0]; var a1 = ground(px - fx * 1.4, pz - fz * 1.4, py + 1)[0]
 		var a2 = ground(px + fz * 0.85, pz - fx * 0.85, py + 1)[0]; var a3 = ground(px - fz * 0.85, pz + fx * 0.85, py + 1)[0]
 		var sp = rest(py, a0, a1, 1.4); var sr = rest(py, a2, a3, 0.85); pitch = sp[0]; roll = sr[0]; body_lift = maxf(sp[1], sr[1])
+		position = Vector3(px, py, pz); rotation = Vector3(0, hd, 0); reset_physics_interpolation()          # a jump, not a glide across the map
 	safe = Vector4(p.x, p.y, p.z, h)
 
 # how the body sits on three ground points along one axis (ahead, centre, behind at +-half): over a crest it rests on the
@@ -134,7 +146,7 @@ func drive(dt: float):
 	mu_s = move_toward(mu_s, MU.get(surf, 0.7) * (Weather.GRIP[Weather.get_level()] if surf == "road" else Weather.GRIP_OFF[Weather.get_level()]), dt * 2.5)          # grip changes over a few tenths of a second: crossing a verge or a seam never jerks the car
 	var L = V.a + V.b; var g = 9.81; var mu = V.mu * mu_s
 	var stT = -in_steer; var thT = in_gas; var brT = in_brake
-	var spd0 = Vector2(vx, vz).length(); var srate = (9.0 if stT * st_in < 0 else 5.5) / (1.0 + spd0 / 40.0)
+	var spd0 = Vector2(vx, vz).length(); var srate = (9.0 if stT * st_in < 0 else 5.5) / (1.0 + spd0 / 40.0) * sens
 	st_in += clamp(stT - st_in, -srate * dt, srate * dt); thr += clamp(thT - thr, -dt * 10, dt * 7); brk += clamp(brT - brk, -dt * 12, dt * 9)
 	var sub = 4; var h = dt / sub; var r = yr; var wx = vx; var wz = vz; var bx = 0.0; var by = 0.0
 	for k in sub:
@@ -143,7 +155,7 @@ func drive(dt: float):
 		var slide = clampf((abs(ar) - 0.15) / 0.15, 0, 1) if spd > 4 else 0.0
 		var lock = V.dmax + (V.lockD - V.dmax) * slide
 		var align = clamp(atan2(by + V.a * r, bx), -lock, lock) if bx > 2 else 0.0
-		var rng = max(0.075, V.dmax / (1.0 + pow(max(bx, 0.0) / 12.0, 2) * 1.2))
+		var rng = minf(lock, max(0.075, V.dmax / (1.0 + pow(max(bx, 0.0) / 12.0, 2) * 1.2)) * lerpf(1.0, sens, 0.7))
 		if st_in * align > 0: rng += (lock - rng) * slide
 		var yawLim = clampf(1.0 - (abs(r) - 1.1) / 0.9, 0.15, 1.0) if (assist and st_in * r > 0) else 1.0
 		var dT = clamp((0.85 if assist else 0.25) * slide * align + st_in * rng * yawLim, -lock, lock)
@@ -160,6 +172,8 @@ func drive(dt: float):
 		var wheelRpm = abs(bx) / V.r * 9.5493 * abs(ratio)
 		var sideways = abs(bt) > 0.22
 		if shiftT > 0: shiftT -= h
+		elif manual:
+			if gear > 0 and abs(bx) < 1.0 and thT < 0.1: gear = 0          # stopped: first gear is ready for the next launch
 		elif sideways: pass
 		elif not rev and gear < 5 and (wheelRpm > V.up or (rpm > V.up and wheelRpm > V.up * 0.72)): gear += 1; shiftT = 0.16
 		elif not rev and gear > 0 and wheelRpm * V.gears[gear - 1] / V.gears[gear] < V.down: gear -= 1; shiftT = 0.1
@@ -175,7 +189,7 @@ func drive(dt: float):
 		if pwr > 0.4: drift = max(drift, 0.6)
 		var ab = abs(bt); var grow = (ab - pb) / h; pb = ab
 		if assist and Fdrive > 0 and ab > 0.35 and drift > 0: Fdrive *= clamp(1 - 2.6 * (ab - 0.55) - 0.9 * grow, 0.22, 1)
-		if drift <= 0 and Fdrive > 0:
+		if tc and drift <= 0 and Fdrive > 0:
 			var lt = Pr * lat(ar, V.Br, V.C); Fdrive = min(Fdrive, 0.95 * sqrt(max(0.0, Pr * Pr - lt * lt)))
 		var Fb = 0.0 if rev else brk * V.brake * V.m * g; var sv = sign(bx) if abs(bx) > 0.3 else bx / 0.3
 		var Fxf = -sv * min(Fb * V.bias, 0.96 * Pf); var Fyf = Pf * lat(af, V.B, V.C) * sqrt(max(0.0, 1 - pow(Fxf / Pf, 2)))
@@ -284,6 +298,12 @@ func _physics_process_body(dt):
 		if w.steer: w.steer.rotation.y = delta_
 
 var body_lift := 0.0
+# where the car is drawn this frame: between the last two physics steps (physics interpolation), so the camera and the
+# headlights follow the car as seen, not the 60 Hz physics position
+func vis_pos() -> Vector3: return get_global_transform_interpolated().origin if is_inside_tree() else Vector3(px, py, pz)
+func vis_hd() -> float:
+	if not is_inside_tree(): return hd
+	var z = get_global_transform_interpolated().basis.z; return atan2(z.x, z.z)
 var nearest_road: Callable          # set by the game: position -> [road point, heading] nearest to it
 var impact := 0.0         # speed into the last thing hit (m/s), for the crash sound
 var impact_kind := "solid"   # car, rail or solid: which crash recordings fit

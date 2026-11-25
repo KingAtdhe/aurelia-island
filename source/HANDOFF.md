@@ -360,3 +360,34 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
   30 Hz; traffic ground rays short and only within 110 m; detail chunks are instanced and materialised on a worker thread
   (main-thread attach ~0.03 ms). PROF=1 prints time per system with RACETEST / PHYSTEST.
 - Ground/road photo textures back at full size (colour 2048, normal 1024), anisotropic 8x; mobile shadow map 2048.
+
+## Godot: smooth frames, shader warm-up, showroom, car reflections, control options (25 Nov 2026, APK 37)
+- Physics interpolation on (project.godot physics/common/physics_interpolation). Car, rivals and traffic are drawn between
+  60 Hz physics steps; the chase camera and headlights follow Car.vis_pos()/vis_hd() (interpolated pose). Nodes moved in
+  _process (camera, headlight, Island spinners, Showroom, CarEnv, Warmup) have PHYSICS_INTERPOLATION_MODE_OFF; Car.place
+  and traffic jumps > 8 m call reset_physics_interpolation(). Test: JITTER=45 (speed ratio sd 0.354 before, 0.002-0.003 now).
+- Shader warm-up (scripts/warmup.gd, class Warmup): behind "Getting the island ready..." it draws one small quad per
+  distinct shader (dedup by Warmup.shader_key) for everything in the tree, the flora library (instanced), both cars as
+  rivals set them up, and assets/island/warm.scn (one quad per distinct map-chunk material, built by
+  `godot --headless -s res://scripts/_make_warm.gd`; rebuild after the chunks change). Each in its owner's render layer and
+  shadow setting, two frames with a spot light (night variants) and two without. Runs at start, at race start (no cover)
+  and after a graphics change; skipped headless. Measured with the GL shader cache: night + rain tour over coast, city
+  and desert compiled 43 programs while driving without it; with it 50 at load and 0 new while driving.
+  Test: clear user://shader_cache, TOUR prints SHADERCACHE at the end, WARMUP prints the count at load.
+- Showroom (scripts/showroom.gd, shaders/studio_sky.gdshader): the start screen, garage and controls pages show the car on
+  a turntable in a dark studio at (0, 700, 0) (camera cull mask cars + layer 8, its own Environment, key light with
+  shadow; island sun, car sun and the reflection probe hidden; traffic paused; Ambience bus muted). Drag right of the
+  panel to turn it. The island stays loaded at the spot the car left (Showroom.focus); leaving puts the car back.
+  The studio sky is full brightness only in the reflection cubemap (AT_CUBEMAP_PASS); seen directly it is dim.
+- Car reflections (scripts/car_env.gd, shaders/car_env_dome.gdshader): the sky pictures are bright below the horizon,
+  so cars reflected grey there. A ReflectionProbe (UPDATE_ONCE, re-done on time of day / weather) rides with the player
+  car, sees only a ground + hills dome on layer 20 plus the sky, and its reflections go only to layer 2 (cars):
+  reflection_mask = 2, so the road and verges are unchanged. CARENV=0 switches it off for A/B pictures.
+- Controls (scripts/controls.gd, CONTROLS page): steering BUTTONS / TILT / TILT (REVERSED) (accelerometer roll, +-24 deg
+  full lock, 2 deg dead zone, zeroed when driving starts, at race start and on RESET; arrow buttons hidden in tilt),
+  sensitivity 60-140 % (Car.sens scales steering speed and range), steering assist, traction control (Car.tc), gearbox
+  AUTO / MANUAL (Car.manual, Car.shift(+-1), + and - buttons above the throttle, keys E/Q; protected downshifts, first
+  gear when stopped). Saved in settings.cfg [ctl]. Test: CTLTEST=1 (manual shifts, wheelspin with TC off 142/150
+  frames vs 0, wheel angle 2.7 / 6.3 / 11.4 deg at sensitivity 0.6 / 1.0 / 1.4).
+- Not checked here: tilt direction on Saba's phone (the REVERSED option covers it).
+- A professional Claude skill for this project was written this session (aurelia-car-game.skill, sent to Saba).

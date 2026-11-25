@@ -88,3 +88,4 @@ static func apply(m: Node):
 		if is_instance_valid(a[0]): a[0].emission_energy_multiplier = _energy(a[1])
 	if m.lamps: m.lamps.set_on(NIGHT[l])
 	if m.head: m.head.visible = l == 2; m.head.light_energy = 60.0
+	if m.get("carenv"): m.carenv.refresh()
