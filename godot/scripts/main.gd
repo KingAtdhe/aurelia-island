@@ -7,7 +7,7 @@ var roads = {}
 var shake = 0.0
 var menu: Menu; var menu_on = false; var orbit = 0.0
 var cam_pos = Vector3.ZERO; var cam_yaw = 0.0; var cam_mode = 0; var cam_fix = 0.0
-const CAMS = [[5.9, 2.05], [9.5, 3.6], [2.75, 0.62]]
+const CAMS = [[5.9, 2.05], [9.5, 3.6], [2.75, 0.62], [0.0, 0.0]]          # chase, far chase, bumper, cockpit
 var hud: CanvasLayer; var speed_lbl: Label; var gear_lbl: Label; var minimap
 var traffic: Traffic
 var coll: Coll
@@ -28,6 +28,7 @@ var lamps: Lamps
 var ambience: Ambience
 var weather: Weather
 var worst_ms := 0.0; var _last_us := 0          # test: longest frame since the last report
+var tyrefx: TyreFX          # tyre smoke and skid marks
 var carenv: CarEnv          # what the player's car reflects: sky above, ground and hills below the horizon
 var showroom: Showroom          # the studio with the turntable behind the start screen and garage
 var warm: Warmup          # shader warm-up behind the loading cover (no first-sight stutters)
@@ -83,13 +84,14 @@ func _ready():
 	Tod.apply(self)          # time of day: sky, sun or moon, city lights
 	Gfx.apply(self)          # graphics level (start screen): render scale, shadows, draw distances, grass, mesh LOD
 	showroom = Showroom.new(self); add_child(showroom); showroom.build()
+	tyrefx = TyreFX.new(); add_child(tyrefx); tyrefx.build(); tyrefx.add_car(car)
 	make_hud()
 	drift = DriftScore.new(); drift.car = car; hud.add_child(drift)
 	apply_controls()
 	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("TOUR") == "" and OS.get_environment("PROBE") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == "" and OS.get_environment("FUZZ") == "" and OS.get_environment("AMBTEST") == "" and OS.get_environment("JITTER") == "" and OS.get_environment("CTLTEST") == ""
 	if menu_on or OS.get_environment("SHOTS") == "menu": open_menu()
 	if not menu_on: audio.ignition()
-	if OS.get_environment("CAR") != "" and OS.get_environment("DRIVETEST") != "": car.setup(OS.get_environment("CAR"))
+	if OS.get_environment("CAR") != "" and (OS.get_environment("DRIVETEST") != "" or OS.get_environment("PHYSTEST") != ""): car.setup(OS.get_environment("CAR"))
 	if OS.get_environment("SHOTS") != "": run_shots()
 	if OS.get_environment("PERF") != "": perf_test()
 	if OS.get_environment("DRIVETEST") != "": drive_test()
@@ -288,6 +290,8 @@ func update_camera(dt: float):          # port of the web chase camera: swings r
 		cam.position = c0 + Vector3(sin(orbit) * 7.0, 2.2, cos(orbit) * 7.0); cam.look_at(c0 + Vector3(0, 0.6, 0)); cam.h_offset = -1.6
 		return
 	cam.h_offset = 0.0
+	cam.near = 0.04 if cam_mode == 3 else 0.12; cam.fov = 70.0 if cam_mode == 3 else 62.0
+	if cam_mode == 3: _cockpit(dt); return
 	var c = car.vis_pos(); var hdv = car.vis_hd()          # the car as drawn this frame (between physics steps): no judder
 	var fx = sin(hdv); var fz = cos(hdv); var sp = car.speed; var dist: float = CAMS[cam_mode][0]; var hgt: float = CAMS[cam_mode][1]
 	if cam_mode == 2:
@@ -307,6 +311,19 @@ func update_camera(dt: float):          # port of the web chase camera: swings r
 	if hit: want = hit.position + (eye - hit.position).normalized() * 0.45            # a wall, house or hill between: come in front of it, never through
 	cam_fix = lerpf(cam_fix, 1.0 if hit else 0.0, 1.0 - exp(-dt * 10.0))
 	cam.position = want; cam.look_at(c + Vector3(cs * 4, 1.1, cc * 4))
+
+# cockpit camera: the driver's eyes, moving with the body (pitch and roll), leaning a little with the g-forces and
+# glancing into a slide
+var _look = 0.0
+func _cockpit(dt: float):
+	var bx: Transform3D = car.body.get_global_transform_interpolated()
+	var g = Vector3(clampf(-car.ayf * 0.0035, -0.05, 0.05), 0.0, clampf(-car.axf * 0.004, -0.05, 0.05))
+	var vh = atan2(car.vx, car.vz) if car.speed > 4 else car.hd
+	_look = lerpf(_look, clampf(wrapf(vh - car.hd, -PI, PI), -0.6, 0.6) * 0.35, 1.0 - exp(-dt * 3.0))
+	shake = maxf(0.0, shake - dt * 1.2)
+	var sh = Vector3(randf() - 0.5, randf() - 0.5, 0.0) * shake * 0.05
+	cam.global_position = bx * (car.eye + g + sh)
+	cam.global_basis = bx.basis.orthonormalized() * Basis(Vector3.UP, PI + _look) * Basis(Vector3.RIGHT, -0.06)
 
 func circle_tex(r: int, col: Color, label := "") -> Texture2D:          # touch button: soft-edged disc with a light rim
 	var img = Image.create(r * 2, r * 2, false, Image.FORMAT_RGBA8)
@@ -343,7 +360,7 @@ func make_hud():
 	var gauge = Hud.Gauge.new(); gauge.car = car; gauge.size = Vector2(186, 186); gauge.position = Vector2(338, vs.y - 196); gauge.mouse_filter = Control.MOUSE_FILTER_IGNORE; hud.add_child(gauge)
 	minimap = Hud.MiniMap.new(self, 230.0); minimap.position = Vector2(vs.x - 250, 20); hud.add_child(minimap)
 	var x = 20.0
-	for bdef in [["CAM", func(): cam_mode = (cam_mode + 1) % 3], ["RESET", reset_car], ["MENU", func(): end_race(); open_menu()]]:
+	for bdef in [["CAM", func(): cam_mode = (cam_mode + 1) % CAMS.size()], ["RESET", reset_car], ["MENU", func(): end_race(); open_menu()]]:
 		var b = Button.new(); b.text = bdef[0]; b.position = Vector2(x, 20); b.custom_minimum_size = Vector2(96, 48); Hud.style_button(b); b.pressed.connect(bdef[1]); hud.add_child(b); x += 108.0
 
 func reset_car():
@@ -423,7 +440,7 @@ func open_menu():
 		if car.car_id != Progress.car: car.setup(Progress.car)          # the car on show may be one not bought yet
 		start_race(rid))
 	menu.changed.connect(func(): car.setup(car.car_id); showroom.car_changed())
-	menu.gfx.connect(func(): Gfx.apply(self); warm.reset(); warm.run())
+	menu.gfx.connect(func(): Gfx.apply(self); tyrefx.rebuild(); warm.reset(); warm.run())
 	menu.tod.connect(func(): Tod.apply(self))
 	menu.wx.connect(func(): Tod.apply(self))
 	menu.ctl.connect(apply_controls)
@@ -455,6 +472,7 @@ func traffic_test():        # headless: watch every traffic car for jumps, sudde
 				if o.n.global_position.distance_to(p) < 4.5: print("OVERLAP t=%.2f cars %d %d lanes %d %d dirs %d %d dist %.2f" % [step / 30.0, k, j, c.lane, o.lane, c.dir, o.dir, o.n.global_position.distance_to(p)])
 	get_tree().quit()
 
+var _pshots = []; var _pk = 0
 func phys_test(kind: String):    # test: log the car every physics frame through a scripted scenario
 	var t = 0.0; var last = Vector3(car.px, car.py, car.pz); var lp = [car.pitch, car.roll]
 	var plan = { start = [[0.0, 3.0, 0, 0, false], [3.0, 7.0, 1, 0, false], [7.0, 9.0, 0, 1, false]],
@@ -483,6 +501,12 @@ func phys_test(kind: String):    # test: log the car every physics frame through
 		for st in plan:
 			if t >= st[0] and t < st[1]: touch.gas = st[2] == 1; touch.brake = st[3] == 1; touch.hand = st[4]
 		if kind == "drift": touch.right = t > 3.8 and t < 6.0
+		if OS.get_environment("PHYSSHOTS") != "":          # pictures at these times (and CAMMODE picks the camera)
+			if _pshots.is_empty():
+				for x in OS.get_environment("PHYSSHOTS").split(","): _pshots.append(float(x))
+				if OS.get_environment("CAMMODE") != "": cam_mode = int(OS.get_environment("CAMMODE"))
+			if _pk < _pshots.size() and t >= _pshots[_pk]:
+				await RenderingServer.frame_post_draw; get_viewport().get_texture().get_image().save_png("/tmp/phys_shot_%d.png" % _pk); print("PHYSSHOT %d t %.2f" % [_pk, t]); _pk += 1
 		if kind == "offroad": touch.right = t > 3.0 and t < 3.45; touch.left = t > 6.0 and t < 6.6
 		if car.surf != lsurf: print("EV SURF t%.2f %s -> %s v %.1f beta %.2f yr %.2f" % [t, lsurf, car.surf, car.speed * 3.6, car.beta, car.yr]); lsurf = car.surf
 		var p = Vector3(car.px, car.py, car.pz); var d = p - last
@@ -503,5 +527,5 @@ func phys_test(kind: String):    # test: log the car every physics frame through
 		last = p; lp = [car.pitch, car.roll]
 		if Prof.on and int(round(t * 60)) % 60 == 0: print("PROF t%.0f%s" % [t, Prof.report()])
 		if drift.cur > 0.0 and int(t * 60) % 30 == 0: print("DS t%.1f cur %.0f x%.1f beta %.0f" % [t, drift.cur, drift.mul, abs(car.beta) * 57.3])
-	print("DS total %d" % drift.total)
+	print("DS total %d  skid pieces %d" % [drift.total, tyrefx.mark_i]); print("SKID ", tyrefx.marks.get_instance_transform(100), " ", tyrefx.marks.get_instance_color(100), " car ", car.global_position)
 	get_tree().quit()

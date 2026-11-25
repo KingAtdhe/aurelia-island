@@ -64,6 +64,11 @@ var autopilot = false   # test: the player's car is driven by the same racing dr
 var hud: Control; var info: Label; var big: Label; var msg: Label; var panel: Control
 var wrong_t = 0.0; var off_t = 0.0
 var tod_was = -1
+# ghost (time trial and drift challenge): the best run is recorded at 20 Hz (time, route distance, position, heading,
+# pitch, roll) and saved as user://ghost_<race>.dat; the next try races a see-through copy of it
+var rec := PackedFloat32Array(); var rec_n := 0; var rec_car := ""
+var ghost: Node3D; var gdata := PackedFloat32Array(); var gmat: ShaderMaterial
+const GSTRIDE = 7
 
 static func best(rid: String) -> Array:
 	var cf = ConfigFile.new(); cf.load(SAVE)
@@ -93,9 +98,10 @@ func start(rid: String, m: Node):
 	for k in (0 if solo else RIVALS.size()):
 		var rv = RIVALS[k]; var c = Car.new(); c.car_id = rv.car; c.opts = { far = true, paint = rv.paint }; add_child(c); c.coll = coll
 		var r = _racer(c, rv.name, true, rv.line)
+		if main.tyrefx: main.tyrefx.add_car(c)
 		var au = CarAudio.new(); au.car = c; au.positional = true; c.add_child(au); au.ignition(); r.snd = au      # its own engine, as 3D sound
 		racers.append(r)
-	if solo: slots = [[START_S - 9.0, 0.0]]
+	if solo: slots = [[START_S - 9.0, 0.0]]; _load_ghost()
 	for k in racers.size():
 		var sl = slots[k]; var a = at(sl[0]); var p: Vector3 = a[0] + a[2] * (sl[1] * a[3] * 2.0)
 		racers[k].car.place(p, atan2(a[1].x, a[1].z)); racers[k].s = sl[0]; racers[k].car.frozen = true
@@ -235,6 +241,11 @@ func _physics_process_body(dt):
 				if not r.rival: _player_finished()
 			if r.rival or autopilot: _drive(r, dt)
 		_player_checks(dt)
+		if R.has("mode") and not racers[0].done and state == "race":
+			rec_n += 1
+			if rec_n % 3 == 1:
+				var c0: Car = racers[0].car
+				rec.append_array([t, racers[0].s, c0.px, c0.py, c0.pz, c0.hd, c0.pitch]); rec_car = c0.car_id
 	# race cars are solid to each other
 	var boxes = []
 	for r in racers:
@@ -268,7 +279,8 @@ func _drive(r: Dictionary, dt: float):
 	if r.rival:
 		var lead = r.s - racers[0].s
 		sk *= clampf(1.0 - lead / 1200.0, 0.85, 1.03)          # well ahead of the player: ease off; behind: push a little
-	sk = minf(sk, 0.985)          # never past the corner speeds of the profile: pushing harder only ran them off the track
+	sk = minf(sk, 0.985)
+	if not r.rival and OS.get_environment("AUTOSKILL") != "": sk *= float(OS.get_environment("AUTOSKILL"))          # test: a slower autopilot (ghost pictures)          # never past the corner speeds of the profile: pushing harder only ran them off the track
 	var grip = 0.92 if c.car_id == "calder" else 1.0          # the heavier GT carries less speed through corners
 	var vt = minf(vmax_at(r.s + v * 0.25), vmax_at(r.s + v * 0.6)) * sk * grip
 	# a car right ahead on the same line: hold station behind it
@@ -305,7 +317,7 @@ func _player_checks(dt: float):
 	var c: Car = me.car; var a = at(me.s); var lat = (Vector3(c.px, 0, c.pz) - a[0]).dot(a[2])
 	while next_cp < cps.size() - 1 and me.s >= cps[next_cp]:
 		if abs(lat) < a[3] + 4.0:
-			next_cp += 1; _flash("CHECKPOINT  %s" % fmt(t), 1.4)
+			next_cp += 1; _flash("CHECKPOINT  %s%s" % [fmt(t), _split(cps[next_cp - 1])], 1.6)
 			for k in gates.size(): gates[k].visible = k >= next_cp + 1 and k <= next_cp + 3
 		else: break
 	var fwd = c.vx * a[1].x + c.vz * a[1].z
@@ -348,6 +360,7 @@ func _flash(s: String, d: float):
 	msg.text = s; msg.set_meta("t", d)
 
 func _process(dt):
+	_ghost_process()
 	if not info: return
 	var me = racers[0]; var st = standings(); var pos = st.find(me) + 1
 	var b = best(id)
@@ -405,7 +418,7 @@ func _challenge_results():          # drift score or lap time, a medal, and the 
 	var v: float = float(main.drift.total) if drift else me.time
 	var md = medal(id, v); var cf = ConfigFile.new(); cf.load(SAVE)
 	var old: float = cf.get_value(id, "time", 0.0); var new_best = old <= 0.0 or (v > old if drift else v < old)
-	if new_best: cf.set_value(id, "time", v)
+	if new_best: cf.set_value(id, "time", v); _save_ghost()
 	var bp = cf.get_value(id, "pos", 0)
 	if bp == 0 or md < bp: cf.set_value(id, "pos", md)
 	cf.save(SAVE)
@@ -429,6 +442,65 @@ func _l(p: Control, s: String, sz: int, pos: Vector2) -> Label:
 	var l = Label.new(); l.text = s; l.add_theme_font_size_override("font_size", sz); l.position = pos; p.add_child(l); return l
 func _b(p: Control, s: String, pos: Vector2, cb: Callable):
 	var b = Button.new(); b.text = s; b.position = pos; b.size = Vector2(176, 72); Hud.style_button(b); b.add_theme_font_size_override("font_size", 24); b.pressed.connect(cb); p.add_child(b)
+
+# ---------------------------------------------------------------- ghost
+func _ghost_path() -> String: return "user://ghost_%s.dat" % id
+
+func _save_ghost():
+	if rec.size() < GSTRIDE * 10: return
+	var f = FileAccess.open(_ghost_path(), FileAccess.WRITE)
+	if f: f.store_var({ car = rec_car, data = rec }); f.close()
+
+func _load_ghost():
+	if not FileAccess.file_exists(_ghost_path()): return
+	var f = FileAccess.open(_ghost_path(), FileAccess.READ); var d = f.get_var() if f else null
+	if not (d is Dictionary) or not Car.CARS.has(d.get("car", "")): return
+	gdata = d.data
+	var C = Car.CARS[d.car]
+	ghost = Node3D.new(); ghost.name = "Ghost"; ghost.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF; add_child(ghost)
+	var m = load(C.mid).instantiate(); m.rotation.y = C.yaw; ghost.add_child(m)
+	gmat = ShaderMaterial.new(); gmat.shader = load("res://shaders/ghost.gdshader")
+	for mi in m.find_children("*", "MeshInstance3D", true, false):
+		mi.material_override = gmat; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; mi.layers = 2
+	_ghost_at(0.0)
+
+# the ghost's pose at a race time (between two samples)
+func _ghost_at(tt: float):
+	var n = gdata.size() / GSTRIDE
+	if n < 2: return
+	var lo = 0; var hi = n - 1
+	if tt >= gdata[(n - 1) * GSTRIDE]: ghost.visible = false; return
+	while hi - lo > 1:
+		var mid = (lo + hi) >> 1
+		if gdata[mid * GSTRIDE] <= tt: lo = mid
+		else: hi = mid
+	var a = lo * GSTRIDE; var b = hi * GSTRIDE
+	var u = clampf((tt - gdata[a]) / maxf(gdata[b] - gdata[a], 1e-3), 0.0, 1.0)
+	var p = Vector3(lerpf(gdata[a + 2], gdata[b + 2], u), lerpf(gdata[a + 3], gdata[b + 3], u), lerpf(gdata[a + 4], gdata[b + 4], u))
+	var h = lerp_angle(gdata[a + 5], gdata[b + 5], u); var pt = lerpf(gdata[a + 6], gdata[b + 6], u)
+	ghost.visible = true; ghost.global_transform = Transform3D(Basis(Vector3.UP, h) * Basis(Vector3.RIGHT, -pt), p)
+
+func _ghost_time_at(sd: float) -> float:          # when the ghost passed route distance sd (-1: never)
+	var n = gdata.size() / GSTRIDE
+	for k in range(1, n):
+		if gdata[k * GSTRIDE + 1] >= sd:
+			var a = (k - 1) * GSTRIDE; var b = k * GSTRIDE
+			var u = clampf((sd - gdata[a + 1]) / maxf(gdata[b + 1] - gdata[a + 1], 1e-3), 0.0, 1.0)
+			return lerpf(gdata[a], gdata[b], u)
+	return -1.0
+
+func _split(sd: float) -> String:          # "   -0.42" ahead of the ghost, "   +1.10" behind (time trial only)
+	if ghost == null or R.get("mode", "") != "trial": return ""
+	var gt = _ghost_time_at(sd)
+	if gt < 0.0: return ""
+	return "   %s%.2f" % ["-" if t < gt else "+", abs(t - gt)]
+
+func _ghost_process():
+	if ghost == null: return
+	_ghost_at(t if state != "count" else 0.0)
+	var cam = get_viewport().get_camera_3d(); var d = ghost.global_position.distance_to(cam.global_position) if cam else 20.0
+	var dp = ghost.global_position.distance_to(player.global_position)
+	gmat.set_shader_parameter("fade", clampf((d - 2.0) / 5.0, 0.0, 1.0) * clampf((dp - 1.0) / 3.0, 0.25, 1.0))
 
 func stop():
 	for r in racers:

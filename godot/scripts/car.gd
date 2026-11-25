@@ -42,6 +42,8 @@ const CARS = {
 	calder = { name = "Calder GT", file = "res://assets/calder.glb", far = "res://assets/calder_far.glb", mid = "res://assets/calder_mid.glb", paint = ["Paint_Body", "Paint"], half = Vector2(2.4, 1.0), yaw = 0.0, axis = "z", sgn = -1.0, blurb = "Front-engine V8 grand tourer. Heavier, long and stable; big, slow drifts.",
 		veh = { m = 1650.0, Iz = 3550.0, a = 1.38, b = 1.49, h = 0.48, r = 0.35, gears = [3.00, 2.10, 1.60, 1.28, 1.03, 0.84], fd = 3.30, red = 7200.0, up = 6800.0, down = 3000.0, tqPeak = 640.0, tqRpm = 5200.0, cda = 0.38, dmax = 0.62 } } }
 var car_id = "vortex"; var spin_axis = "x"; var spin_sgn = -1.0
+const EYE = { vortex = Vector3(0.0, 0.21, -0.5), calder = Vector3(0.0, 0.34, -0.52) }          # driver's eyes from the steering wheel centre (the Vortex roof is low)
+const STEER_SIGN = { vortex = 1.0, calder = 1.0 }          # which way the steering wheel model turns for a left turn
 var opts = {}            # race rivals: { far = true (light model beyond FAR_AT), paint = Color }
 var frozen = false       # race countdown: the car holds still on the grid
 var player = false       # the player's car: its upgrades and paint come from the career save
@@ -61,6 +63,7 @@ func setup(id: String, o := {}):
 		var w: Node3D = s.find_child(nm, true, false)
 		if w: wheels.append({ n = w, steer = (w.get_parent() if w.get_parent().name.begins_with("Steer_") else null), front = nm.begins_with("Front") })
 	merge_body(s)
+	_find_cockpit(s)
 	for mi in s.find_children("BodyMerged", "MeshInstance3D", true, false):
 		for i in mi.mesh.get_surface_count():
 			var m = mi.mesh.surface_get_material(i)
@@ -296,6 +299,9 @@ func _physics_process_body(dt):
 		if spin_axis == "x": w.n.rotation.x = a
 		else: w.n.rotation.z = a
 		if w.steer: w.steer.rotation.y = delta_
+	if sw:          # steering wheel: about 11 times the road wheels' angle, round its own centre
+		var r = Transform3D(Basis(sw_axis, delta_ * 11.0 * STEER_SIGN.get(car_id, 1.0)), Vector3.ZERO)
+		sw.transform = sw_rest * Transform3D(Basis(), sw_c) * r * Transform3D(Basis(), -sw_c)
 
 var body_lift := 0.0
 # where the car is drawn this frame: between the last two physics steps (physics interpolation), so the camera and the
@@ -315,6 +321,30 @@ func bump(v := 8.0, kind := ""):
 	if v > 6.0: settle = clampf(v / 20.0, 0.35, 0.9); drift = 0.0
 	if bump_t <= 0: bump_t = 0.5 if v < 6.0 else 0.8; impact = v; crashed.emit()
 
+# cockpit: where the driver's eyes are (body space) and the steering wheel, turned with the front wheels
+var eye := Vector3(0.0, 1.0, -0.2)
+var sw: Node3D; var sw_rest := Transform3D.IDENTITY; var sw_c := Vector3.ZERO; var sw_axis := Vector3.FORWARD
+func _find_cockpit(s: Node3D):
+	sw = _steering_wheel(s)
+	if sw == null: return
+	sw_rest = sw.transform
+	var box := AABB(); var first = true
+	for mi in ([sw] if sw is MeshInstance3D else []) + sw.find_children("*", "MeshInstance3D", true, false):
+		var bb: AABB = _rel(mi, sw) * (mi as MeshInstance3D).get_aabb() if mi != sw else (mi as MeshInstance3D).get_aabb()
+		box = bb if first else box.merge(bb); first = false
+	if first: return
+	sw_c = box.get_center()
+	var sz = box.size; sw_axis = Vector3.RIGHT if sz.x <= sz.y and sz.x <= sz.z else (Vector3.UP if sz.y <= sz.z else Vector3.BACK)   # the thin side is the column
+	var c_body: Vector3 = s.transform * (_rel(sw, s) * sw_c)          # wheel centre in the car's own space (nose +Z)
+	eye = c_body + EYE.get(car_id, Vector3(0.0, 0.3, -0.5))
+static func _steering_wheel(root: Node) -> Node3D:          # the import names it "Steering" (the column is separate)
+	var n = root.find_child("Steering_Wheel", true, false)
+	return n if n else root.find_child("Steering", true, false)
+static func _rel(n: Node3D, root: Node) -> Transform3D:
+	var t = n.transform; var p = n.get_parent()
+	while p != null and p != root: t = (p as Node3D).transform * t; p = p.get_parent()
+	return t
+
 static var _merged = {}
 # one mesh per material for everything that does not move: about 60 parts become a dozen draw calls
 func merge_body(root: Node3D):
@@ -322,8 +352,8 @@ func merge_body(root: Node3D):
 	for w in wheels:
 		moving[w.n] = true
 		if w.steer: moving[w.steer] = true
-	var sw = root.find_child("Steering_Wheel", true, false)
-	if sw: moving[sw] = true
+	var swn = _steering_wheel(root)
+	if swn: moving[swn] = true
 	var tools := {}; var mats := {}
 	var inv = root.global_transform.affine_inverse()
 	if _merged.has(car_id):                     # merged once per car model; rivals and later races reuse it (no hitch at the start)

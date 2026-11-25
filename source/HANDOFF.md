@@ -391,3 +391,23 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
   frames vs 0, wheel angle 2.7 / 6.3 / 11.4 deg at sensitivity 0.6 / 1.0 / 1.4).
 - Not checked here: tilt direction on Saba's phone (the REVERSED option covers it).
 - A professional Claude skill for this project was written this session (aurelia-car-game.skill, sent to Saba).
+
+## Godot: tyre smoke and skid marks, ghost car, cockpit camera (25 Nov 2026, APK 38)
+- scripts/tyre_fx.gd (TyreFX, shaders/skid.gdshader, shaders/smoke.gdshader): for the player and race rivals
+  (Race adds them). TyreFX.slide(car) -> [rear, front] 0..1 from body slip angle, wheelspin, handbrake and front slip.
+  Skid marks: one MultiMesh ring buffer of 0.32 m ribbon pieces (500/1100/1800 by graphics level), laid on a ray hit
+  under each wheel, colour by surface (rubber, dirt, sand, grass, snow), half strength in the wet. The skid shader uses
+  skip_vertex_transform like decal.gdshader (writing POSITION drew nothing on Compatibility). Smoke: pooled billboard
+  puffs (36/70/110), simulated in GDScript (drift with the car, rise, grow, fade, thinned near the camera), white on
+  tarmac, dust off-road, thin spray in rain, dimmed at night and in tunnels. Cost ~0.25 ms/frame in a 4-car race (PROF).
+  Tests: PHYSTEST=drift PHYSSHOTS=4.6,5.4 CAMMODE=1 (pictures at those times), "skid pieces" count at the end.
+- Ghost (race.gd): trial and drift challenges record the player at 20 Hz (t, route s, x, y, z, heading, pitch) and save
+  user://ghost_<race>.dat on a new best; the next try shows the car's mid model in shaders/ghost.gdshader (pale blue,
+  rim-lit, depth pre-pass so it reads as one shape), faded near the camera and the player. Time trial checkpoints show
+  the split against the ghost ("CHECKPOINT 0:08.78 +0.05"). Test: RACETEST=trial twice; AUTOSKILL=0.9 slows the
+  autopilot so the ghost pulls ahead in RACESHOTS pictures.
+- Cockpit camera (CAM cycles chase / far / bumper / cockpit): eyes at Car.eye (steering wheel centre + Car.EYE offset per
+  car; the Vortex roof is low), moving with the body, leaning with g-forces, glancing into slides; near plane 4 cm, FOV 70.
+  The glTF importer turns "Steering_Wheel" into a VehicleWheel3D named "Steering": Car._steering_wheel() finds it; it is no
+  longer merged into the body and turns 11x the road-wheel angle round its own centre (thin axis = column).
+- Hooks added: PHYSSHOTS, CAMMODE, AUTOSKILL; CAR now also works with PHYSTEST.
