@@ -47,6 +47,12 @@ static func conv(m: Material, has_col: bool) -> Material:
 			out = dm
 		elif nm in ["WindowGlass", "KitWindow", "HeroCurtain"]:
 			var im := ShaderMaterial.new(); im.shader = shader("interior"); out = im
+		elif nm == "FacadeWindows" or nm == "FacadeGlass":          # facades: windows light up at night
+			var f := ShaderMaterial.new(); f.shader = shader("facade"); f.set_shader_parameter("tex", sm.albedo_texture)
+			f.set_shader_parameter("orm", sm.roughness_texture); f.set_shader_parameter("has_orm", 1.0 if sm.roughness_texture else 0.0)
+			f.set_shader_parameter("tex_n", sm.normal_texture); f.set_shader_parameter("has_n", 1.0 if sm.normal_texture else 0.0)
+			f.set_shader_parameter("glass", 1.0 if nm == "FacadeGlass" else 0.0); f.set_shader_parameter("use_col", 1.0 if has_col else 0.0)
+			out = f
 		elif nm == "Water":
 			var w := ShaderMaterial.new(); w.shader = shader("water"); w.render_priority = 2; out = w
 		elif nm == "Seabed":
@@ -56,6 +62,7 @@ static func conv(m: Material, has_col: bool) -> Material:
 			if has_col: d.vertex_color_use_as_albedo = true; d.vertex_color_is_srgb = false      # glTF vertex colours are linear
 			if nm in ["ContactAO", "RoadDecals", "Skids", "Puddles", "ShoreFoam", "Shallows", "Markings"]:
 				d.render_priority = 2
+			if Tod.EMIT.has(nm): Tod.emissive(d, nm)
 			if nm == "TreeCards": d = null
 			elif nm.begins_with("Leaves") or d.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR or nm.begins_with("T_tree"):
 				d.cull_mode = BaseMaterial3D.CULL_DISABLED

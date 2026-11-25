@@ -1,5 +1,6 @@
 shader_type spatial;
 render_mode skip_vertex_transform, cull_disabled;
+global uniform float tod_sunbake;          // time of day: the baked sun shadows fade out at sunset and night
 // paint and decals lying on the road and ground (markings, tyre marks, puddles, contact shade, shore foam): drawn a hair
 // towards the camera so they never flicker against the surface under them, and shaded by the island bake like that surface
 uniform sampler2D tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -20,7 +21,7 @@ void fragment() {
 	vec4 c = t * col * COLOR;
 	vec2 uv = (wpos.xz - bake_rect.xy) / bake_rect.zw;
 	vec2 b = texture(bake, uv).rg;
-	ALBEDO = c.rgb * (0.34 + 0.66 * b.r) * (0.72 + 0.28 * b.g);
+	ALBEDO = c.rgb * (0.34 + 0.66 * mix(0.75, b.r, tod_sunbake)) * (0.72 + 0.28 * b.g);
 	//ALPHA
 	ROUGHNESS = rough; SPECULAR = 0.3;
 }

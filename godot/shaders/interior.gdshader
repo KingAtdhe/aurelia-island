@@ -2,7 +2,7 @@ shader_type spatial;
 render_mode cull_disabled;
 // shop and office windows: a furnished room is traced behind each pane per pixel, so glass reads as glass with rooms
 // behind it, not as a flat grey slab (same rooms as the browser game's interior())
-uniform float night = 0.0;
+global uniform float tod_night;
 varying vec3 wp;
 void vertex() { wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
 float rh(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
@@ -44,6 +44,6 @@ void fragment() {
 	float cs = abs(dot(N, V)); float fr = 0.04 + 0.96 * pow(1.0 - cs, 5.0);
 	vec3 day = rc * 0.5, nt = rc * lt * vec3(1.25, 1.0, 0.72) * 1.35 + rc * 0.01;
 	ALBEDO = vec3(0.02, 0.025, 0.03);
-	EMISSION = mix(day, nt, night) * (1.0 - fr);
+	EMISSION = mix(day, nt, tod_night) * (1.0 - fr);
 	ROUGHNESS = 0.08; METALLIC = 0.0; SPECULAR = 0.32;
 }

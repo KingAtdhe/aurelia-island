@@ -26,7 +26,7 @@ func _ready():
 			cam.global_position = Vector3(float(cp[0]), float(cp[1]), float(cp[2])); cam.look_at(Vector3(float(a[1]), float(a[2]), float(a[3]))); cam.make_current()
 		for w in 20: await get_tree().process_frame
 		await RenderingServer.frame_post_draw
-		var nm = "/tmp/tour_%02d.png" % k
+		var nm = "/tmp/%s_%02d.png" % [OS.get_environment("TOURPFX") if OS.get_environment("TOURPFX") != "" else "tour", k]
 		get_viewport().get_texture().get_image().save_png(nm)
 		print("TOUR %d %s pos %s tris %d draws %d prims %d (%.1f s)" % [k, s, Vector3(m.car.px, m.car.py, m.car.pz), m.island.loaded_tris, Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME), (Time.get_ticks_msec() - t0) / 1000.0])
 		if OS.get_environment("DRAWSPLIT") != "":          # what the draws go to: hide one map group (or flora, grass, traffic) at a time

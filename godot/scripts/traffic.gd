@@ -68,7 +68,7 @@ func build(roads: Dictionary, count: int, world_roads: Array = []):
 		c.v = c.vmax
 		for o in cars:
 			if o.lane == c.lane and abs(o.d - c.d) < 20.0: c.d = fmod(c.d + 40.0, lanes[li].len - 20.0) + 10.0
-		var n: Node3D = scenes[model].instantiate(); add_child(n); c.n = n; c.wheels = []; Car.car_layers(n)
+		var n: Node3D = scenes[model].instantiate(); add_child(n); c.n = n; c.wheels = []; Tod.light_car(n); Car.car_layers(n)
 		_dress(n, rng.randi() % PAINT.size() if rng.randf() < 0.75 else -1, c)
 		var ap = AudioStreamPlayer3D.new(); ap.stream = CarAudio.loop_stream("res://assets/audio/traffic_%s.ogg" % model); c.model = model; ap.max_distance = 45.0; ap.unit_size = 4.0
 		ap.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE; ap.position = Vector3(1.2, 0.6, 0); n.add_child(ap); ap.play(rng.randf() * 10.0); c.snd = ap

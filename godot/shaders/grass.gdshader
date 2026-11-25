@@ -1,5 +1,6 @@
 shader_type spatial;
 render_mode cull_disabled;
+global uniform float tod_sunbake;          // time of day: the baked sun shadows fade out at sunset and night
 // modelled grass blades: wind sway growing towards the tips, clumps grow out of the ground at the edge of the ring
 // (no popping), the island light bake shades them like the ground they stand on, a little light through the blades
 uniform sampler2D bake : filter_linear, repeat_disable;
@@ -19,7 +20,7 @@ void vertex() {
 	far_k = smoothstep(12.0, fade_far, d);          // further out the clumps take on the ground's own green, so the ring has no edge
 	vec2 uv = (org.xz - bake_rect.xy) / bake_rect.zw;
 	vec2 b = texture(bake, uv).rg;
-	shade = (0.34 + 0.66 * b.r) * (0.72 + 0.28 * b.g);
+	shade = (0.34 + 0.66 * mix(0.75, b.r, tod_sunbake)) * (0.72 + 0.28 * b.g);
 }
 void fragment() {
 	ALBEDO = mix(COLOR.rgb, vec3(0.16, 0.22, 0.09), far_k * 0.55) * shade * 1.05;

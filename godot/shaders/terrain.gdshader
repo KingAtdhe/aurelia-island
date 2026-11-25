@@ -1,4 +1,5 @@
 shader_type spatial;
+global uniform float tod_sunbake;          // time of day: the baked sun shadows fade out at sunset and night
 // Aurelia ground: map colour (vertex colour) x photo detail, large-scale variation, side projection on steep slopes
 uniform sampler2D detail : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D detail_n : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -10,7 +11,7 @@ varying vec3 wpos;
 uniform sampler2D bake : filter_linear_mipmap, repeat_disable;
 uniform vec4 bake_rect = vec4(-1950.0, 280.0, 1300.0, 1060.0);   // x0, z0, width, depth of the baked light map
 vec3 baked(vec3 c) { vec2 uv = (wpos.xz - bake_rect.xy) / bake_rect.zw; if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) return c;
-	vec2 b = texture(bake, uv).rg; return c * (0.34 + 0.66 * b.r) * (0.72 + 0.28 * b.g); } varying vec3 wnrm;
+	vec2 b = texture(bake, uv).rg; return c * (0.34 + 0.66 * mix(0.75, b.r, tod_sunbake)) * (0.72 + 0.28 * b.g); } varying vec3 wnrm;
 float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float n2(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y); }
 float fbm(vec2 p) { return n2(p) * 0.55 + n2(p * 2.3 + 7.1) * 0.3 + n2(p * 5.7 + 3.3) * 0.15; }

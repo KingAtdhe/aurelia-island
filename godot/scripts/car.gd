@@ -60,6 +60,7 @@ func setup(id: String, o := {}):
 	if opts.has("paint"): _repaint(s, C.paint, opts.paint)
 	elif player and Progress.U(id).paint > 0: _repaint(s, C.paint, Progress.PAINTS[Progress.U(id).paint][1])
 	if opts.get("far", false): _add_far(s, C)
+	Tod.light_car(body)          # head and tail lights glow at sunset and night
 	car_layers(body)
 
 # cars are drawn on render layer 2: they get their sunlight from the car sun, which follows the baked light where they are

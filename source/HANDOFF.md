@@ -306,3 +306,14 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
   material in the detail chunks: 1274 -> 479 primitives. A city street: 1440 -> 1091 draws on HIGH, 890 MEDIUM, 679 LOW.
 - Test hook: DRAWSPLIT=1 with TOUR prints the draw calls per map group.
 - Order after a fresh export_chunks.py: fix_rivers.py, fix_podium.py, merge_hd.py, export_shops.py.
+
+## Godot: time of day (25 Nov 2026)
+- scripts/tod.gd (class Tod): DAY / SUNSET / NIGHT, TIME button on the start screen, saved in user://settings.cfg (TOD env for
+  tests). Skies: assets/sky.png (day), sky_sunset.png and sky_night.png from source/godot_tools/sky_tod.py (bpy + numpy).
+  Sets sun/moon direction and colour (car_sun too), ambient (night: moonlit blue fill, no sky contribution), haze, exposure.
+- Global shader values (project.godot [shader_globals]): tod_sunbake fades the baked sun shadows in terrain/road/decal/grass
+  (1 / 0.3 / 0), tod_night lights windows (interior.gdshader, new facade.gdshader for FacadeWindows/FacadeGlass) and darkens the sea.
+- Glowing map materials (Tod.EMIT: shop rooms, shop signs, hero signs, neon, ads, lamp lenses) and car head/tail lamp materials
+  (Tod.light_car: player, rivals, traffic) follow the time of day. Street lamps: scripts/lamps.gd + shaders/lamp.gdshader
+  (glow + ground pool for the 364 world.json lamps, 2 draws). Player headlights: SpotLight3D at night only.
+- Test hook: TOURPFX=name sets the tour picture names.

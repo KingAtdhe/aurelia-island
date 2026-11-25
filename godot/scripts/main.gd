@@ -24,6 +24,8 @@ var sun: DirectionalLight3D
 var environment: Environment
 var eyes = 0.0          # 0 in daylight, 1 deep in a tunnel
 var car_sun: DirectionalLight3D
+var lamps: Lamps
+var head: SpotLight3D          # the player's headlights at night
 var probe: PackedByteArray; var probe_w = 0; var probe_h = 0; var shade = 1.0
 const START = ["Peninsula Road", 30]
 var view_car = -1          # test shots: look at this traffic car instead of following the player
@@ -65,6 +67,10 @@ func _ready():
 	audio = CarAudio.new(); audio.car = car; add_child(audio)
 	traffic = Traffic.new(); add_child(traffic); traffic.player = car; traffic.coll = co
 	traffic.build(roads, int(OS.get_environment("TRAFFIC")) if OS.get_environment("TRAFFIC") != "" else Gfx.cars(), world_roads)
+	lamps = Lamps.new(); add_child(lamps); lamps.build(w)
+	head = SpotLight3D.new(); head.spot_range = 55.0; head.spot_angle = 30.0; head.spot_attenuation = 0.6; head.spot_angle_attenuation = 1.6; head.light_color = Color(1.0, 0.95, 0.85)
+	head.shadow_enabled = false; head.visible = false; add_child(head)
+	Tod.apply(self)          # time of day: sky, sun or moon, city lights
 	Gfx.apply(self)          # graphics level (start screen): render scale, shadows, draw distances, grass, mesh LOD
 	make_hud()
 	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("TOUR") == "" and OS.get_environment("PROBE") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == "" and OS.get_environment("FUZZ") == ""
@@ -215,7 +221,10 @@ func _process(dt):
 	# eyes adjusting in a tunnel: the sun and the sky fade, exposure opens up a little
 	var tin = tunnels.inside(Vector3(car.px, car.py, car.pz)) if tunnels else 0.0
 	eyes = move_toward(eyes, tin, dt * (0.9 if tin > eyes else 0.6))
-	sun.light_energy = 1.35 * (1.0 - 0.88 * eyes); environment.ambient_light_energy = 0.75 * (1.0 - 0.75 * eyes); environment.tonemap_exposure = 1.0 + 0.12 * eyes
+	sun.light_energy = Tod.sun_e() * (1.0 - 0.88 * eyes); environment.ambient_light_energy = Tod.amb_e() * (1.0 - 0.75 * eyes); environment.tonemap_exposure = Tod.expo() + 0.12 * eyes
+	if head.visible:          # headlights: low beam ahead of the car
+		var fw = Vector3(sin(car.hd), 0.0, cos(car.hd)); var hp = Vector3(car.px, car.py + 0.75, car.pz) + fw * 2.1
+		head.global_position = hp; head.look_at(hp + fw * 12.0 + Vector3(0, -1.4, 0))
 	shade = lerpf(shade, sun_at(Vector3(car.px, car.py, car.pz)), clampf(dt * 5.0, 0.0, 1.0))
 	car_sun.light_energy = sun.light_energy * lerpf(0.1, 1.0, shade)
 	if view_car >= 0 and traffic and view_car < traffic.cars.size():
@@ -361,6 +370,7 @@ func open_menu():
 		start_race(rid))
 	menu.changed.connect(func(): car.setup(car.car_id))
 	menu.gfx.connect(func(): Gfx.apply(self))
+	menu.tod.connect(func(): Tod.apply(self))
 	menu.travel.connect(func(rg):
 		if car.car_id != Progress.car: car.setup(Progress.car)
 		travel_to(Vector3(rg[1], 0, rg[2]))
