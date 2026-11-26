@@ -431,3 +431,16 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
   minutes, so it could not be checked and is not shipped. The renderer can't be switched at runtime either (it would
   need a second APK). Revisit only with a way to verify it.
 - Fixed: TOUR free cameras (P:...:cx;cy;cz) now go away after their picture.
+
+## Concept 15 roadside trees and concept 16 city blocks (26 Nov 2026): sheets sent, awaiting approval
+- Saba approved making sheets for the two biggest gaps left after APK 39 (trees, city buildings).
+- 15: source/blender/sheet15_render.py (concept 04 trees at game weight LOD 2 on a road verge, driver's view; HERO=1 mixed
+  avenue), source/art/sheet15.py -> source/art/concept_15_roadside_trees.jpg. Proposal: in Godot, the concept 04 trees
+  (already in flora_flora) replace the Tripo trees for pine/oak/plane/fruit/cypress (export_flora.py map), with a leaf
+  shader (backlight, inner shade, sway). Tripo rocks/houses/barn/cafe stay.
+- 16: source/blender/isle_towers_hq.py (four box-kit building types: office_glass, office_stone, residential,
+  mixed_tower; real relief, per-material boxes), sheet16_render.py (tiles + HERO street), source/art/sheet16.py ->
+  concept_16_city_blocks.jpg. Plan after approval: place them on the existing city plots (heights from the current
+  towers), merged per material per quarter like merge_hd.py, concept 10 shopfronts kept, current LODs for the skyline.
+- No photo/*.raw in this workspace: isle_photo.raw() now falls back to godot/assets/island/tex/tex_photo_*.jpg.
+- bpy 5.3 via pip works here (Python 3.13). Cycles at 24 samples + denoise: ~1-2 min per 600 px tile on 2 cores.

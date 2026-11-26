@@ -6,9 +6,20 @@ import isle_lib as L
 D = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'photo')
 
 
+GT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'godot', 'assets', 'island', 'tex')
+
+
+def _from_godot(name, kind):          # no photo/*.raw in this workspace: the game's own copies (colour 2048, normal 1024)
+    from PIL import Image
+    f = os.path.join(GT, 'tex_photo_%s%s.jpg' % (name, {'Color': '', 'NormalGL': '_n'}.get(kind, '?')))
+    if not os.path.exists(f): return None
+    im = Image.open(f).convert('RGBA'); n = min(im.size[0], 1024); im = im.resize((n, n))
+    return np.asarray(im, float)[::-1] / 255.0
+
+
 def raw(name, kind):
     f = os.path.join(D, '%s_%s.raw' % (name, kind))
-    if not os.path.exists(f): return None
+    if not os.path.exists(f): return _from_godot(name, kind)
     a = np.fromfile(f, np.uint8); n = int(round((len(a) / 4) ** 0.5)); a = a.reshape(n, n, 4).astype(float) / 255.0
     if kind in ('Color', 'NormalGL', 'Roughness'):
         import isle_hd; a = isle_hd.upres(name, kind, a)                     # 1024 px rebuild with synthesised fine detail
