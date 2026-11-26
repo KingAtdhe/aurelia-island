@@ -411,3 +411,23 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
   The glTF importer turns "Steering_Wheel" into a VehicleWheel3D named "Steering": Car._steering_wheel() finds it; it is no
   longer merged into the body and turns 11x the road-wheel angle round its own centre (thin axis = column).
 - Hooks added: PHYSSHOTS, CAMMODE, AUTOSKILL; CAR now also works with PHYSTEST.
+
+## Godot: look pass toward CarX (26 Nov 2026, APK 39)
+- Lighting: AgX tonemapper (agx contrast 1.45, saturation 1.3, contrast 1.06), exposure x1.18 (main.EXPO_K, EXPOK env);
+  daytime sun x1.22 / ambient x0.72 (sunset x1.15 / x0.8) in Tod.sun_e/amb_e: shapes and shadows read, less flat fill.
+  Island-bake sky occlusion deeper on road and ground (0.58 + 0.42 G, was 0.72 + 0.28).
+- shaders/kit.gdshader: buildings and street kit (Look.KIT list + KitBrick*/KitConcrete*/KitPlaster*, opaque with a
+  texture): photo colour x tint, normal, ORM (AO/rough/metal), the same picture at 3.7x within ~6-28 m for crisp
+  close-ups (mean-preserving, via textureLod mip 8), stains, rain streaks on walls, bake sky occlusion.
+- shaders/tree.gdshader for Saba's Tripo trees (T_tree_*): trunk and lower crown in the tree's own shade (by height),
+  foliage pulled from yellow-green towards real greens with per-tree variation, backlight, gentle wind sway.
+- Road: close-up aggregate layer (world-space, 0.62 per m) for colour and normal, smaller blotches, faint sheen
+  (roughness ~0.78, specular 0.42). Terrain: picture again at 3.3x near the camera.
+- Global shader value gfx_detail (1 on MEDIUM/HIGH, 0 on LOW) switches the close-up layers. HIGH: MSAA 4x; anisotropic
+  filtering 16x everywhere. Grass radius 34 m (MEDIUM, spacing 1.3) / 52 m (HIGH, spacing 1.0): grass CPU ~+25 %.
+- LOOK=1 env restores the old look for A/B pictures. Spots used: car close-up P:-1199:39.11:310.7:0.5:-1193.6;40.2;313.2,
+  Peninsula Road:0.2, Street E260:0.5, Summit Pass:0.5, Dune Road:0.5, Street N-480:0.3.
+- Vulkan (Mobile renderer): tried with lavapipe here; software Vulkan did not get through loading the island in 20+
+  minutes, so it could not be checked and is not shipped. The renderer can't be switched at runtime either (it would
+  need a second APK). Revisit only with a way to verify it.
+- Fixed: TOUR free cameras (P:...:cx;cy;cz) now go away after their picture.

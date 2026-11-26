@@ -1,6 +1,7 @@
 shader_type spatial;
 global uniform float tod_sunbake;
-global uniform float wx_wet;          // weather: rain makes the ground darker and glossy          // time of day: the baked sun shadows fade out at sunset and night
+global uniform float wx_wet;
+global uniform float gfx_detail;          // close-up detail layers: off on LOW          // weather: rain makes the ground darker and glossy          // time of day: the baked sun shadows fade out at sunset and night
 // Aurelia ground: map colour (vertex colour) x photo detail, large-scale variation, side projection on steep slopes
 uniform sampler2D detail : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D detail_n : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -12,7 +13,7 @@ varying vec3 wpos;
 uniform sampler2D bake : filter_linear_mipmap, repeat_disable;
 uniform vec4 bake_rect = vec4(-1950.0, 280.0, 1300.0, 1060.0);   // x0, z0, width, depth of the baked light map
 vec3 baked(vec3 c) { vec2 uv = (wpos.xz - bake_rect.xy) / bake_rect.zw; if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) return c;
-	vec2 b = texture(bake, uv).rg; return c * (0.34 + 0.66 * mix(0.75, b.r, tod_sunbake)) * (0.72 + 0.28 * b.g); } varying vec3 wnrm;
+	vec2 b = texture(bake, uv).rg; return c * (0.34 + 0.66 * mix(0.75, b.r, tod_sunbake)) * (0.58 + 0.42 * b.g); }           varying vec3 wnrm;
 float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float n2(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y); }
 float fbm(vec2 p) { return n2(p) * 0.55 + n2(p * 2.3 + 7.1) * 0.3 + n2(p * 5.7 + 3.3) * 0.15; }
@@ -26,6 +27,8 @@ void fragment() {
 	vec3 d = texture(detail, q * tscale).rgb;
 	vec3 d2 = texture(detail, q * tscale * 0.27 + 0.5).rgb;                 // second, larger sample hides the repeat
 	d = mix(d, d * d2 * 2.0, 0.35);
+	float near = (1.0 - smoothstep(4.0, 22.0, length(VERTEX))) * gfx_detail;          // close to the camera: the picture again, 3.3x finer
+	if (near > 0.01) d *= mix(vec3(1.0), clamp(texture(detail, q * tscale * 3.3 + 0.21).rgb / max(vec3(0.03), textureLod(detail, q * tscale * 3.3 + 0.21, 9.0).rgb), 0.55, 1.6), near * 0.5);
 	if (steep > 0.01) d = mix(d, tri(detail, tscale).rgb, steep);
 	float big = fbm(q * 0.021), mid = fbm(q * 0.29), fine = n2(q * 2.3);
 	vec3 base = COLOR.rgb;
@@ -35,7 +38,8 @@ void fragment() {
 		base *= tint;
 	}
 	ALBEDO = baked(base * d * 1.75 * (0.9 + 0.2 * fine));
-	NORMAL_MAP = texture(detail_n, q * tscale).rgb;
+	vec3 nm = texture(detail_n, q * tscale).rgb; if (near > 0.01) nm.xy = clamp(nm.xy + (texture(detail_n, q * tscale * 3.3 + 0.21).xy - 0.5) * near * 0.8, 0.0, 1.0);
+	NORMAL_MAP = nm;
 	NORMAL_MAP_DEPTH = 0.8;
 	ALBEDO *= mix(1.0, 0.8, wx_wet); ROUGHNESS = mix(rough, rough * 0.65, wx_wet); METALLIC = 0.0; SPECULAR = mix(0.3, 0.45, wx_wet);
 	//BLEND_ALPHA

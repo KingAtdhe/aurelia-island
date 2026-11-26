@@ -21,7 +21,7 @@ var _t := 0.0
 var _pending := []
 var gmat: ShaderMaterial
 func set_radius(r: float):
-	R_FAR = r; SPACING = 1.2 if r >= 40.0 else 1.5; visible = r > 0.0; set_process(r > 0.0); if gmat: gmat.set_shader_parameter("fade_far", maxf(r, 1.0))
+	R_FAR = r; SPACING = 1.0 if r >= 50.0 else (1.3 if r >= 30.0 else 1.5); visible = r > 0.0; set_process(r > 0.0); if gmat: gmat.set_shader_parameter("fade_far", maxf(r, 1.0))
 	cells.clear(); _last = Vector3(1e9, 0, 0); _shown = []
 
 func build(world: Dictionary):

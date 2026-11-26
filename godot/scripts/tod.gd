@@ -41,8 +41,11 @@ const SKY_RAIN = ["res://assets/sky_rain.png", "res://assets/sky_rain.png", "res
 const SKY_RAIN_E = [1.0, 0.62, 1.0]
 const FOG_RAIN = [Color(0.62, 0.65, 0.68), Color(0.5, 0.46, 0.45), Color(0.04, 0.045, 0.055)]
 static func night() -> float: return NIGHT[get_level()]
-static func sun_e() -> float: return SUN_E[get_level()] * Weather.SUN_K[Weather.get_level()]
-static func amb_e() -> float: return AMB_E[get_level()] * Weather.AMB_K[Weather.get_level()]
+# Nov 26 look pass: more sun, less flat fill light (shapes and shadows read; AgX keeps the highlights)
+const SUN_K2 = [1.22, 1.15, 1.0]
+const AMB_K2 = [0.72, 0.8, 1.0]
+static func sun_e() -> float: return SUN_E[get_level()] * Weather.SUN_K[Weather.get_level()] * (SUN_K2[get_level()] if Look.LOOK2 else 1.0)
+static func amb_e() -> float: return AMB_E[get_level()] * Weather.AMB_K[Weather.get_level()] * (AMB_K2[get_level()] if Look.LOOK2 else 1.0)
 static func sky_e() -> float: return SKY_RAIN_E[get_level()] if Weather.get_level() > 0 else SKY_E[get_level()]
 static func expo() -> float: return EXPO[get_level()]
 

@@ -47,6 +47,8 @@ func _ready():
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC; e.tonemap_exposure = 1.0; e.fog_enabled = true; e.fog_light_color = Color(0.72, 0.8, 0.88); e.fog_density = 0.0005; e.fog_sky_affect = 0.0
 	e.glow_enabled = true; e.glow_intensity = 0.4; e.glow_bloom = 0.05; e.glow_hdr_threshold = 1.2
 	e.adjustment_enabled = true; e.adjustment_contrast = 1.07; e.adjustment_saturation = 1.1          # a touch more punch: the haze and filmic curve flatten the colours
+	if Look.LOOK2:          # Nov 26 look pass: AgX keeps colour in bright skies and sunlit paint instead of washing to white
+		e.tonemap_mode = Environment.TONE_MAPPER_AGX; e.tonemap_agx_contrast = 1.45; e.adjustment_contrast = 1.06; e.adjustment_saturation = 1.3
 	env.environment = e; add_child(env); environment = e
 	sun = DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-38, -35, 0); sun.light_energy = 1.35; sun.light_color = Color(1.0, 0.95, 0.86); sun.shadow_enabled = true; sun.directional_shadow_max_distance = 60; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS; sun.directional_shadow_split_1 = 0.25; sun.light_cull_mask = 1; add_child(sun)
 	# the car sun lights only the cars and dims where the island bake has shade; no shadow map of its own
@@ -239,6 +241,7 @@ func spawn(road: String, i: int):
 	car.place(a, atan2(b.x - a.x, b.z - a.z)); cam_yaw = car.hd; cam_pos = a - Vector3(sin(car.hd), 0, cos(car.hd)) * 9 + Vector3(0, 4, 0)
 
 var _keys_shift = [false, false]
+var EXPO_K = float(OS.get_environment("EXPOK")) if OS.get_environment("EXPOK") != "" else (1.18 if Look.LOOK2 else 1.0)          # AgX sits darker than filmic
 var touch_btns = {}          # HUD touch buttons by name (left/right hide in tilt mode, shift buttons only with the manual gearbox)
 func apply_controls():          # control options changed (or the game starts): the car's driving aids, the buttons on screen
 	Controls.apply(car)
@@ -270,7 +273,7 @@ func _process(dt):
 	# eyes adjusting in a tunnel: the sun and the sky fade, exposure opens up a little
 	var tin = tunnels.inside(Vector3(car.px, car.py, car.pz)) if tunnels else 0.0
 	eyes = move_toward(eyes, tin, dt * (0.9 if tin > eyes else 0.6))
-	sun.light_energy = Tod.sun_e() * (1.0 - 0.88 * eyes); environment.ambient_light_energy = Tod.amb_e() * (1.0 - 0.75 * eyes); environment.tonemap_exposure = Tod.expo() + 0.12 * eyes
+	sun.light_energy = Tod.sun_e() * (1.0 - 0.88 * eyes); environment.ambient_light_energy = Tod.amb_e() * (1.0 - 0.75 * eyes); environment.tonemap_exposure = (Tod.expo() + 0.12 * eyes) * EXPO_K
 	if head.visible:          # headlights: low beam ahead of the car
 		var vh0 = car.vis_hd(); var fw = Vector3(sin(vh0), 0.0, cos(vh0)); var hp = car.vis_pos() + Vector3(0, 0.75, 0) + fw * 2.1
 		head.global_position = hp; head.look_at(hp + fw * 12.0 + Vector3(0, -1.4, 0))

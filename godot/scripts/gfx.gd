@@ -8,7 +8,7 @@ const NAMES = ["LOW", "MEDIUM", "HIGH"]
 const SCALE = [0.7, 0.85, 1.0]
 const DIST = [0.55, 0.72, 1.0]
 const LOD = [8.0, 6.0, 4.0]
-const GRASS = [0.0, 30.0, 40.0]
+const GRASS = [0.0, 34.0, 52.0]          # modelled grass radius (Nov 26: further and denser on HIGH)
 const CARS = [8, 11, 14]
 const FAR = [1500.0, 2200.0, 3000.0]          # camera reach; thicker haze on the lower levels hides where the island ends
 const FOG = [0.0011, 0.0007, 0.0005]
@@ -35,8 +35,9 @@ static func cars() -> int: return CARS[get_level()]
 static func apply(m: Node):
 	var l = get_level(); var vp: Viewport = m.get_viewport()
 	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR; vp.scaling_3d_scale = SCALE[l]
-	vp.msaa_3d = Viewport.MSAA_DISABLED if l == 0 else Viewport.MSAA_2X
+	vp.msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_4X][l]          # HIGH: cleaner edges on wires, rails and trees
 	vp.mesh_lod_threshold = float(OS.get_environment("LODT")) if OS.get_environment("LODT") != "" else LOD[l]
+	RenderingServer.global_shader_parameter_set("gfx_detail", 0.0 if l == 0 else 1.0)
 	m.sun.shadow_enabled = l > 0
 	m.sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS if l == 2 else DirectionalLight3D.SHADOW_ORTHOGONAL
 	m.sun.directional_shadow_max_distance = 60.0 if l == 2 else 45.0

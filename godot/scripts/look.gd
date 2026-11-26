@@ -2,6 +2,10 @@ class_name Look
 # material pass over imported map pieces: the map keeps its colour in vertex colours, so every material uses them
 const TSCALE = {"Terrain": 0.2222, "TerrainField": 0.2, "TerrainForest": 0.25, "TerrainRock": 0.0909, "TerrainSand": 0.1815, "TerrainSnow": 0.1428, "TerrainPave": 0.25}
 static var _cache := {}
+# second look pass (Nov 2026): buildings and kit through shaders/kit.gdshader; LOOK=1 env switches it off for A/B pictures
+static var LOOK2 := OS.get_environment("LOOK") != "1"
+const KIT = ["KitAshlar", "KitCorr", "KitFabric", "KitGalv", "KitIron", "KitPaint", "KitPlanks", "KitPlastic", "KitPwood", "KitRoof", "KitStone", "KitWood",
+	"KitTrim", "KitLimestone", "KitSetts", "WallPlaster", "RoofTiles", "PaintedSurface", "Kerb"]
 static var _sh := {}
 
 static var bake_tex: Texture2D
@@ -56,6 +60,21 @@ static func conv(m: Material, has_col: bool) -> Material:
 			f.set_shader_parameter("tex_n", sm.normal_texture); f.set_shader_parameter("has_n", 1.0 if sm.normal_texture else 0.0)
 			f.set_shader_parameter("glass", 1.0 if nm == "FacadeGlass" else 0.0); f.set_shader_parameter("use_col", 1.0 if has_col else 0.0)
 			out = f
+		elif LOOK2 and (nm in KIT or nm.begins_with("KitBrick") or nm.begins_with("KitConcrete") or nm.begins_with("KitPlaster")) and sm.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED and sm.albedo_texture:
+			var k := ShaderMaterial.new(); k.shader = shader("kit")          # buildings and street kit: detail, weathering, occlusion
+			k.set_shader_parameter("tex", sm.albedo_texture); k.set_shader_parameter("tex_n", sm.normal_texture); k.set_shader_parameter("has_n", 1.0 if sm.normal_texture else 0.0)
+			k.set_shader_parameter("tex_orm", sm.roughness_texture); k.set_shader_parameter("has_orm", 1.0 if sm.roughness_texture else 0.0)
+			k.set_shader_parameter("col", sm.albedo_color); k.set_shader_parameter("use_col", 1.0 if (has_col or props) else 0.0)
+			k.set_shader_parameter("rough", sm.roughness); k.set_shader_parameter("metal", sm.metallic if sm.roughness_texture else 0.0)
+			k.set_shader_parameter("uv_scale", sm.uv1_scale); k.set_shader_parameter("uv_offset", sm.uv1_offset)
+			k.set_shader_parameter("detail_k", 0.0 if nm in ["KitPlastic", "KitPaint"] else (0.5 if nm in ["KitGalv", "KitIron", "KitFabric"] else 1.0))
+			k.set_shader_parameter("bake", _bake()); k.set_shader_parameter("bake_rect", BAKE_RECT)
+			out = k
+		elif LOOK2 and props and nm.begins_with("T_tree") and sm.albedo_texture:          # Tripo trees: shade, colour, sway (shaders/tree.gdshader)
+			var tr := ShaderMaterial.new(); tr.shader = shader("tree")
+			tr.set_shader_parameter("tex", sm.albedo_texture); tr.set_shader_parameter("tex_n", sm.normal_texture); tr.set_shader_parameter("has_n", 1.0 if sm.normal_texture else 0.0)
+			tr.set_shader_parameter("height", {"T_tree_t_cypress": 11.0, "T_tree_t_pine": 12.0}.get(nm, 8.0))
+			out = tr
 		elif nm == "Water":
 			var w := ShaderMaterial.new(); w.shader = shader("water"); w.render_priority = 2; out = w
 		elif nm == "Seabed":

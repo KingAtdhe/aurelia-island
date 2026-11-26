@@ -21,14 +21,16 @@ func _ready():
 		for w in 400:
 			await get_tree().process_frame
 			if m.island.ready_around() and w > 30: break
+		var cam: Camera3D = null
 		if a.size() > 5:          # P:x:y:z:h:cx,cy,cz -> a free camera at cx,cy,cz looking at x,y,z
-			var cp = a[5].split(";"); var cam := Camera3D.new(); m.add_child(cam); cam.far = 4000.0
+			var cp = a[5].split(";"); cam = Camera3D.new(); m.add_child(cam); cam.far = 4000.0; cam.cull_mask = m.cam.cull_mask
 			cam.global_position = Vector3(float(cp[0]), float(cp[1]), float(cp[2])); cam.look_at(Vector3(float(a[1]), float(a[2]), float(a[3]))); cam.make_current()
 		for w in 20: await get_tree().process_frame
 		m.car.place(Vector3(m.car.px, m.car.py + 0.8, m.car.pz), m.car.hd)          # stand on the detail colliders that came in meanwhile
 		await RenderingServer.frame_post_draw
 		var nm = "/tmp/%s_%02d.png" % [OS.get_environment("TOURPFX") if OS.get_environment("TOURPFX") != "" else "tour", k]
 		get_viewport().get_texture().get_image().save_png(nm)
+		if cam: cam.queue_free(); m.cam.make_current()          # the next spot uses the game camera again
 		print("TOUR %d %s pos %s tris %d draws %d prims %d (%.1f s)" % [k, s, Vector3(m.car.px, m.car.py, m.car.pz), m.island.loaded_tris, Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME), (Time.get_ticks_msec() - t0) / 1000.0])
 		if OS.get_environment("DRAWSPLIT") != "":          # what the draws go to: hide one map group (or flora, grass, traffic) at a time
 			var base = Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME); var by := {}
