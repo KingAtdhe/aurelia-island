@@ -7,6 +7,7 @@ class_name Traffic
 const MODELS = ["hatch", "saloon", "tera", "suv", "taxi", "van", "pickup", "porto"]
 const RADIUS = { hatch = 0.335, saloon = 0.345, suv = 0.385, van = 0.40, pickup = 0.40, tera = 0.355, porto = 0.345, taxi = 0.335 }
 const WB = { hatch = Vector2(1.35, 1.475), saloon = Vector2(1.585, 1.475), suv = Vector2(1.55, 1.45), van = Vector2(1.58, 1.46), pickup = Vector2(1.84, 1.40), tera = Vector2(1.38, 1.32), porto = Vector2(1.74, 1.61), taxi = Vector2(1.42, 1.38) }   # front and rear axle distance from the body centre
+# half length and half width (metres) for collisions and spacing
 const HALF = { hatch = Vector2(2.08, 0.90), saloon = Vector2(2.39, 0.94), suv = Vector2(2.36, 0.98), van = Vector2(2.41, 1.01), pickup = Vector2(2.71, 0.98), tera = Vector2(2.24, 0.96), porto = Vector2(2.56, 1.02), taxi = Vector2(2.35, 0.93) }
 const PAINT = [Color(0.62, 0.63, 0.64), Color(0.45, 0.46, 0.48), Color(0.02, 0.02, 0.025), Color(0.06, 0.11, 0.24), Color(0.30, 0.02, 0.03),
 	Color(0.07, 0.007, 0.016), Color(0.17, 0.33, 0.55), Color(0.40, 0.34, 0.25), Color(0.010, 0.032, 0.017), Color(0.20, 0.21, 0.22), Color(0.55, 0.42, 0.10)]
