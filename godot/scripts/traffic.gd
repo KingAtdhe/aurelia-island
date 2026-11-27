@@ -1,17 +1,21 @@
 extends Node3D
 class_name Traffic
-# Background traffic: the five hero-built traffic cars (hatch, saloon, SUV, van, pickup) drive the coast roads on the right-hand lane,
+# Background traffic: the hero-built traffic cars (hatch, saloon, SUV, van, pickup from Saba's sheets; Tera crossover, Porto van and Vela taxi
+# from the approved sheet 03-05) drive the coast roads on the right-hand lane,
 # keep their distance, brake for the player and are solid to the player's car. Each car has a near model (LOD0) and a light far model (LOD1).
 
-const MODELS = ["hatch", "saloon", "suv", "van", "pickup"]
-const RADIUS = { hatch = 0.335, saloon = 0.345, suv = 0.385, van = 0.40, pickup = 0.40 }
-const WB = { hatch = Vector2(1.35, 1.475), saloon = Vector2(1.585, 1.475), suv = Vector2(1.55, 1.45), van = Vector2(1.58, 1.46), pickup = Vector2(1.84, 1.40) }   # front and rear axle distance from the body centre
-const HALF = { hatch = Vector2(2.08, 0.90), saloon = Vector2(2.39, 0.94), suv = Vector2(2.36, 0.98), van = Vector2(2.41, 1.01), pickup = Vector2(2.71, 0.98) }
+const MODELS = ["hatch", "saloon", "tera", "suv", "taxi", "van", "pickup", "porto"]
+const RADIUS = { hatch = 0.335, saloon = 0.345, suv = 0.385, van = 0.40, pickup = 0.40, tera = 0.355, porto = 0.345, taxi = 0.335 }
+const WB = { hatch = Vector2(1.35, 1.475), saloon = Vector2(1.585, 1.475), suv = Vector2(1.55, 1.45), van = Vector2(1.58, 1.46), pickup = Vector2(1.84, 1.40), tera = Vector2(1.38, 1.32), porto = Vector2(1.74, 1.61), taxi = Vector2(1.42, 1.38) }   # front and rear axle distance from the body centre
+const HALF = { hatch = Vector2(2.08, 0.90), saloon = Vector2(2.39, 0.94), suv = Vector2(2.36, 0.98), van = Vector2(2.41, 1.01), pickup = Vector2(2.71, 0.98), tera = Vector2(2.24, 0.96), porto = Vector2(2.56, 1.02), taxi = Vector2(2.35, 0.93) }
 const PAINT = [Color(0.62, 0.63, 0.64), Color(0.45, 0.46, 0.48), Color(0.02, 0.02, 0.025), Color(0.06, 0.11, 0.24), Color(0.30, 0.02, 0.03),
 	Color(0.07, 0.007, 0.016), Color(0.17, 0.33, 0.55), Color(0.40, 0.34, 0.25), Color(0.010, 0.032, 0.017), Color(0.20, 0.21, 0.22), Color(0.55, 0.42, 0.10)]
 const LOD_SWITCH = 28.0
 # each model its own real engine recording (source/audio/sfx.py) and its own horn note
-const SOUND = { hatch = [1.05, 1.12], saloon = [0.95, 1.0], suv = [1.0, 0.92], van = [1.0, 0.84], pickup = [0.95, 0.88] }     # engine pitch at walking pace, horn pitch
+# Porto: Aurelia Parcel livery on half of them (fleet white), the rest plain white, silver or navy; the taxi keeps its yellow
+const PORTO_PLAIN = [Color(0.62, 0.62, 0.61), Color(0.45, 0.46, 0.48), Color(0.06, 0.09, 0.18)]
+const AUDIO = { tera = "suv", porto = "van", taxi = "saloon" }
+const SOUND = { hatch = [1.05, 1.12], saloon = [0.95, 1.0], suv = [1.0, 0.92], van = [1.0, 0.84], pickup = [0.95, 0.88], tera = [1.0, 0.95], porto = [1.02, 0.86], taxi = [0.97, 1.04] }     # engine pitch at walking pace, horn pitch
 # every paved road of the island: [road name, first point, last point, lane offset from the centre line, closed loop]
 static var RUNS = []
 const TYPES = ["hwy", "road", "street", "rbt"]
@@ -64,13 +68,18 @@ func build(roads: Dictionary, count: int, world_roads: Array = []):
 		while li < lanes.size() - 1 and pick > lanes[li].len: pick -= lanes[li].len; li += 1
 		var model: String = MODELS[k % MODELS.size()]
 		var c = { lane = li, dir = 1 if rng.randf() < 0.5 else -1, d = clampf(pick, 10.0, lanes[li].len - 10.0), v = 0.0,
-			vmax = rng.randf_range(11.0, 16.5) * (0.85 if model in ["van", "pickup"] else 1.0), r = RADIUS[model], half = HALF[model], wb = WB[model] }
+			vmax = rng.randf_range(11.0, 16.5) * (0.85 if model in ["van", "pickup", "porto"] else 1.0), r = RADIUS[model], half = HALF[model], wb = WB[model] }
 		c.v = c.vmax
 		for o in cars:
 			if o.lane == c.lane and abs(o.d - c.d) < 20.0: c.d = fmod(c.d + 40.0, lanes[li].len - 20.0) + 10.0
 		var n: Node3D = scenes[model].instantiate(); add_child(n); c.n = n; c.wheels = []; Tod.light_car(n); Car.car_layers(n)
-		_dress(n, rng.randi() % PAINT.size() if rng.randf() < 0.75 else -1, c)
-		var ap = AudioStreamPlayer3D.new(); ap.stream = CarAudio.loop_stream("res://assets/audio/traffic_%s.ogg" % model); c.model = model; ap.max_distance = 45.0; ap.unit_size = 4.0
+		var paint = rng.randi() % PAINT.size() if rng.randf() < 0.75 else -1
+		if model == "taxi": paint = -1
+		if model == "porto":
+			paint = -1; c.livery = rng.randf() < 0.5 or OS.get_environment("PORTOLIV") != ""
+			if not c.livery: c.plain = PORTO_PLAIN[rng.randi() % PORTO_PLAIN.size()]
+		_dress(n, paint, c)
+		var ap = AudioStreamPlayer3D.new(); ap.stream = CarAudio.loop_stream("res://assets/audio/traffic_%s.ogg" % AUDIO.get(model, model)); c.model = model; ap.max_distance = 45.0; ap.unit_size = 4.0
 		ap.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE; ap.position = Vector3(1.2, 0.6, 0); n.add_child(ap); ap.play(rng.randf() * 10.0); c.snd = ap
 		var hp = AudioStreamPlayer3D.new(); hp.stream = load("res://assets/audio/horn.ogg"); hp.max_distance = 120.0; hp.unit_size = 14.0; hp.position = Vector3(1.8, 0.6, 0); n.add_child(hp); c.horn = hp; c.blocked = 0.0; c.honked = 0.0
 		var sh = MeshInstance3D.new(); var q = QuadMesh.new(); q.size = Vector2(c.half.x * 2.5, c.half.y * 2.7); q.orientation = PlaneMesh.FACE_Y; sh.mesh = q
@@ -87,14 +96,16 @@ func _dress(n: Node3D, paint: int, c: Dictionary):
 		else: mi.visibility_range_end = LOD_SWITCH; mi.visibility_range_end_margin = 2.0
 		mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 		if String(mi.name).contains("_Wheel_"): c.wheels.append(mi)
+		if String(mi.name).contains("_Livery_") and not c.get("livery", true): mi.visible = false
 		if String(mi.name).begins_with("GapLines"): mi.visibility_range_end = 14.0; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if not lod1 else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		if String(mi.name).contains("_Livery_") or String(mi.name).contains("_Doors_"): mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		for i in mi.mesh.get_surface_count():
 			var m = mi.mesh.surface_get_material(i)
 			if not (m is StandardMaterial3D): continue
 			if m.resource_name == "Paint":
 				if pm == null:
-					pm = m.duplicate(); pm.albedo_color = PAINT[paint] if paint >= 0 else m.albedo_color
+					pm = m.duplicate(); pm.albedo_color = PAINT[paint] if paint >= 0 else c.get("plain", m.albedo_color)
 					var mx = maxf(pm.albedo_color.r, maxf(pm.albedo_color.g, pm.albedo_color.b))
 					if mx > 0.64: pm.albedo_color = pm.albedo_color * (0.64 / mx)          # white paint would burn out under the filmic sun
 					pm.roughness = 0.22; pm.metallic_specular = 0.7

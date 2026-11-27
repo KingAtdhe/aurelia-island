@@ -502,3 +502,12 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
 - art/traffic_03-05_design_sheet.jpg drawn by blender/traffic/sheet_family3.py (reuses sheet_mira/sheet_saloon helpers).
 - 03 Tera compact crossover 4480×1860×1680, WB 2700, 18" · 04 Porto delivery van 5120×2000×2150, WB 3350, 16" steel, Aurelia Parcel livery · 05 Vela taxi (Vela + roof sign, checker band, lettering as decals).
 - Build only after Saba approves.
+- APPROVED ("Approved", 27 Nov) and BUILT for the Godot game as three NEW traffic models (Saba's own SUV and van stay):
+  source/traffic_cars/hero: tera_sdf/zones/parts.py, porto_sdf/zones/parts.py, taxi_sdf/zones (= the Vela) + taxi_parts.py (vela_parts on the hero
+  pipeline), decal.py (surface-laid grid, RGBA picture, glTF MASK -> alpha scissor), livery_tex.py (Porto Aurelia Parcel sides L/R, taxi doors, sign).
+  Build: set up /home/claude/traffic with symlinks to hero/*.py (+ blender/traffic/vela_sdf.py, vela_zones.py), then `bash mk.sh tera|porto|taxi`
+  (body, parts, normals, shared tyre textures, workbench renders via look.py; CT=TEXTURE shows decals but not their alpha). Copy /tmp/<car>_n.glb to
+  godot/assets/traffic/<car>.glb and run godot --import. Counts: Tera 36k+9.6k / far 7k, Porto 51k+8k / 5.5k, Taxi 36k+8.9k / 6.4k.
+- traffic.gd: MODELS hatch, saloon, tera, suv, taxi, van, pickup, porto. Taxi keeps its yellow; Porto: half with livery (fleet white), the rest plain
+  white/silver/navy with the Livery nodes hidden (PORTOLIV=1 forces the livery). Sounds reuse suv/van/saloon recordings (AUDIO map).
+- Test: SHOTS=traffic TRAFFIC=8 TVIEW=2,4,7 PORTOLIV=1 NOWARM=1 xvfb-run godot --path godot  -> /tmp/gd_shot_2..4 (Tera, taxi, Porto).

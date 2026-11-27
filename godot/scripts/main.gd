@@ -400,16 +400,19 @@ func run_shots():          # test: drive with full throttle and a few steering i
 	if OS.get_environment("CAR") != "": car.setup(OS.get_environment("CAR")); spawn("Peninsula Road", 30)
 	if OS.get_environment("SHOTS") == "menu": plan = [[0.0, 0.0, 0.0, 1.5]]
 	if OS.get_environment("SHOTS") == "menu" and OS.get_environment("MENUVIEW") != "" and menu: menu.show_page(OS.get_environment("MENUVIEW"))
+	var tview = [0, 1, 2, 3, 4]          # traffic cars to look at (TVIEW=2,4,7 picks them by index; models repeat every Traffic.MODELS.size())
+	if OS.get_environment("TVIEW") != "": tview = Array(OS.get_environment("TVIEW").split(",")).map(func(x): return int(x))
 	if OS.get_environment("SHOTS") == "traffic":             # park on the Peninsula Road and line the five traffic cars up ahead
-		plan = [[0.0, 0.0, 0.0, 0.6], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0]]
-		for k in traffic.cars.size():
-			var c = traffic.cars[k]
-			if k < 5: c.lane = 1; c.dir = -1 if k % 2 == 0 else 1; c.d = 70.0 + k * 16.0; c.vmax = 0.0 if k % 2 == 1 else 6.0; c.v = c.vmax
+		plan = [[0.0, 0.0, 0.0, 0.6], [0.0, 0.0, 0.0, 1.0]]
+		for k in tview: plan.append([0.0, 0.0, 0.0, 1.0])
+		for j in tview.size():
+			var c = traffic.cars[tview[j]]
+			c.lane = 1; c.dir = -1 if j % 2 == 0 else 1; c.d = 70.0 + j * 16.0; c.vmax = 0.0 if j % 2 == 1 else 6.0; c.v = c.vmax
 		if OS.get_environment("SHOTS") == "car": plan = [[0.0, 0.0, 0.0, 1.0]]; cam_mode = 0; car.place(Vector3(-1405, 58, 862), 2.6)
 	var i = 0
 	for st in plan:
 		touch.left = st[0] < 0; touch.right = st[0] > 0; touch.gas = st[1] > 0; touch.brake = st[2] > 0
-		if OS.get_environment("SHOTS") == "traffic": view_car = i - 2 if i >= 2 else -1; touch.hand = true
+		if OS.get_environment("SHOTS") == "traffic": view_car = tview[i - 2] if i >= 2 else -1; touch.hand = true
 		await get_tree().create_timer(st[3]).timeout
 		await RenderingServer.frame_post_draw
 		print("PERF draws %d prims %d objects %d vram %.0f MB" % [Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME), Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0])
