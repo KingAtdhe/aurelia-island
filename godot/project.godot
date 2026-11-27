@@ -50,3 +50,15 @@ look3={
 "type": "bool",
 "value": true
 }
+head_pos={
+"type": "vec3",
+"value": Vector3(0, -1000, 0)
+}
+head_dir={
+"type": "vec3",
+"value": Vector3(0, 0, 1)
+}
+head_on={
+"type": "float",
+"value": 0.0
+}

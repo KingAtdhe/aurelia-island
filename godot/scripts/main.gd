@@ -36,6 +36,8 @@ var showroom: Showroom          # the studio with the turntable behind the start
 var warm: Warmup          # shader warm-up behind the loading cover (no first-sight stutters)
 var drift: DriftScore          # drift points in free roam and in the Touge Drift event
 var head: SpotLight3D          # the player's headlights at night
+var _head_was := false
+var head_road: SpotLight3D          # their light on the road: from 0.75 m the beam grazed dark asphalt and the road ahead stayed black
 var probe: PackedByteArray; var probe_w = 0; var probe_h = 0; var shade = 1.0
 const START = ["Peninsula Road", 30]
 var view_car = -1          # test shots: look at this traffic car instead of following the player
@@ -84,6 +86,8 @@ func _ready():
 	lamps = Lamps.new(); add_child(lamps); lamps.build(w)
 	head = SpotLight3D.new(); head.spot_range = 55.0; head.spot_angle = 30.0; head.spot_attenuation = 0.6; head.spot_angle_attenuation = 1.6; head.light_color = Color(1.0, 0.95, 0.85)
 	head.shadow_enabled = false; head.visible = false; head.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF; add_child(head)
+	head_road = SpotLight3D.new(); head_road.spot_range = 60.0; head_road.spot_angle = 34.0; head_road.spot_attenuation = 0.5; head_road.spot_angle_attenuation = 1.4; head_road.light_color = Color(1.0, 0.95, 0.85); head_road.light_energy = 70.0
+	head_road.light_cull_mask = 1; head_road.shadow_enabled = false; head_road.visible = false; head_road.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF; add_child(head_road)
 	weather = Weather.new(); add_child(weather); weather.build(self)
 	if OS.get_environment("CARENV") != "0": carenv = CarEnv.new(); add_child(carenv); carenv.build(car)
 	Tod.apply(self)          # time of day: sky, sun or moon, city lights
@@ -283,9 +287,13 @@ func _process(dt):
 	var tin = tunnels.inside(Vector3(car.px, car.py, car.pz)) if tunnels else 0.0
 	eyes = move_toward(eyes, tin, dt * (0.9 if tin > eyes else 0.6))
 	sun.light_energy = Tod.sun_e() * (1.0 - 0.88 * eyes); environment.ambient_light_energy = Tod.amb_e() * (1.0 - 0.75 * eyes); environment.tonemap_exposure = (Tod.expo() + 0.12 * eyes) * EXPO_K
+	head_road.visible = head.visible
+	if head.visible != _head_was: _head_was = head.visible; RenderingServer.global_shader_parameter_set("head_on", 1.0 if head.visible else 0.0)
 	if head.visible:          # headlights: low beam ahead of the car
 		var vh0 = car.vis_hd(); var fw = Vector3(sin(vh0), 0.0, cos(vh0)); var hp = car.vis_pos() + Vector3(0, 0.75, 0) + fw * 2.1
-		head.global_position = hp; head.look_at(hp + fw * 12.0 + Vector3(0, -1.4, 0))
+		head.global_position = hp; head.look_at(hp + fw * 25.0 + Vector3(0, -0.75 + 25.0 * sin(car.pitch), 0))
+		RenderingServer.global_shader_parameter_set("head_pos", hp); RenderingServer.global_shader_parameter_set("head_dir", (hp + fw * 25.0 + Vector3(0, -0.75 + 25.0 * sin(car.pitch), 0) - hp).normalized())
+		var hr = hp + Vector3(0, 3.5, 0); head_road.global_position = hr; head_road.look_at(hp + fw * 18.0 + Vector3(0, -0.75 + 18.0 * sin(car.pitch), 0))          # low beam meets the road ~25 m ahead (it was aimed 6.5 m ahead, under the car in the chase view)
 	shade = lerpf(shade, sun_at(Vector3(car.px, car.py, car.pz)), clampf(dt * 5.0, 0.0, 1.0))
 	car_sun.light_energy = sun.light_energy * lerpf(0.1, 1.0, shade)
 	if view_car >= 0 and traffic and view_car < traffic.cars.size():

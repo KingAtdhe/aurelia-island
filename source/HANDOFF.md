@@ -584,3 +584,8 @@ no script errors), CTLTEST, FREETEST, DRIVETEST (+crash, AUDIODBG), a 12-spot re
   neighbouring Vortex loops, now 51-76 % above 3000 rpm. Originals: /tmp/audio_bak in that session only (re-run engines.py
   from the muted.io pack to rebuild).
 - Traffic engines were pitched up to x1.7 at highway speed (0.85 + v/30): now 0.9-1.16 (smoothstep to 24 m/s).
+- Night: white markings glowed blue (moonlit fill at full strength on white paint, black asphalt beside it): decal.gdshader
+  dims and neutralises light decals by tod_night. Headlights: aimed 6.5 m ahead (under the car in the chase view), now
+  ~25 m and following the body pitch; a second road-only spot (head_road, mask 1, from 3.5 m up) lights verges and grass.
+  The asphalt never took either spot light in the full scene (it does in an isolated test scene; not tracked down), so
+  road.gdshader and decal.gdshader draw the low beam themselves from global head_pos/head_dir/head_on (set in main.gd).

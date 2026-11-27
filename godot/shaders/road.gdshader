@@ -17,6 +17,17 @@ vec3 baked(vec3 c) { vec2 uv = (wpos.xz - bake_rect.xy) / bake_rect.zw; if (uv.x
 float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float n2(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y); }
 float fbm(vec2 p) { return n2(p) * 0.55 + n2(p * 2.3 + 7.1) * 0.3 + n2(p * 5.7 + 3.3) * 0.15; }
+// the player's low beam drawn in the road's own shader: the spot light never reached the asphalt in the full scene
+// (Compatibility renderer), so the road ahead stayed black at night. Same cone as the headlights, falling off with distance.
+global uniform vec3 head_pos;
+global uniform vec3 head_dir;
+global uniform float head_on;
+float head_light(vec3 p) {
+	if (head_on < 0.01) return 0.0;
+	vec3 L = p - head_pos; float d = length(L);
+	float cone = smoothstep(0.8, 0.97, dot(L / max(d, 0.01), head_dir));
+	return head_on * cone * clamp(1.0 - d / 70.0, 0.0, 1.0) / (1.0 + 0.004 * d * d);
+}
 void vertex() { wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
 void fragment() {
 	vec2 q = wpos.xz; vec3 c = texture(tex, UV).rgb * COLOR.rgb * 1.9;
@@ -63,4 +74,5 @@ void fragment() {
 	c *= mix(1.0, 0.6, wx_wet) * mix(1.0, 0.75, pool);
 	ALBEDO = baked(c * (0.88 + 0.24 * fine)); vec3 nm = texture(tex_n, UV).rgb; if (near > 0.01) nm.xy = clamp(nm.xy + (texture(tex_n, q * 0.62 + 0.17).xy - 0.5) * near * 0.9, 0.0, 1.0); NORMAL_MAP = nm; NORMAL_MAP_DEPTH = mix(0.7, 0.25, wx_wet);
 	ROUGHNESS = mix(mix(r, 0.22, wx_wet), 0.04, pool); SPECULAR = mix(asphalt > 0.5 ? 0.42 : 0.35, 0.7, wx_wet);
+	EMISSION = ALBEDO * head_light(wpos) * 3.2;
 }
