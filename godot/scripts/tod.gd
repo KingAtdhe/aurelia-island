@@ -43,9 +43,13 @@ const FOG_RAIN = [Color(0.62, 0.65, 0.68), Color(0.5, 0.46, 0.45), Color(0.04, 0
 static func night() -> float: return NIGHT[get_level()]
 # Nov 26 look pass: more sun, less flat fill light (shapes and shadows read; AgX keeps the highlights)
 const SUN_K2 = [1.22, 1.15, 1.0]
+# Nov 27 look pass: shade lit by blue sky, not grey (part of the fill comes from a sky-blue colour); a little more fill so shadows are not near-black
+const AMB_SKY3 = [0.35, 0.6, 0.0]
+const AMB_COL3 = [Color(0.6, 0.76, 1.12), Color(0.8, 0.78, 0.95), Color(0.24, 0.3, 0.46)]
+const AMB_K3 = [1.12, 1.0, 1.0]
 const AMB_K2 = [0.72, 0.8, 1.0]
 static func sun_e() -> float: return SUN_E[get_level()] * Weather.SUN_K[Weather.get_level()] * (SUN_K2[get_level()] if Look.LOOK2 else 1.0)
-static func amb_e() -> float: return AMB_E[get_level()] * Weather.AMB_K[Weather.get_level()] * (AMB_K2[get_level()] if Look.LOOK2 else 1.0)
+static func amb_e() -> float: return AMB_E[get_level()] * Weather.AMB_K[Weather.get_level()] * (AMB_K2[get_level()] if Look.LOOK2 else 1.0) * (AMB_K3[get_level()] if Look.LOOK3 else 1.0)
 static func sky_e() -> float: return SKY_RAIN_E[get_level()] if Weather.get_level() > 0 else SKY_E[get_level()]
 static func expo() -> float: return EXPO[get_level()]
 
@@ -78,7 +82,7 @@ static func apply(m: Node):
 	var l = get_level(); var e: Environment = m.environment
 	var wx = Weather.get_level()
 	var sm := e.sky.sky_material as PanoramaSkyMaterial; sm.panorama = load(SKY_RAIN[l] if wx > 0 else SKY[l]); sm.energy_multiplier = sky_e()
-	e.fog_light_color = FOG_RAIN[l] if wx > 0 else FOG[l]; e.ambient_light_sky_contribution = AMB_SKY[l]; e.ambient_light_color = AMB_COL[l]
+	e.fog_light_color = FOG_RAIN[l] if wx > 0 else FOG[l]; e.ambient_light_sky_contribution = AMB_SKY3[l] if Look.LOOK3 else AMB_SKY[l]; e.ambient_light_color = AMB_COL3[l] if Look.LOOK3 else AMB_COL[l]
 	e.fog_density = Gfx.FOG[Gfx.get_level()] * Weather.FOG_K[wx]
 	m.sun.shadow_opacity = 0.35 if wx > 0 else 1.0          # overcast: soft, faint shadows
 	if m.weather: m.weather.apply()

@@ -522,3 +522,22 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
   grille blocks (SUV, pickup, van) and projector headlamps (all but the van); hatch/saloon lamp strips taller.
 - Bug found on the way: _dress read c.model before it was set (script error stopped the loop after the first mesh, so LOD ranges, rims and glass
   were left undressed and both LODs drew). c.model is now set before _dress. Check logs for SCRIPT ERROR after each SHOTS run.
+## Godot: third look pass toward CarX (27 Nov 2026, APK 46)
+- Switch: Look.LOOK3 (global shader value look3); LOOK=2 env turns this pass off (LOOK=1 also turns off LOOK2) for A/B pictures.
+- Road (road.gdshader): asphalt cap 0.17 -> 0.13 plus mid-scale mottling; the round tar blobs (read as puddles) are gone.
+  Road UV.x is the lateral position in 3.33 m units (0 = centre line), UV.y the distance along: lanes of 3.6 m get two
+  0.6 m wheel tracks (darker, a little glossier), an oily lane centre, grime on the centre seam, thin tar crack seals and
+  cut rectangular repair patches (dark fresh tar or pale old patch, about one in ten lane cells). Junction pads
+  (|UV.x| >= 3.2) keep the plain asphalt. City setts (new uniform setts, set in Look.conv): contrast pulled towards the
+  tile average and x0.84 (the stones were near white against black joints).
+- Light (tod.gd): daytime fill is 35 % sky + 65 % sky-blue colour (AMB_SKY3/AMB_COL3), ambient x1.12 (AMB_K3); sunset
+  60 % sky. Night unchanged.
+- Grass (grass.gd): country verges (not City/Harbour/Desert) now grow meadow (55 %) and dry grass (13 %) instead of 25 %
+  lawn: verges read as grass, not bare dirt.
+- Leaves (leaves.gdshader): the laurel tile of tex_leaf_atlas_hq.png (row 3, col 2) is painted near black (mean sRGB
+  7,19,4), so every "bush" (laurel, 5,156 on the island) drew as a black blob, worst in the desert. TILE_K lifts that tile
+  x2.6 (only for LeavesHQ: hq_atlas uniform). Lifting the other dark tiles made the spruces lime green: left at 1.
+- Checked: Peninsula Road 0.2/0.5 (day, sunset), Street E260, Summit Pass, Dune Road. Software GL here: ~100 s per rural
+  spot, ~700 s in the city.
+- Seen, not fixed: Dune Road 0.5 has a striped asphalt/dirt/grass patch at the crossing beside the speed-trap board;
+  light skid arcs at Summit Pass and Dune Road; pale Tripo pine trunks in the Summit Pass forest.

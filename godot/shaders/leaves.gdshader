@@ -8,6 +8,10 @@ global uniform float wx_wet;
 //  - a gentle sway in the wind, more at the top and the outside of the crown
 uniform sampler2D tex : source_color, filter_linear_mipmap_anisotropic, repeat_disable;
 uniform float lift = 1.0;          // the atlas is painted dark: brightened like the web game's LEAF_LIFT
+global uniform bool look3;
+uniform float hq_atlas = 0.0;          // 1: tex is tex_leaf_atlas_hq.png (TILE_K applies)
+// Nov 27: the atlas tiles are painted at very different brightness (the laurel bush tile near black): lift that one (row-major 4 x 4 tiles of tex_leaf_atlas_hq.png)
+const float TILE_K[16] = float[16](1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.6, 1.0);          // only the laurel tile: the darker needle tiles are meant to be dark
 varying float hk;
 varying float vary;
 void vertex() {
@@ -22,7 +26,8 @@ void vertex() {
 void fragment() {
 	vec4 t = texture(tex, UV);
 	if (t.a < 0.45) discard;
-	vec3 c = t.rgb * COLOR.rgb * lift;
+	ivec2 ti = clamp(ivec2(floor(UV * 4.0)), ivec2(0), ivec2(3));
+	vec3 c = t.rgb * COLOR.rgb * lift * (look3 && hq_atlas > 0.5 ? TILE_K[ti.y * 4 + ti.x] : 1.0);
 	c *= mix(vec3(1.0), vec3(0.94 + 0.12 * vary, 1.0, 0.92 + 0.1 * vary), 0.8);
 	float down = clamp(-NORMAL.y, 0.0, 1.0);          // view space: cards turned away from the sky sit in the crown's shade
 	float shade = mix(0.74, 1.0, smoothstep(0.0, 0.7, hk)) * (1.0 - 0.22 * down);

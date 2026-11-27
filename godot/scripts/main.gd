@@ -52,6 +52,7 @@ func _ready():
 	if Look.LOOK2:          # Nov 26 look pass: AgX keeps colour in bright skies and sunlit paint instead of washing to white
 		e.tonemap_mode = Environment.TONE_MAPPER_AGX; e.tonemap_agx_contrast = 1.45; e.adjustment_contrast = 1.06; e.adjustment_saturation = 1.3
 	env.environment = e; add_child(env); environment = e
+	RenderingServer.global_shader_parameter_set("look3", Look.LOOK3)
 	sun = DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-38, -35, 0); sun.light_energy = 1.35; sun.light_color = Color(1.0, 0.95, 0.86); sun.shadow_enabled = true; sun.directional_shadow_max_distance = 60; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS; sun.directional_shadow_split_1 = 0.25; sun.light_cull_mask = 1; add_child(sun)
 	# the car sun lights only the cars and dims where the island bake has shade; no shadow map of its own
 	# (on the Compatibility renderer a second shadowed sun draws the whole scene again)

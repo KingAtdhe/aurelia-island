@@ -98,7 +98,9 @@ func _make_cell(key: Vector2i) -> Dictionary:
 					"Forest Trails": t = "forest" if u < 0.6 else "meadow"
 					"Countryside", "Coastal Highway": t = "meadow" if u < 0.88 else "dry"
 					_: t = "meadow" if u < 0.8 else "dry"
-			elif nm.begins_with("Verge"): t = "lawn" if u < 0.25 else ""
+			elif nm.begins_with("Verge"):
+				if Look.LOOK3 and not (reg in ["City", "Harbour", "Desert"]): t = "meadow" if u < 0.55 else ("dry" if u < 0.68 else "")          # Nov 27: country verges grass over (they read as bare dirt)
+				else: t = "lawn" if u < 0.25 else ""
 			if t == "": continue
 			if not out.has(t): out[t] = PackedFloat32Array()
 			var tint = 0.86 + 0.28 * _h(s + 3); var sc = 1.05 + 0.65 * _h(s + 5); var yw = _h(s + 4) * TAU

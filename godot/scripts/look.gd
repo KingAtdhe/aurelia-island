@@ -6,6 +6,8 @@ static var _cache := {}
 const C16COL = { "C16Stone": Color(0.78, 0.66, 0.5), "C16StoneDark": Color(0.5, 0.42, 0.33), "C16Render": Color(0.8, 0.76, 0.68), "C16Panel": Color(0.46, 0.41, 0.36) }
 # second look pass (Nov 2026): buildings and kit through shaders/kit.gdshader; LOOK=1 env switches it off for A/B pictures
 static var LOOK2 := OS.get_environment("LOOK") != "1"
+# third look pass (27 Nov 2026): road wear, shadow tint, depth; LOOK=2 (or 1) switches it off for A/B pictures
+static var LOOK3 := not (OS.get_environment("LOOK") in ["1", "2"])
 const KIT = ["KitAshlar", "KitCorr", "KitFabric", "KitGalv", "KitIron", "KitPaint", "KitPlanks", "KitPlastic", "KitPwood", "KitRoof", "KitStone", "KitWood",
 	"KitTrim", "KitLimestone", "KitSetts", "WallPlaster", "RoofTiles", "PaintedSurface", "Kerb", "C16Stone", "C16StoneDark", "C16Render", "C16Panel"]
 static var _sh := {}
@@ -44,7 +46,7 @@ static func conv(m: Material, has_col: bool) -> Material:
 			out = t
 		elif nm == "Asphalt" or nm == "Shoulder" or nm == "Setts":
 			var r := ShaderMaterial.new(); r.shader = shader("road")
-			r.set_shader_parameter("bake", _bake()); r.set_shader_parameter("bake_rect", BAKE_RECT); r.set_shader_parameter("tex", sm.albedo_texture); r.set_shader_parameter("tex_n", sm.normal_texture); r.set_shader_parameter("asphalt", 1.0 if nm == "Asphalt" else 0.0)
+			r.set_shader_parameter("bake", _bake()); r.set_shader_parameter("bake_rect", BAKE_RECT); r.set_shader_parameter("tex", sm.albedo_texture); r.set_shader_parameter("tex_n", sm.normal_texture); r.set_shader_parameter("asphalt", 1.0 if nm == "Asphalt" else 0.0); r.set_shader_parameter("setts", 1.0 if nm == "Setts" else 0.0)
 			out = r
 		elif nm in DECALS:
 			var dm := ShaderMaterial.new(); var blend = sm.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED
@@ -76,7 +78,7 @@ static func conv(m: Material, has_col: bool) -> Material:
 			var lt = sm.albedo_texture
 			if nm == "LeavesHQ" and ResourceLoader.exists("res://assets/island/tex/tex_leaf_atlas_hq.png"): lt = load("res://assets/island/tex/tex_leaf_atlas_hq.png")          # one atlas for both tree files (its import keeps the needles at a distance)
 			var lv := ShaderMaterial.new(); lv.shader = shader("leaves"); lv.set_shader_parameter("tex", lt)
-			lv.set_shader_parameter("lift", 1.55 if nm == "LeavesHQ" else 1.3)
+			lv.set_shader_parameter("lift", 1.55 if nm == "LeavesHQ" else 1.3); lv.set_shader_parameter("hq_atlas", 1.0 if nm == "LeavesHQ" else 0.0)
 			out = lv
 		elif LOOK2 and props and nm.begins_with("T_tree") and sm.albedo_texture:          # Tripo trees: shade, colour, sway (shaders/tree.gdshader)
 			var tr := ShaderMaterial.new(); tr.shader = shader("tree")
