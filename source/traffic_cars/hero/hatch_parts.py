@@ -21,7 +21,7 @@ def mat(name, col, rough=0.5, metal=0.0, emit=None, alpha=1.0, coat=0.0):
     if emit: b.inputs['Emission Color'].default_value = (*emit[0], 1); b.inputs['Emission Strength'].default_value = emit[1]
     if alpha < 1: b.inputs['Alpha'].default_value = alpha; m.blend_method = 'BLEND' if hasattr(m, 'blend_method') else None; m.surface_render_method = 'BLENDED'
     m.use_backface_culling = name not in ('Interior', 'Headliner', 'GapLine'); m.diffuse_color = (*col, 1); return m
-MATS = dict(Paint=((0.17, 0.33, 0.55), 0.28, 0.15, None, 1, 1.0), Trim=((0.01, 0.01, 0.012), 0.12), Clad=((0.045, 0.045, 0.05), 0.72), Liner=((0.018, 0.018, 0.02), 0.9), GapLine=((0.004, 0.004, 0.005), 1.0),
+MATS = dict(Mesh=((0.20, 0.205, 0.215), 0.4, 0.6), Paint=((0.17, 0.33, 0.55), 0.28, 0.15, None, 1, 1.0), Trim=((0.01, 0.01, 0.012), 0.12), Clad=((0.045, 0.045, 0.05), 0.72), Liner=((0.018, 0.018, 0.02), 0.9), GapLine=((0.004, 0.004, 0.005), 1.0),
             Glass=((0.012, 0.018, 0.024), 0.03, 0.0, None, 0.74), GlassBlack=((0.008, 0.008, 0.01), 0.08), Lamp=((0.05, 0.055, 0.06), 0.10, 1.0), LampLens=((0.85, 0.88, 0.92), 0.05, 0.0, None, 0.25), PlateText=((1, 1, 1), 0.5), Leather=((0.10, 0.085, 0.075), 0.6), LED=((1, 1, 1), 0.2, 0, ((1, 0.98, 0.94), 4.0)),
             Tail=((0.42, 0.012, 0.018), 0.14), TailBand=((0.01, 0.01, 0.012), 0.08), TailLED=((0.9, 0.08, 0.06), 0.2, 0, ((1, 0.06, 0.03), 2.5)), Reverse=((0.92, 0.92, 0.92), 0.15),
             Grille=((0.014, 0.014, 0.016), 0.55), Intake=((0.006, 0.006, 0.007), 0.75), Reflector=((0.5, 0.02, 0.02), 0.2), Tyre=((0.028, 0.028, 0.03), 0.86), Rim=((0.58, 0.59, 0.61), 0.3, 1.0),
@@ -211,6 +211,11 @@ def surf_diag(u, z, front=True, side=1):
     P = np.c_[s, side * y, np.full_like(t, z)]; d = dval(P); k = np.argmax(d < 0)
     if k == 0: return None
     f = d[k - 1] / (d[k - 1] - d[k]); return P[k - 1] + (P[k] - P[k - 1]) * f
+import front_kit as FK
+for sd in (1, -1):
+    for u in (0.30, 0.46):
+        p = surf_diag(u, 0.817, True, sd)
+        if p is not None: FK.projector(blob, B(p), 0.024)
 bml = bmesh.new()
 for sd in (1, -1):
     ribbon(bml, [surf_diag(u, z, True, sd) for u, z in dense(Zn.HL_DRL, 0.01)], 0.0075, 0.003)
@@ -335,8 +340,15 @@ for x in (FX, RX):
         r = bmesh.ops.create_cone(bm, cap_ends=True, segments=12, radius1=R, radius2=R, depth=0.2)
         bmesh.ops.rotate(bm, cent=(0, 0, 0), matrix=Matrix.Rotation(math.pi / 2, 3, 'X'), verts=r['verts']); bmesh.ops.translate(bm, vec=(x, sd * TRK, R), verts=r['verts'])
 wo = obj('far_wheels', bm, 'TyreFar'); PARTS.remove(wo)
+bm = bmesh.new()                                                  # far rims: a silver face with a dark hub, so the far wheels are not black discs
+for x in (FX, RX):
+    for sd in (1, -1):
+        for rr, dd, off in ((R * 0.66, 0.012, 0.096), (R * 0.2, 0.014, 0.100)):
+            r = bmesh.ops.create_cone(bm, cap_ends=True, segments=16, radius1=rr, radius2=rr, depth=dd)
+            bmesh.ops.rotate(bm, cent=(0, 0, 0), matrix=Matrix.Rotation(math.pi / 2, 3, 'X'), verts=r['verts']); bmesh.ops.translate(bm, vec=(x, sd * (TRK + off), R), verts=r['verts'])
+wr = obj('far_rims', bm, 'Rim'); PARTS.remove(wr)
 for o in bpy.context.scene.objects: o.select_set(False)
-far.select_set(True); wo.select_set(True); bpy.context.view_layer.objects.active = far; bpy.ops.object.join()
+far.select_set(True); wo.select_set(True); wr.select_set(True); bpy.context.view_layer.objects.active = far; bpy.ops.object.join()
 lod1 = bpy.data.objects.new('LOD1', None); bpy.context.scene.collection.objects.link(lod1); far.parent = lod1
 tris = lambda o: sum(len(p.vertices) - 2 for p in o.data.polygons)
 print('TRIS body', tris(body), 'parts', tris(P0), 'far', tris(far))

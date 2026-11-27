@@ -20,7 +20,7 @@ func build(c: Node3D):
 	dome = MeshInstance3D.new(); var sm := SphereMesh.new(); sm.radius = 20.0; sm.height = 40.0; sm.radial_segments = 48; sm.rings = 24; dome.mesh = sm
 	mat = ShaderMaterial.new(); mat.shader = load("res://shaders/car_env_dome.gdshader"); dome.material_override = mat
 	dome.layers = LAYER; dome.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(dome)
-	probe = ReflectionProbe.new(); probe.size = Vector3(26.0, 14.0, 26.0); probe.max_distance = 40.0; probe.cull_mask = LAYER; probe.reflection_mask = 2          # sees only the dome (and sky); only cars (layer 2) take its reflections
+	probe = ReflectionProbe.new(); probe.size = Vector3(260.0, 60.0, 260.0); probe.max_distance = 40.0; probe.cull_mask = LAYER; probe.reflection_mask = 2          # sees only the dome (and sky); only cars (layer 2) take its reflections; big enough to cover the traffic round the player
 	probe.update_mode = ReflectionProbe.UPDATE_ONCE; probe.ambient_mode = ReflectionProbe.AMBIENT_ENVIRONMENT; probe.blend_distance = 4.0
 	probe.intensity = 1.0; add_child(probe)
 	refresh()

@@ -513,3 +513,12 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
 - Test: SHOTS=traffic TRAFFIC=8 TVIEW=2,4,7 PORTOLIV=1 NOWARM=1 xvfb-run godot --path godot  -> /tmp/gd_shot_2..4 (Tera, taxi, Porto).
 - APK 45 (godot-apk-45) carries the three new traffic cars. Run 44 hung for 14 min in the CI import (stuck on eng_vortex_2.ogg at 9 %, not
   related to the change) and was replaced by run 45, which took 3 min. If it happens again: wrap the two `--import` calls in `timeout 600`.
+
+## 2026-11-27 · traffic cars look pass (after Saba: "improve the npc cars, they look bad")
+- Traffic paint: metallic (solid for whites/yellow/taxi) with clear coat; CarEnv probe now 260 × 60 × 260 m so traffic round the player gets the
+  dome reflections (dark ground half, horizon line) instead of the flat bright sky. Glass darker (0.8 alpha); far-model glass opaque dark.
+- LOD distance by graphics level: 26 / 40 / 55 m (was 28). Far models have rim faces (silver disc + hub) instead of black wheel discs.
+- Older five (hatch, saloon, SUV, van, pickup): crisper bodies (smax blend 0.06/0.045/0.04, profile blur 4 px instead of 8); front_kit.py adds
+  grille blocks (SUV, pickup, van) and projector headlamps (all but the van); hatch/saloon lamp strips taller.
+- Bug found on the way: _dress read c.model before it was set (script error stopped the loop after the first mesh, so LOD ranges, rims and glass
+  were left undressed and both LODs drew). c.model is now set before _dress. Check logs for SCRIPT ERROR after each SHOTS run.

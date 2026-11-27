@@ -27,14 +27,14 @@ def plan_poly():
 def field():
     s = np.arange(S0, S1 + 1e-9, H); y = np.arange(-Y0, Y0 + 1e-9, H); z = np.arange(Z0, Z1 + 1e-9, H)
     FS2 = sdf2d(side_poly(), -0.2, L + 0.2, 0.0, 2.1); FP = sdf2d(plan_poly(), -0.2, L + 0.2, -1.1, 1.1)
-    FS2 = (_nd.gaussian_filter(FS2[0], 8.0),) + FS2[1:]; FP = (_nd.gaussian_filter(FP[0], 8.0),) + FP[1:]
+    FS2 = (_nd.gaussian_filter(FS2[0], 4.0),) + FS2[1:]; FP = (_nd.gaussian_filter(FP[0], 4.0),) + FP[1:]
     SS, ZZ = np.meshgrid(s, z, indexing='ij'); dside = sample2d(FS2, SS, ZZ)
     SP, YP = np.meshgrid(s, y, indexing='ij'); dplan = sample2d(FP, SP, YP)
     zz = z[None, :]; S2 = s[:, None]
     cab = sstep(1.20, 1.32, S2) * (1 - sstep(3.62, 3.70, S2))                    # greenhouse only over the cab
     taper = (cab * (0.10 * sstep(BELT - 0.01, BELT + 0.08, zz) + np.maximum(0, zz - BELT) * 0.32 + 0.6 * np.maximum(0, zz - BELT - 0.30) ** 2)
              + np.maximum(0, 0.55 - zz) * 0.25 + 0.05 * (zz - 1.05) ** 2)
-    D = smax(dside[:, None, :], dplan[:, :, None] + taper[:, None, :], 0.06)
+    D = smax(dside[:, None, :], dplan[:, :, None] + taper[:, None, :], 0.04)
     yy = y[None, :, None]; Z3 = z[None, None, :]; S3 = s[:, None, None]
     crown = np.clip(1 - (yy / 0.97) ** 2, 0, 1) ** 0.7 * sstep(1.15, 1.26, Z3) * (1 - sstep(3.60, 3.68, S3))
     D -= crown * np.interp(s, [0.0, 1.2, 1.4, 2.0, 3.6], [0.016, 0.020, 0.010, 0.016, 0.016])[:, None, None]

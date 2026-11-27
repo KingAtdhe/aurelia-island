@@ -367,8 +367,15 @@ for x in (FX, RX):
         r = bmesh.ops.create_cone(bm, cap_ends=True, segments=12, radius1=R, radius2=R, depth=0.2)
         bmesh.ops.rotate(bm, cent=(0, 0, 0), matrix=Matrix.Rotation(math.pi / 2, 3, 'X'), verts=r['verts']); bmesh.ops.translate(bm, vec=(x, sd * TRK, R), verts=r['verts'])
 wo = obj('far_wheels', bm, 'TyreFar'); PARTS.remove(wo)
+bm = bmesh.new()                                                  # far rims: a silver face with a dark hub, so the far wheels are not black discs
+for x in (FX, RX):
+    for sd in (1, -1):
+        for rr, dd, off in ((R * 0.66, 0.012, 0.096), (R * 0.2, 0.014, 0.100)):
+            r = bmesh.ops.create_cone(bm, cap_ends=True, segments=16, radius1=rr, radius2=rr, depth=dd)
+            bmesh.ops.rotate(bm, cent=(0, 0, 0), matrix=Matrix.Rotation(math.pi / 2, 3, 'X'), verts=r['verts']); bmesh.ops.translate(bm, vec=(x, sd * (TRK + off), R), verts=r['verts'])
+wr = obj('far_rims', bm, 'Rim'); PARTS.remove(wr)
 for o in bpy.context.scene.objects: o.select_set(False)
-far.select_set(True); wo.select_set(True); bpy.context.view_layer.objects.active = far; bpy.ops.object.join()
+far.select_set(True); wo.select_set(True); wr.select_set(True); bpy.context.view_layer.objects.active = far; bpy.ops.object.join()
 lod1 = bpy.data.objects.new('LOD1', None); bpy.context.scene.collection.objects.link(lod1); far.parent = lod1
 tris = lambda o: sum(len(p.vertices) - 2 for p in o.data.polygons)
 print('TRIS body', tris(body), 'parts', tris(P0), 'far', tris(far))

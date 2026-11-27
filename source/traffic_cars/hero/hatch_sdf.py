@@ -36,7 +36,7 @@ def field():
     zz = z[None, :]
     taper = (np.maximum(0, zz - belt[:, None]) * 0.40 + 0.9 * np.maximum(0, zz - belt[:, None] - 0.30) ** 2 + 0.04 * sstep(belt[:, None] - 0.03, belt[:, None] + 0.07, zz)
              + np.maximum(0, 0.36 - zz) * 0.30 + 0.05 * (zz - 0.75) ** 2)
-    D = smax(dside[:, None, :], dplan[:, :, None] + taper[:, None, :], 0.10)
+    D = smax(dside[:, None, :], dplan[:, :, None] + taper[:, None, :], 0.06)
     yy = y[None, :, None]; Z3 = z[None, None, :]; S3 = s[:, None, None]
     crown = np.clip(1 - (yy / 0.86) ** 2, 0, 1) ** 0.5 * sstep(0.62, 0.78, Z3)
     crown_amt = np.interp(s, [0.0, 0.95, 1.20, 1.55, 1.85, 3.50, 3.80, 4.2], [0.020, 0.024, 0.016, 0.010, 0.022, 0.026, 0.016, 0.012])[:, None, None]

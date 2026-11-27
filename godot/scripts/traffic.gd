@@ -11,7 +11,8 @@ const WB = { hatch = Vector2(1.35, 1.475), saloon = Vector2(1.585, 1.475), suv =
 const HALF = { hatch = Vector2(2.08, 0.90), saloon = Vector2(2.39, 0.94), suv = Vector2(2.36, 0.98), van = Vector2(2.41, 1.01), pickup = Vector2(2.71, 0.98), tera = Vector2(2.24, 0.96), porto = Vector2(2.56, 1.02), taxi = Vector2(2.35, 0.93) }
 const PAINT = [Color(0.62, 0.63, 0.64), Color(0.45, 0.46, 0.48), Color(0.02, 0.02, 0.025), Color(0.06, 0.11, 0.24), Color(0.30, 0.02, 0.03),
 	Color(0.07, 0.007, 0.016), Color(0.17, 0.33, 0.55), Color(0.40, 0.34, 0.25), Color(0.010, 0.032, 0.017), Color(0.20, 0.21, 0.22), Color(0.55, 0.42, 0.10)]
-const LOD_SWITCH = 28.0
+const LOD_SWITCH = [26.0, 40.0, 55.0]          # near model out to this distance (LOW, MEDIUM, HIGH graphics)
+var lod_switch := 40.0
 # each model its own real engine recording (source/audio/sfx.py) and its own horn note
 # Porto: Aurelia Parcel livery on half of them (fleet white), the rest plain white, silver or navy; the taxi keeps its yellow
 const PORTO_PLAIN = [Color(0.62, 0.62, 0.61), Color(0.45, 0.46, 0.48), Color(0.06, 0.09, 0.18)]
@@ -29,6 +30,7 @@ var player: Car
 var coll: Coll
 
 func build(roads: Dictionary, count: int, world_roads: Array = []):
+	lod_switch = float(OS.get_environment("TLOD")) if OS.get_environment("TLOD") != "" else LOD_SWITCH[Gfx.get_level()]
 	for m in MODELS: scenes[m] = load("res://assets/traffic/%s.glb" % m)
 	RUNS = []
 	var rbts = []          # roundabouts: roads that end in the middle of one stop at its ring
@@ -73,7 +75,7 @@ func build(roads: Dictionary, count: int, world_roads: Array = []):
 		c.v = c.vmax
 		for o in cars:
 			if o.lane == c.lane and abs(o.d - c.d) < 20.0: c.d = fmod(c.d + 40.0, lanes[li].len - 20.0) + 10.0
-		var n: Node3D = scenes[model].instantiate(); add_child(n); c.n = n; c.wheels = []; Tod.light_car(n); Car.car_layers(n)
+		var n: Node3D = scenes[model].instantiate(); add_child(n); c.n = n; c.model = model; c.wheels = []; Tod.light_car(n); Car.car_layers(n)
 		var paint = rng.randi() % PAINT.size() if rng.randf() < 0.75 else -1
 		if model == "taxi": paint = -1
 		if model == "porto":
@@ -93,8 +95,8 @@ func _dress(n: Node3D, paint: int, c: Dictionary):
 	var pm: StandardMaterial3D = null
 	for mi in n.find_children("*", "MeshInstance3D", true, false):
 		var lod1 = mi.get_parent() != null and String(mi.get_parent().name).begins_with("LOD1")
-		if lod1: mi.visibility_range_begin = LOD_SWITCH; mi.visibility_range_begin_margin = 2.0
-		else: mi.visibility_range_end = LOD_SWITCH; mi.visibility_range_end_margin = 2.0
+		if lod1: mi.visibility_range_begin = lod_switch; mi.visibility_range_begin_margin = 2.0
+		else: mi.visibility_range_end = lod_switch; mi.visibility_range_end_margin = 2.0
 		mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 		if String(mi.name).contains("_Wheel_"): c.wheels.append(mi)
 		if String(mi.name).contains("_Livery_") and not c.get("livery", true): mi.visible = false
@@ -109,7 +111,9 @@ func _dress(n: Node3D, paint: int, c: Dictionary):
 					pm = m.duplicate(); pm.albedo_color = PAINT[paint] if paint >= 0 else c.get("plain", m.albedo_color)
 					var mx = maxf(pm.albedo_color.r, maxf(pm.albedo_color.g, pm.albedo_color.b))
 					if mx > 0.64: pm.albedo_color = pm.albedo_color * (0.64 / mx)          # white paint would burn out under the filmic sun
-					pm.roughness = 0.22; pm.metallic_specular = 0.7
+					var solid = mx > 0.5 or c.model == "taxi"          # whites, yellows: solid paint; the rest metallic
+					pm.metallic = 0.0 if solid else 0.55; pm.roughness = 0.34 if solid else 0.3; pm.metallic_specular = 0.6
+					pm.clearcoat_enabled = true; pm.clearcoat = 1.0; pm.clearcoat_roughness = 0.04
 				mi.set_surface_override_material(i, pm)
 			elif m.resource_name in ["Rim", "Chrome"] and String(mi.name).contains("_Wheel_"):
 				if not c.has("rim"): c.rim = m.duplicate(); c.rim.roughness = maxf(m.roughness, 0.42); c.rim.metallic = minf(m.metallic, 0.7); c.rim.albedo_color = m.albedo_color.darkened(0.25)
@@ -123,7 +127,8 @@ func _dress(n: Node3D, paint: int, c: Dictionary):
 				if not c.has("tyre"): c.tyre = m.duplicate(); c.tyre.albedo_color = Color(0.05, 0.05, 0.052); c.tyre.roughness = 0.86; c.tyre.metallic_specular = 0.35
 				mi.set_surface_override_material(i, c.tyre)
 			elif m.resource_name == "Glass":
-				var g: StandardMaterial3D = m.duplicate(); g.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA; g.albedo_color.a = 0.62; g.roughness = 0.04
+				var g: StandardMaterial3D = m.duplicate(); g.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA; g.albedo_color = Color(0.015, 0.02, 0.026, 0.8); g.roughness = 0.02; g.metallic = 0.2; g.metallic_specular = 0.9
+				if lod1: g.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED; g.albedo_color = Color(0.02, 0.025, 0.032)          # the far model has no cabin: dark tinted glass
 				mi.set_surface_override_material(i, g)
 
 # where a road ends at another road: the ways a car can carry on (lane, distance, direction), found once at the start

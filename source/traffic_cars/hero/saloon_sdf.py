@@ -28,14 +28,14 @@ def plan_poly():
 def field():
     s = np.arange(S0, S1 + 1e-9, H); y = np.arange(-Y0, Y0 + 1e-9, H); z = np.arange(Z0, Z1 + 1e-9, H)
     FS2 = sdf2d(side_poly(), -0.2, L + 0.2, 0.0, 1.75); FP = sdf2d(plan_poly(), -0.2, L + 0.2, -1.05, 1.05)
-    FS2 = (_nd.gaussian_filter(FS2[0], 8.0),) + FS2[1:]; FP = (_nd.gaussian_filter(FP[0], 8.0),) + FP[1:]
+    FS2 = (_nd.gaussian_filter(FS2[0], 4.0),) + FS2[1:]; FP = (_nd.gaussian_filter(FP[0], 4.0),) + FP[1:]
     SS, ZZ = np.meshgrid(s, z, indexing='ij'); dside = sample2d(FS2, SS, ZZ)
     SP, YP = np.meshgrid(s, y, indexing='ij'); dplan = sample2d(FP, SP, YP)
     belt = interp(BELT, np.clip(s, BS0, BS1)) + 1.6 * np.maximum(0, s - (BS1 - 0.14)) + 1.6 * np.maximum(0, (BS0 + 0.10) - s)
     zz = z[None, :]; bz = belt[:, None]
     taper = (np.maximum(0, zz - bz) * 0.70 + 0.8 * np.maximum(0, zz - bz - 0.25) ** 2 + 0.045 * sstep(bz - 0.03, bz + 0.07, zz)
              + np.maximum(0, 0.38 - zz) * 0.30 + 0.05 * (zz - 0.80) ** 2)
-    D = smax(dside[:, None, :], dplan[:, :, None] + taper[:, None, :], 0.10)
+    D = smax(dside[:, None, :], dplan[:, :, None] + taper[:, None, :], 0.06)
     yy = y[None, :, None]; Z3 = z[None, None, :]; S3 = s[:, None, None]
     crown = np.clip(1 - (yy / 0.90) ** 2, 0, 1) ** 0.7 * sstep(0.66, 0.82, Z3)
     crown_amt = np.interp(s, [0.0, 1.20, 1.45, 1.80, 2.20, 3.70, 4.10, 4.8], [0.020, 0.024, 0.014, 0.010, 0.024, 0.026, 0.018, 0.014])[:, None, None]
