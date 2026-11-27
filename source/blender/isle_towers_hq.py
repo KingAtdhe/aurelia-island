@@ -18,22 +18,24 @@ def curtain_face(B, x0, x1, y, z0, z1, floor_h, bay, outward, fin_d=0.35, spandr
         _add(B, fins, ((x0 + x1) / 2, y + outward * 0.06, z), (w, 0.14, 0.07))
 
 def punched_face(B, x0, x1, y, z0, z1, floor_h, bay, outward, win_w=1.5, win_h=2.0, reveal=0.32, wall='Stone', frame='Frame', glass='GlassDark', sill='Stone'):
-    """Masonry wall with punched windows set back in deep reveals, a sill under each, a frame and glazing bars."""
+    """Masonry wall with punched windows set back in deep reveals: full-height piers between the window columns,
+    a wall band between the floors, a projecting sill course under each row of windows, the glazing behind."""
     w = x1 - x0; n = max(1, int(round(w / bay))); bw = w / n; floors = int(round((z1 - z0) / floor_h))
+    ym = y - outward * reveal / 2
     _add(B, glass, ((x0 + x1) / 2, y - outward * (reveal + 0.04), (z0 + z1) / 2), (w, 0.04, z1 - z0))          # glazing behind
-    for f in range(floors):
-        zb = z0 + f * floor_h; zw0 = zb + (floor_h - win_h) * 0.55; zw1 = zw0 + win_h
-        _add(B, wall, ((x0 + x1) / 2, y - outward * reveal / 2, (zb + zw0) / 2), (w, reveal, zw0 - zb))               # below the windows
-        _add(B, wall, ((x0 + x1) / 2, y - outward * reveal / 2, (zw1 + zb + floor_h) / 2), (w, reveal, zb + floor_h - zw1))
-        for k in range(n + 1):          # piers between windows
-            px = x0 + k * bw; pw = (bw - win_w) if 0 < k < n else (bw - win_w) / 2
-            cx = px if 0 < k < n else (px + pw / 2 if k == 0 else px - pw / 2)
-            _add(B, wall, (cx, y - outward * reveal / 2, (zw0 + zw1) / 2), (pw, reveal, win_h))
-        for k in range(n):
-            cx = x0 + (k + 0.5) * bw
-            _add(B, sill, (cx, y + outward * 0.04, zw0 - 0.05), (win_w + 0.2, 0.16, 0.1))
-            _add(B, frame, (cx, y - outward * (reveal - 0.02), (zw0 + zw1) / 2), (0.06, 0.06, win_h))              # centre mullion
-            _add(B, frame, (cx, y - outward * (reveal - 0.02), zw0 + win_h * 0.7), (win_w, 0.06, 0.05))           # transom
+    pw = bw - win_w
+    for k in range(n + 1):          # piers, the full height of the face
+        cx = x0 + k * bw; ww = pw if 0 < k < n else pw / 2
+        cx = cx if 0 < k < n else (cx + ww / 2 if k == 0 else cx - ww / 2)
+        _add(B, wall, (cx, ym, (z0 + z1) / 2), (ww, reveal, z1 - z0))
+    zs = [z0 + f * floor_h + (floor_h - win_h) * 0.55 for f in range(floors)]          # window bottoms
+    bands = [(z0, zs[0])] + [(zs[f] + win_h, zs[f + 1]) for f in range(floors - 1)] + [(zs[-1] + win_h, z1)]
+    for a, b in bands:          # wall between one row of windows and the next
+        if b - a > 0.02: _add(B, wall, ((x0 + x1) / 2, ym, (a + b) / 2), (w, reveal, b - a))
+    for zb in zs:          # sill course
+        _add(B, sill, ((x0 + x1) / 2, y + outward * 0.05, zb - 0.05), (w + 0.1, 0.18, 0.1))
+    if frame:          # one slim mullion in each window
+        for k in range(n): _add(B, frame, (x0 + (k + 0.5) * bw, y - outward * (reveal - 0.03), (z0 + z1) / 2), (0.05, 0.05, z1 - z0))
 
 def box_faces(B, w, d, z0, z1, face, **kw):
     """Run a face function round all four sides of a w x d block (x faces use the same function rotated)."""
@@ -53,7 +55,7 @@ def roof_plant(B, w, d, z, rng, screen=True):
     if screen:
         for k in range(int(pw / 0.5) + 1): _add(B, 'Louvre', (-pw / 2 + k * 0.5, pd / 2 + 0.3, z + 2.3), (0.06, 0.25, 4.6))
     for k in range(int(rng.integers(4, 9))):
-        _add(B, 'Plant', (rng.uniform(-w / 2 + 2, w / 2 - 2), rng.uniform(-d / 2 + 2, d / 2 - 2), z + 0.6), (1.4, 1.0, 1.2))
+        _add(B, 'Plant', (rng.uniform(-1, 1) * max(0.1, w / 2 - 2), rng.uniform(-1, 1) * max(0.1, d / 2 - 2), z + 0.6), (1.4, 1.0, 1.2))
     _add(B, 'Tank', (w * 0.3, -d * 0.25, z + 1.4), (2.4, 2.4, 2.8))
 
 def office_glass(seed=1, w=30.0, d=24.0, floors=24):
@@ -64,8 +66,8 @@ def office_glass(seed=1, w=30.0, d=24.0, floors=24):
     z = 7.0; ww, dd = w, d
     for part, nf in ((0, floors - 8), (1, 5), (2, 3)):
         _add(B, 'Core', (0, 0, z + nf * fh / 2), (ww - 1.2, dd - 1.2, nf * fh))
-        box_faces(B, ww, dd, z, z + nf * fh, curtain_face, floor_h=fh, bay=1.5, fin_d=0.42)
-        z += nf * fh; _add(B, 'Coping', (0, 0, z + 0.25), (ww + 0.3, dd + 0.3, 0.5)); ww -= 4.0; dd -= 3.0
+        box_faces(B, ww, dd, z, z + nf * fh, curtain_face, floor_h=fh, bay=3.0, fin_d=0.24)          # game: wider bays, slimmer fins (more glass)
+        z += nf * fh; _add(B, 'Coping', (0, 0, z + 0.25), (ww + 0.3, dd + 0.3, 0.5)); ww = max(10.0, ww - 4.0); dd = max(10.0, dd - 3.0)
     _add(B, 'CrownLight', (0, 0, z + 1.0), (ww + 3.0, dd + 2.5, 0.25))
     roof_plant(B, ww + 3.5, dd + 2.5, z, rng)
     return B, (w, d), z + 5.0
@@ -99,8 +101,9 @@ def residential(seed=3, w=24.0, d=16.0, floors=9):
     for f in range(floors):
         z = z0 + f * fh
         _add(B, 'Timber', (0, -d / 2 + 0.02, z + 0.15), (w + 0.1, 0.1, 0.3))
-        for k in range(4):
-            x = -w / 2 + 3.0 + k * 6.0; bw = 4.2
+        nb = max(2, int(w / 6.0))
+        for k in range(nb):
+            x = -w / 2 + w / nb * (k + 0.5); bw = min(4.2, w / nb - 1.6)
             _add(B, 'Slab', (x, -d / 2 - 0.85, z + 0.1), (bw, 1.7, 0.2))
             _add(B, 'GlassRail', (x, -d / 2 - 1.68, z + 0.65), (bw, 0.04, 0.95))
             _add(B, 'FrameDark', (x, -d / 2 - 1.68, z + 1.13), (bw, 0.06, 0.05))
@@ -113,17 +116,17 @@ def residential(seed=3, w=24.0, d=16.0, floors=9):
     _add(B, 'Plant', (w * 0.25, d * 0.2, z1 + 1.5), (4, 3, 3))
     return B, (w, d), z1 + 3.5
 
-def mixed_tower(seed=4, w=22.0, d=22.0, floors=30):
+def mixed_tower(seed=4, w=22.0, d=22.0, floors=30, podium=None):
     """D: mixed-use: a five-storey podium with shopfront canopies, a slender banded tower, a sloped glass crown."""
     rng = np.random.default_rng(seed); B = {}; fh = 3.4
-    pw, pd = w + 14, d + 10
+    pw, pd = podium if podium else (w + 14, d + 10)
     _add(B, 'Core', (0, 0, 9), (pw - 1, pd - 1, 18)); box_faces(B, pw, pd, 0, 5, curtain_face, floor_h=5, bay=4.0, fin_d=0.1, spandrel=False, glass='GlassLobby')
     box_faces(B, pw, pd, 5, 18, punched_face, floor_h=3.25, bay=2.6, win_w=1.9, win_h=2.2, reveal=0.25, wall='Panel', frame='Frame', sill='Panel')
     for k in range(4): _add(B, 'Canopy', (-pw / 2 + 4 + k * (pw - 8) / 3, -pd / 2 - 1.2, 4.2), (6, 2.4, 0.2))
     _add(B, 'Coping', (0, 0, 18.3), (pw + 0.3, pd + 0.3, 0.6))
     z0 = 18.6; z1 = z0 + floors * fh
     _add(B, 'Core', (0, 0, (z0 + z1) / 2), (w - 1, d - 1, z1 - z0))
-    box_faces(B, w, d, z0, z1, curtain_face, floor_h=fh, bay=1.2, fin_d=0.2)
+    box_faces(B, w, d, z0, z1, curtain_face, floor_h=fh, bay=2.4, fin_d=0.16)
     for f in range(0, floors, 2): _add(B, 'Band', (0, 0, z0 + f * fh + 0.2), (w + 0.6, d + 0.6, 0.35))       # white bands every other floor
     for k in range(6):          # stepped glass crown
         s = 1.0 - k * 0.13; _add(B, 'GlassCrown', (0, 0, z1 + 1.0 + k * 1.6), (w * s, d * s, 1.6))
@@ -132,3 +135,12 @@ def mixed_tower(seed=4, w=22.0, d=22.0, floors=30):
     return B, (pw, pd), z1 + 18
 
 KINDS = { 'office_glass': office_glass, 'office_stone': office_stone, 'residential': residential, 'mixed_tower': mixed_tower }
+
+
+def fit(kind, w, d, h, seed=1):
+    """A building of this kind on a plot w x d (m) standing about h m tall (the height of the tower it replaces)."""
+    if kind == 'office_glass': return office_glass(seed, w, d, max(10, int(round((h - 12.0) / 3.6))))
+    if kind == 'office_stone': return office_stone(seed, w, d, max(6, int(round((h - 10.0) / 3.8))))
+    if kind == 'residential': return residential(seed, w, d, max(6, int(round((h - 8.5) / 3.1))))
+    tw, td = max(14.0, w * 0.62), max(14.0, d * 0.62)
+    return mixed_tower(seed, tw, td, max(10, int(round((h - 37.0) / 3.4))), podium=(w, d))

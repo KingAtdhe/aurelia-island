@@ -2,10 +2,12 @@ class_name Look
 # material pass over imported map pieces: the map keeps its colour in vertex colours, so every material uses them
 const TSCALE = {"Terrain": 0.2222, "TerrainField": 0.2, "TerrainForest": 0.25, "TerrainRock": 0.0909, "TerrainSand": 0.1815, "TerrainSnow": 0.1428, "TerrainPave": 0.25}
 static var _cache := {}
+# concept 16 stone and render: the photo is light, these colours give each its tone (glTF keeps only the picture)
+const C16COL = { "C16Stone": Color(0.78, 0.66, 0.5), "C16StoneDark": Color(0.5, 0.42, 0.33), "C16Render": Color(0.8, 0.76, 0.68), "C16Panel": Color(0.46, 0.41, 0.36) }
 # second look pass (Nov 2026): buildings and kit through shaders/kit.gdshader; LOOK=1 env switches it off for A/B pictures
 static var LOOK2 := OS.get_environment("LOOK") != "1"
 const KIT = ["KitAshlar", "KitCorr", "KitFabric", "KitGalv", "KitIron", "KitPaint", "KitPlanks", "KitPlastic", "KitPwood", "KitRoof", "KitStone", "KitWood",
-	"KitTrim", "KitLimestone", "KitSetts", "WallPlaster", "RoofTiles", "PaintedSurface", "Kerb"]
+	"KitTrim", "KitLimestone", "KitSetts", "WallPlaster", "RoofTiles", "PaintedSurface", "Kerb", "C16Stone", "C16StoneDark", "C16Render", "C16Panel"]
 static var _sh := {}
 
 static var bake_tex: Texture2D
@@ -64,7 +66,7 @@ static func conv(m: Material, has_col: bool) -> Material:
 			var k := ShaderMaterial.new(); k.shader = shader("kit")          # buildings and street kit: detail, weathering, occlusion
 			k.set_shader_parameter("tex", sm.albedo_texture); k.set_shader_parameter("tex_n", sm.normal_texture); k.set_shader_parameter("has_n", 1.0 if sm.normal_texture else 0.0)
 			k.set_shader_parameter("tex_orm", sm.roughness_texture); k.set_shader_parameter("has_orm", 1.0 if sm.roughness_texture else 0.0)
-			k.set_shader_parameter("col", sm.albedo_color); k.set_shader_parameter("use_col", 1.0 if (has_col or props) else 0.0)
+			k.set_shader_parameter("col", C16COL.get(nm, sm.albedo_color)); k.set_shader_parameter("use_col", 1.0 if (has_col or props) else 0.0)
 			k.set_shader_parameter("rough", sm.roughness); k.set_shader_parameter("metal", sm.metallic if sm.roughness_texture else 0.0)
 			k.set_shader_parameter("uv_scale", sm.uv1_scale); k.set_shader_parameter("uv_offset", sm.uv1_offset)
 			k.set_shader_parameter("detail_k", 0.0 if nm in ["KitPlastic", "KitPaint"] else (0.5 if nm in ["KitGalv", "KitIron", "KitFabric"] else 1.0))
@@ -81,6 +83,8 @@ static func conv(m: Material, has_col: bool) -> Material:
 			tr.set_shader_parameter("tex", sm.albedo_texture); tr.set_shader_parameter("tex_n", sm.normal_texture); tr.set_shader_parameter("has_n", 1.0 if sm.normal_texture else 0.0)
 			tr.set_shader_parameter("height", {"T_tree_t_cypress": 11.0, "T_tree_t_pine": 12.0}.get(nm, 8.0))
 			out = tr
+		elif nm == "C16Glass":          # concept 16 curtain walls: dark mirror glass, lit offices at night
+			var g16 := ShaderMaterial.new(); g16.shader = shader("glass16"); out = g16
 		elif nm == "Water":
 			var w := ShaderMaterial.new(); w.shader = shader("water"); w.render_priority = 2; out = w
 		elif nm == "Seabed":

@@ -19,7 +19,7 @@ const SUNBAKE = [1.0, 0.3, 0.0]
 const NIGHT = [0.0, 0.35, 1.0]
 const CFG = "user://settings.cfg"
 # materials that glow: name -> [energy by day, energy at night]
-const EMIT = { "KitShopInterior": [0.35, 1.0], "KitShopSign": [0.0, 0.9], "HeroSigns": [0.0, 0.8], "KitNeon": [0.25, 2.2], "KitAds": [0.0, 0.8], "KitLens": [0.0, 2.5] }
+const EMIT = { "KitShopInterior": [0.35, 1.0], "KitShopSign": [0.0, 0.9], "HeroSigns": [0.0, 0.8], "KitNeon": [0.25, 2.2], "KitAds": [0.0, 0.8], "KitLens": [0.0, 2.5], "C16Light": [0.4, 2.6] }
 const HEAD = ["head", "Light_White", "Lamp", "LED", "LampLens"]
 const TAIL = ["tail", "Light_Red", "Tail", "TailLED", "redlens"]
 static var level := -1

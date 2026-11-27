@@ -12,6 +12,10 @@ const RANGE = {
 	"Props": [0, 330], "Shapes": [0, 420], "KitTrim": [0, 520], "ArchTrim": [0, 620], "Kerbs": [0, 500],
 	"BuildingsHDModel": [0, 1150], "BuildingsLOD": [1100, 0], "Glazing": [0, 1400], "Shops": [0, 280],
 }
+# concept 16 (Nov 27): the glass-core towers rebuilt with depth (assets/island/city16, source/godot_tools/export_city16.py);
+# up close they replace the old tower boxes and their crowns, far away the old boxes stand in
+const RANGE16 = { "City16": [0, 1300], "Towers": [1250, 0] }
+static var city16 := false
 
 var chunks := {}               # name -> { kind, lo: Vector2, hi: Vector2, node, state (0 none, 1 loading, 3 loaded and queued, 2 in) }
 var focus := Vector3.ZERO
@@ -27,8 +31,22 @@ func load_base(spawn: Vector3):
 		var c = idx["chunks"][nm]
 		chunks[nm] = { kind = c["kind"], lo = Vector2(c["min"][0], c["min"][2]), hi = Vector2(c["max"][0], c["max"][2]), node = null, state = 0, tris = int(c["tris"]) }
 	focus = spawn
+	city16 = Look.LOOK2 and DirAccess.dir_exists_absolute(DIR + "city16")
 	for nm in chunks:
 		if chunks[nm].kind == "b" or _dist(chunks[nm]) < LOAD_R: _attach(nm, load(_path(nm)))
+	if city16:
+		for f in DirAccess.get_files_at(DIR + "city16"):
+			if not f.ends_with(".glb"): continue
+			var n = load(DIR + "city16/" + f).instantiate(); add_child(n); Look.apply(n); ranges(n)
+		if OS.get_environment("C16DBG") != "":
+			for t in find_children("Towers*", "GeometryInstance3D", true, false): print("TOW ", t.name, " ", t.visibility_range_begin, " ", t.visible)
+			for t in find_children("City16*", "GeometryInstance3D", true, false).slice(0, 3): print("C16 ", t.name, " ", t.visibility_range_end)
+			for q in [Vector3(40, 60, 0), Vector3(40, 60, -60), Vector3(-40, 60, -60), Vector3(-40, 60, 0), Vector3(40, 60, 100)]:
+				var hits = []
+				for g in find_children("*", "MeshInstance3D", true, false):
+					if g.is_visible_in_tree() and g.mesh and (g.global_transform * g.get_aabb()).grow(-0.5).has_point(q): hits.append("%s[%d-%d]" % [String(g.name), int(g.visibility_range_begin), int(g.visibility_range_end)])
+				print("AT ", q, " ", hits)
+
 
 func _path(nm: String) -> String: return DIR + "chunks/%s.glb" % nm
 
@@ -150,8 +168,10 @@ static func ranges(root: Node):
 		var g = group_of(String(n.name))
 		if g.begins_with("TerrainBlend"): (n as GeometryInstance3D).visibility_range_end = 900.0 * Gfx.dist()
 		if OS.get_environment("HIDEGRP") != "" and g in OS.get_environment("HIDEGRP").split(","): n.visible = false   # test: look behind a group
-		if not RANGE.has(g): continue
-		var r = RANGE[g]; var gi := n as GeometryInstance3D; var k = Gfx.dist()          # graphics level shortens every draw distance
+		if city16 and g.begins_with("TowerCrown"): n.visible = false; continue          # the new towers have their own crowns
+		var r = RANGE16[g] if (city16 and RANGE16.has(g)) else RANGE.get(g, [])
+		if r.is_empty(): continue
+		var gi := n as GeometryInstance3D; var k = Gfx.dist()          # graphics level shortens every draw distance
 		gi.visibility_range_begin = r[0] * k; gi.visibility_range_end = r[1] * k
 		gi.visibility_range_begin_margin = 20.0 if r[0] > 0 else 0.0; gi.visibility_range_end_margin = 20.0 if r[1] > 0 else 0.0
 		gi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED

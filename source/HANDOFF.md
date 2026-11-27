@@ -454,3 +454,20 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
 - shaders/leaves.gdshader for every Leaves* material (also the spruce/birch/palms already HQ): cut-out, tint, shade low in
   the crown and on down-facing cards, backlight, a little emission, sway. No specular: with it the cards turned grey-white
   against the sun. LeavesHQ always samples res://assets/island/tex/tex_leaf_atlas_hq.png (one atlas for both files).
+
+## Concept 16 built: city blocks with depth (27 Nov 2026, APK 40)
+- The glass-core towers of the map are the base-chunk group "Towers" (FacadeGlass boxes, 44 buildings of 1-3 tiers,
+  77-189 m, ground 14.2). Their footprints and heights: source/godot_tools/city16_plots.json (measured from the Towers
+  meshes; the TowerCrown_* df chunks sat on them).
+- source/godot_tools/export_city16.py (bpy): isle_towers_hq.fit(kind, w, d, h) per plot; 100 m and up -> office_glass or
+  mixed_tower, lower -> office_stone or residential (4 each); half turned 180 deg. Merged per material per 400 m cell into
+  godot/assets/island/city16/c16_<i>_<j>.glb (objects City16__<material>), 256k tris for all 44, world-space UVs (4 m).
+  punched_face is built from full-height piers + floor bands + a sill course (a tenth of the earlier pieces).
+- Game: island.gd loads every city16 glb at start (Island.city16, only with LOOK2); RANGE16: City16 0-1300 m, the old
+  Towers boxes only beyond 1250 m; TowerCrown_* hidden. Materials: C16Glass -> shaders/glass16.gdshader (dark tinted
+  glass with a drawn reflection: sky above, street below - the sky picture is bright below the horizon and turned the
+  towers white; lit offices at night by bay and floor), WindowGlass (punched windows, lobbies) -> interior rooms,
+  C16Stone/StoneDark/Render/Panel -> kit shader with Look.C16COL tones (glTF keeps only the photo), C16Light glows at
+  night (Tod.EMIT), the rest plain materials. Curtain walls: dark fins (bay 3 m, 0.24 m deep) so the glass reads.
+- Checks: Street N0 day and night, Street E260; draws/prims about as before (the old towers had no detail of their own).
+  C16DBG=1 prints the ranges and what occupies a few points along the avenue.
