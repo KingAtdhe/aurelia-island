@@ -511,3 +511,5 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
 - traffic.gd: MODELS hatch, saloon, tera, suv, taxi, van, pickup, porto. Taxi keeps its yellow; Porto: half with livery (fleet white), the rest plain
   white/silver/navy with the Livery nodes hidden (PORTOLIV=1 forces the livery). Sounds reuse suv/van/saloon recordings (AUDIO map).
 - Test: SHOTS=traffic TRAFFIC=8 TVIEW=2,4,7 PORTOLIV=1 NOWARM=1 xvfb-run godot --path godot  -> /tmp/gd_shot_2..4 (Tera, taxi, Porto).
+- APK 45 (godot-apk-45) carries the three new traffic cars. Run 44 hung for 14 min in the CI import (stuck on eng_vortex_2.ogg at 9 %, not
+  related to the change) and was replaced by run 45, which took 3 min. If it happens again: wrap the two `--import` calls in `timeout 600`.
