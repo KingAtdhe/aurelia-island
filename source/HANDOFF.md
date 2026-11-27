@@ -563,3 +563,24 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
 - look.gd (LOOK3): C16Alu/Spandrel/Frame/FrameDark/Canopy/Plant metallic <= 0.12, roughness >= 0.5 (metal mirrored the
   sky picture's bright lower half); C16Alu graphite 0.16.
 - Checked: Street E260 (the tower now shows), Street N0. City spots take ~12-15 min each here.
+
+## Godot: bug pass and car sound matching (27 Nov 2026)
+Tested: FUZZ 600 s / 23 spots (no NaN, teleport, sinking, flips), FLOW (no leaks), all 18 races on autopilot (all finish,
+no script errors), CTLTEST, FREETEST, DRIVETEST (+crash, AUDIODBG), a 12-spot rendered tour. Found and fixed:
+- Road markings (and kerbs, trims, decals, props) vanished along long stretches (Ring in the desert, Beach Flyover,
+  Serpentine): visibility_range is measured to the middle of a piece and a marking strip can be 600 m long. island.gd
+  ranges(): range_end += half the piece's horizontal extent (transform walked by hand: chunks are built off the tree).
+- Shoreline: the car hit the waterline with a "solid" crash sound and bounced, and kept doing it with the throttle held
+  (FUZZ stalls at 1394,1085 / 1076,1183). car.gd: water stops the car quietly; pushing on for 1.2 s (shore_t) puts it
+  back on the nearest road.
+- Launch: rpm sat flat at 3549 from 0 to ~40 km/h (clutch slip floor), so the engine note did not follow the car.
+  Now eng = max(wheelRpm, min(idle + 1500 thr + 0.28 wheelRpm, 4400)): revs climb from ~2650 with the car. Same pace.
+- A bigger hit right after a light one (rail scrape then wall) was silent: bump() re-triggers when v > 6 and > 1.6x
+  the last impact. Hard landings: a low thump only from 9 m/s (was a crash cut from 6.5 m/s).
+- Crash recordings: source/audio/align_crashes.py re-cut them so the hit is at the start (crash_car_a reached its
+  impact 1.3 s in, heavy_b 0.9 s); car_b and car_a shortened to 1.5/1.7 s.
+- Engine loops: source/audio/even_engines.py evens each car's tone across the 8 rpm loops (1/3-octave levels fitted
+  per band across rpm, circular FFT filter, RMS kept); the share of energy near the firing rate swung 10-92 % between
+  neighbouring Vortex loops, now 51-76 % above 3000 rpm. Originals: /tmp/audio_bak in that session only (re-run engines.py
+  from the muted.io pack to rebuild).
+- Traffic engines were pitched up to x1.7 at highway speed (0.85 + v/30): now 0.9-1.16 (smoothstep to 24 m/s).

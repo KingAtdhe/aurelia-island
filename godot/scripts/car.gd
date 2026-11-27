@@ -181,7 +181,10 @@ func drive(dt: float):
 		elif sideways: pass
 		elif not rev and gear < 5 and (wheelRpm > V.up or (rpm > V.up and wheelRpm > V.up * 0.72)): gear += 1; shiftT = 0.16
 		elif not rev and gear > 0 and wheelRpm * V.gears[gear - 1] / V.gears[gear] < V.down: gear -= 1; shiftT = 0.1
-		var launch = V.idle + 2600 * thr; var eng = max(wheelRpm, min(launch, 4200))
+		# pulling away the clutch slips: the revs start a little above idle and climb with the wheels until they meet them
+		# (about 40 km/h in first). Before, they sat flat at 3550 from standstill to 40 km/h, so the engine note did not
+		# follow the car speeding up.
+		var launch = V.idle + 1500 * thr; var eng = max(wheelRpm, min(launch + 0.28 * wheelRpm, 4400))
 		rpm += ((min(V.red, eng + 1800 * thr) if spin else min(eng, V.red + 60)) - rpm) * min(1.0, h * 14)
 		var Fdrive = 0.0
 		if not (shiftT > 0 or in_hand):
@@ -248,8 +251,15 @@ func physics(dt: float):
 		var ob := coll.obstacles(nx, nz, self); nx = ob[0]; nz = ob[1]
 	var gn0 = ground(nx, nz, py + 1.0)[0]
 	if not air and (gn0 < -50.0 or (gn0 < -0.15 and gn0 <= py + 0.02)):          # the edge of the map, or the sea (surface at -0.25): stop at the edge / waterline
-		nx = px; nz = pz; var sp0 = Vector2(vx, vz).length(); vx *= -0.25; vz *= -0.25; yr *= 0.5
-		if sp0 > 3.0: bump(sp0, "solid")
+		# water stops the car (no bounce back and no crash sound: it was playing a metal crash at the shoreline); pushing on
+		# into the sea for over a second puts the car back on the nearest road, as driving off into it does
+		nx = px; nz = pz; vx *= 0.2; vz *= 0.2; yr *= 0.5; shore_t += dt
+		if shore_t > 1.2:
+			shore_t = 0.0; var q = nearest_road.call(Vector3(px, py, pz)) if nearest_road.is_valid() else null
+			if q: place(q[0], q[1])
+			else: place(Vector3(safe.x, safe.y, safe.z), safe.w)
+			return
+	else: shore_t = maxf(0.0, shore_t - dt)
 	px = nx; pz = nz; bump_t -= dt
 	if settle > 0.0:          # a crash knocks the car round, but the tyres soon take hold again: the spin dies away instead of sliding on
 		settle -= dt; yr *= exp(-dt * 4.0)
@@ -320,12 +330,15 @@ var nearest_road: Callable          # set by the game: position -> [road point, 
 var impact := 0.0         # speed into the last thing hit (m/s), for the crash sound
 var impact_kind := "solid"   # car, rail or solid: which crash recordings fit
 var settle := 0.0
+var shore_t := 0.0          # time spent pushing against the waterline or the map edge
 var _odd := false; var _corners := []         # after a crash: the car straightens out instead of spinning on
 signal landed(v)          # back on the ground after a jump, with the speed it came down at
 func bump(v := 8.0, kind := ""):
 	if kind != "": impact_kind = kind
 	if v > 6.0: settle = clampf(v / 20.0, 0.35, 0.9); drift = 0.0
-	if bump_t <= 0: bump_t = 0.5 if v < 6.0 else 0.8; impact = v; crashed.emit()
+	# one sound per crash, but a much harder hit straight after a light one (scraping a rail, then the wall) still gets
+	# its own: before, the light knock held the sound for 0.8 s and the big hit was silent
+	if bump_t <= 0 or (v > 6.0 and v > impact * 1.6): bump_t = 0.5 if v < 6.0 else 0.8; impact = v; crashed.emit()
 
 # cockpit: where the driver's eyes are (body space) and the steering wheel, turned with the front wheels
 var eye := Vector3(0.0, 1.0, -0.2)

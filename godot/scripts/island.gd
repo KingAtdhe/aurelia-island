@@ -172,7 +172,14 @@ static func ranges(root: Node):
 		var r = RANGE16[g] if (city16 and RANGE16.has(g)) else RANGE.get(g, [])
 		if r.is_empty(): continue
 		var gi := n as GeometryInstance3D; var k = Gfx.dist()          # graphics level shortens every draw distance
-		gi.visibility_range_begin = r[0] * k; gi.visibility_range_end = r[1] * k
+		# the draw distance is measured to the middle of the piece: a long piece (a marking strip can run for 600 m) vanished
+		# while the car was still on its far end. Allow for the piece's own half length (horizontal) on top.
+		var xf := Transform3D(); var p: Node = gi          # the chunk may still be off the tree (built on the loading thread): walk up by hand
+		while p != null and p != root.get_parent():
+			if p is Node3D: xf = (p as Node3D).transform * xf
+			p = p.get_parent()
+		var wb = xf * gi.get_aabb(); var half = Vector2(wb.size.x, wb.size.z).length() * 0.5
+		gi.visibility_range_begin = r[0] * k; gi.visibility_range_end = (r[1] * k + half) if r[1] > 0 else 0.0
 		gi.visibility_range_begin_margin = 20.0 if r[0] > 0 else 0.0; gi.visibility_range_end_margin = 20.0 if r[1] > 0 else 0.0
 		gi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 

@@ -43,7 +43,7 @@ func _ready():
 	if car:
 		car.crashed.connect(_on_crash)
 		car.knocked.connect(func(o): _hit(0, -17.0 if o[2] < 0.35 else -11.0, 1.3 if o[2] < 0.35 else 1.0))                  # a bin, sign or post knocked over
-		car.landed.connect(func(v): if v > 6.5: _hit(0 if v < 10.0 else 1, lerpf(-20.0, -6.0, clampf((v - 6.5) / 10.0, 0.0, 1.0)), 0.8))   # coming down from a jump
+		car.landed.connect(func(v): if v > 9.0: _hit(0, lerpf(-22.0, -12.0, clampf((v - 9.0) / 10.0, 0.0, 1.0)), 0.72))   # a hard landing: a low thump, not a crash
 	_build()
 
 func _player(s: AudioStream, b: String) -> Node:
