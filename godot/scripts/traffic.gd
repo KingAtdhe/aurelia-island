@@ -84,6 +84,7 @@ func build(roads: Dictionary, count: int, world_roads: Array = []):
 		_dress(n, paint, c)
 		var ap = AudioStreamPlayer3D.new(); ap.stream = CarAudio.loop_stream("res://assets/audio/traffic_%s.ogg" % AUDIO.get(model, model)); c.model = model; ap.max_distance = 45.0; ap.unit_size = 4.0
 		ap.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE; ap.position = Vector3(1.2, 0.6, 0); n.add_child(ap); ap.play(rng.randf() * 10.0); c.snd = ap
+		var cpt = Car.contact_patch(Vector2(HALF[model].x, HALF[model].y), 0.66); cpt.rotation.y = PI * 0.5; n.add_child(cpt)          # traffic frames run along x
 		var hp = AudioStreamPlayer3D.new(); hp.stream = load("res://assets/audio/horn.ogg"); hp.max_distance = 120.0; hp.unit_size = 14.0; hp.position = Vector3(1.8, 0.6, 0); n.add_child(hp); c.horn = hp; c.blocked = 0.0; c.honked = 0.0
 		var sh = MeshInstance3D.new(); var q = QuadMesh.new(); q.size = Vector2(c.half.x * 2.5, c.half.y * 2.7); q.orientation = PlaneMesh.FACE_Y; sh.mesh = q
 		sh.material_override = blob_material(); sh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; sh.position = Vector3(0, 0.035, 0); sh.visibility_range_end = 70.0; n.add_child(sh)

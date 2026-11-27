@@ -589,3 +589,9 @@ no script errors), CTLTEST, FREETEST, DRIVETEST (+crash, AUDIODBG), a 12-spot re
   ~25 m and following the body pitch; a second road-only spot (head_road, mask 1, from 3.5 m up) lights verges and grass.
   The asphalt never took either spot light in the full scene (it does in an isolated test scene; not tracked down), so
   road.gdshader and decal.gdshader draw the low beam themselves from global head_pos/head_dir/head_on (set in main.gd).
+- "Cars float on the asphalt": measured, the tyres sit 4 cm into the road (both cars), so not a height bug; the road under
+  the car was as bright as the open road. shaders/contact.gdshader + Car.contact_patch(half): a soft dark patch under
+  every car (rounded rect, darker in the middle and at the tyres, plain alpha: blend_mul went through tone mapping and
+  greyed the quad). On the body (tilts with it), layer 1; traffic cars get one too (rotated: their frame runs along x).
+- Calder wheels never turned or steered: its model names them Wheel_Front_Left etc. and setup() looked only for
+  Front_Left; they were merged into the body. setup() now also tries "Wheel_" + name. Axle = local z, matching axis "z".

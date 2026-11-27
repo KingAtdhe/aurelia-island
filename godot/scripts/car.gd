@@ -61,6 +61,7 @@ func setup(id: String, o := {}):
 	body = Node3D.new(); add_child(body); body.add_child(s); s.rotation.y = C.yaw          # every model turned to face +Z, the heading direction
 	for nm in ["Front_Left", "Front_Right", "Rear_Left", "Rear_Right"]:
 		var w: Node3D = s.find_child(nm, true, false)
+		if w == null: w = s.find_child("Wheel_" + nm, true, false)          # the Calder names its wheels Wheel_Front_Left etc.: they were never found, so they did not turn or steer
 		if w: wheels.append({ n = w, steer = (w.get_parent() if w.get_parent().name.begins_with("Steer_") else null), front = nm.begins_with("Front") })
 	merge_body(s)
 	_find_cockpit(s)
@@ -77,6 +78,17 @@ func setup(id: String, o := {}):
 	if opts.get("far", false): _add_far(s, C)
 	Tod.light_car(body)          # head and tail lights glow at sunset and night
 	car_layers(body)
+	var cp = contact_patch(CARS[id].half); body.add_child(cp); cp.layers = 1          # after car_layers: the patch belongs to the road
+
+# the soft dark patch under a car (shaders/contact.gdshader); half = half length, half width in metres. Lies just above
+# the ground in the car's own frame, so it tilts with the body; drawn on the map layer (it darkens the road, not the car)
+static var _contact_sh: Shader
+static func contact_patch(half: Vector2, strength := 0.72) -> MeshInstance3D:
+	if _contact_sh == null: _contact_sh = load("res://shaders/contact.gdshader")
+	var mi := MeshInstance3D.new(); var pm := PlaneMesh.new(); pm.size = Vector2((half.y + 0.45) * 2.0, (half.x + 0.55) * 2.0); mi.mesh = pm
+	var m := ShaderMaterial.new(); m.shader = _contact_sh; m.set_shader_parameter("half", half); m.set_shader_parameter("strength", strength); m.render_priority = 3
+	mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; mi.position = Vector3(0, 0.03, 0); mi.name = "ContactPatch"
+	return mi
 
 # cars are drawn on render layer 2: they get their sunlight from the car sun, which follows the baked light where they are
 static func car_layers(root: Node):
