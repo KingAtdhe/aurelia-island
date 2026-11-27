@@ -73,6 +73,7 @@ func setup(id: String, o := {}):
 				d.roughness = 0.05; mi.set_surface_override_material(i, d)
 	if opts.has("paint"): _repaint(s, C.paint, opts.paint)
 	elif player and Progress.U(id).paint > 0: _repaint(s, C.paint, Progress.PAINTS[Progress.U(id).paint][1])
+	if player and not opts.has("paint"): CarStyle.apply(self, s, Progress.U(id))          # wheels, wing, stance, livery from the garage
 	if opts.get("far", false): _add_far(s, C)
 	Tod.light_car(body)          # head and tail lights glow at sunset and night
 	car_layers(body)
@@ -292,7 +293,7 @@ func _physics_process_body(dt):
 	acc = min(acc + dt, 0.1)
 	while acc >= 1.0 / 120.0: physics(1.0 / 120.0); acc -= 1.0 / 120.0
 	position = Vector3(px, py, pz); rotation = Vector3(0, hd, 0)
-	body.rotation = Vector3(-pitch, 0, roll); body.position.y = body_lift
+	body.rotation = Vector3(-pitch, 0, roll); body.position.y = body_lift + ride_off
 	wheel_spin += vf * dt; rear_spin += (vf + (16 * thr if spin else 0.0) - (vf if in_hand and abs(vf) > 1 else 0.0)) * dt
 	for w in wheels:
 		var a = spin_sgn * (wheel_spin if w.front else rear_spin) / V.r
@@ -304,6 +305,7 @@ func _physics_process_body(dt):
 		sw.transform = sw_rest * Transform3D(Basis(), sw_c) * r * Transform3D(Basis(), -sw_c)
 
 var body_lift := 0.0
+var ride_off := 0.0          # garage ride height (looks only)
 # where the car is drawn this frame: between the last two physics steps (physics interpolation), so the camera and the
 # headlights follow the car as seen, not the 60 Hz physics position
 func vis_pos() -> Vector3: return get_global_transform_interpolated().origin if is_inside_tree() else Vector3(px, py, pz)
@@ -354,6 +356,9 @@ func merge_body(root: Node3D):
 		if w.steer: moving[w.steer] = true
 	var swn = _steering_wheel(root)
 	if swn: moving[swn] = true
+	for nm in ["Spoiler", "Spoiler_Mount"]:          # kept apart so the garage can take the wing off
+		var sp = root.find_child(nm, true, false)
+		if sp: moving[sp] = true
 	var tools := {}; var mats := {}
 	var inv = root.global_transform.affine_inverse()
 	if _merged.has(car_id):                     # merged once per car model; rivals and later races reuse it (no hitch at the start)

@@ -32,9 +32,20 @@ const RACES = {
 	# solo challenges: medals instead of places (gold, silver, bronze count as 1st, 2nd, 3rd for prize money and unlocks)
 	touge = { name = "Touge Drift", blurb = "Down the Summit Pass alone. Angle, speed and linked drifts score; crash or spin and the drift is lost.",
 		segs = [["Summit Pass", 298, 2]], skill = 0.93, mode = "drift", medals = [9000, 5000, 2000], after = "summit" },
+	# Nov 27: five more events
+	skyline = { name = "Skyline Ridge", blurb = "Along the high ridge road, 1.5 km of fast sweepers with the island below.",
+		segs = [["Skyline Road", 2, 297]], skill = 0.95, after = "descent" },
+	east = { name = "East Avenue Sunset", blurb = "Out of the city along East Avenue, straight into the setting sun.",
+		segs = [["East Avenue", 2, 279]], skill = 0.94, tod = 1, after = "golden" },
+	west = { name = "West Avenue Nights", blurb = "From the city edge to the west coast at night, under the street lamps.",
+		segs = [["West Avenue", 2, 257]], skill = 0.95, tod = 2, after = "harbour" },
+	forest = { name = "Lake Trail Rally", blurb = "Dirt all the way: the lake trail through the forest. Brake early, slide late.",
+		segs = [["Lake Trail", 2, 262]], skill = 0.92, after = "serpentine" },
+	south = { name = "East Coast Highway", blurb = "Two kilometres of the coastal highway on the island's east side, flat out between the cliffs and the sea.",
+		segs = [["Ring", 1000, 1400]], skill = 0.94, after = "coast" },
 	trial = { name = "Circuit Time Trial", blurb = "One lap of the racing circuit against the clock, from a standing start. No rivals, no excuses.",
 		segs = [["Circuit", 50, 50, 1]], skill = 0.98, mode = "trial", medals = [76.0, 81.0, 87.0], after = "desert" } }
-const ORDER = ["coast", "peninsula", "lighthouse", "summit", "descent", "desert", "serpentine", "gp", "golden", "harbour", "midnight", "touge", "trial"]
+const ORDER = ["coast", "peninsula", "lighthouse", "summit", "descent", "desert", "serpentine", "gp", "golden", "harbour", "midnight", "touge", "trial", "south", "skyline", "east", "west", "forest"]
 static func tag(rid: String) -> String:
 	var m = RACES[rid].get("mode", "")
 	return " · DRIFT" if m == "drift" else (" · TIME TRIAL" if m == "trial" else ["", " · SUNSET", " · NIGHT"][RACES[rid].get("tod", 0)])
@@ -393,6 +404,7 @@ func _results():
 	if b[1] == 0 or pos < b[1]: cf.set_value(id, "pos", pos)
 	cf.save(SAVE)
 	var prize = Progress.race_done(id, pos) if me.done else [0, ""]
+	if main.get("freeroam") and me.done: main.freeroam.daily_check("race", id, 1 if pos == 1 else 0)
 	var vs = get_viewport().get_visible_rect().size
 	panel = Panel.new(); var sb = Hud.panel_style(16); sb.bg_color = Color(0.03, 0.05, 0.08, 0.88); sb.border_color = Color(Hud.ACCENT.r, Hud.ACCENT.g, Hud.ACCENT.b, 0.5); sb.border_width_top = 3; panel.add_theme_stylebox_override("panel", sb)
 	panel.size = Vector2(620, 470); panel.position = (vs - panel.size) / 2; hud.add_child(panel)

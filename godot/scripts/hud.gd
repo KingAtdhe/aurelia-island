@@ -81,6 +81,9 @@ class MiniMap extends Control:
 		var c = size / 2.0
 		if main.traffic and main.traffic.visible:
 			for tc in main.traffic.cars: _dot(tc.n.global_position, Color(0.75, 0.78, 0.82), 3.0)
+		if main.get("freeroam") and not main.race:          # speed traps (orange) and drift-zone starts (blue)
+			for t in main.freeroam.traps: _dot(t[0], ACCENT, 4.0)
+			for z in main.freeroam.zones: _dot(z[0], Color(0.35, 0.85, 1.0), 4.0)
 		if main.race:
 			var rc = main.race
 			if rc.next_cp < rc.cps.size():

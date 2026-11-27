@@ -14,8 +14,9 @@ const REGIONS = [["Coastal Highway", -1300, 780], ["City", 0, 20], ["Harbour", -
 	["Desert", 1380, -620], ["Racing Circuit", 1260, 355], ["Countryside", 700, 900], ["Heliport", 1715, 1010]]
 var ids = ["vortex", "calder"]; var idx = 0
 var title: Label; var name_lbl: Label; var blurb: Label; var stats: Label; var credits: Label; var note: Label; var root: Control
+var daily_lbl: Label
 var go_btn: Button; var garage_btn: Button; var gfx_btn: Button; var tod_btn: Button; var wx_btn: Button
-var car_ui = []; var race_ui = []; var travel_ui = []; var garage_ui = []; var ctl_ui = []; var shade: ColorRect
+var car_ui = []; var race_ui = []; var travel_ui = []; var garage_ui = []; var ctl_ui = []; var style_ui = []; var shade: ColorRect
 
 func _ready():
 	Progress.load_save(); idx = maxi(0, ids.find(Progress.car))
@@ -23,10 +24,11 @@ func _ready():
 	shade = ColorRect.new(); shade.color = Color(0.04, 0.05, 0.07, 0.6); shade.size = Vector2(460, 2000); root.add_child(shade)
 	title = _lbl("AURELIA ISLAND", 44, Vector2(40, 34))
 	credits = _lbl("", 22, Vector2(42, 92)); credits.add_theme_color_override("font_color", Hud.ACCENT)
+	daily_lbl = _lbl("", 15, Vector2(42, 122)); daily_lbl.modulate = Color(1, 1, 1, 0.7)
 	note = _lbl("", 20, Vector2(40, 670)); note.modulate = Color(1, 0.85, 0.6)
 	name_lbl = _lbl("", 36, Vector2(40, 150)); blurb = _lbl("", 18, Vector2(40, 200)); blurb.autowrap_mode = TextServer.AUTOWRAP_WORD; blurb.size = Vector2(380, 80)
 	stats = _lbl("", 18, Vector2(40, 278)); stats.modulate = Color(1, 1, 1, 0.75)
-	car_ui = [name_lbl, blurb, stats]
+	car_ui = [name_lbl, blurb, stats, daily_lbl]
 	car_ui.append(_btn("◀", Vector2(40, 368), Vector2(80, 64), func(): pick(-1)))
 	car_ui.append(_btn("▶", Vector2(130, 368), Vector2(80, 64), func(): pick(1)))
 	go_btn = _btn("FREE ROAM", Vector2(40, 446), Vector2(250, 68), _go); car_ui.append(go_btn)
@@ -63,14 +65,18 @@ func show_page(p: String):
 	for c in travel_ui: c.visible = p == "travel"
 	for c in garage_ui: c.visible = p == "garage"
 	for c in ctl_ui: c.visible = p == "controls"
+	for c in style_ui: c.visible = p == "style"
+	if p == "style": _build_style()
 	if p == "garage": _build_garage()
 	if p == "controls": _build_controls()
 	if p == "races": _build_races(); for c in race_ui: c.visible = true
-	shade.size.x = 470 if p == "" else (620 if p in ["garage", "controls"] else (1240 if p == "races" else 880))
+	shade.size.x = 470 if p == "" else (620 if p in ["garage", "controls", "style"] else (1240 if p == "races" else 880))
 	_refresh()
 
 func _refresh():
 	credits.text = "%s credits" % _n(Progress.cr)
+	if daily_lbl:
+		var d = FreeRoam.daily(); daily_lbl.text = ("Daily challenge done  ✓" if FreeRoam.daily_done() else "Daily · %s  ·  %s" % [d.text, _n(FreeRoam.DAILY_PAY)])
 
 func _build_races():
 	for c in race_ui: c.queue_free()
@@ -78,14 +84,14 @@ func _build_races():
 	var y = 140; var k = 0
 	for rid in Race.ORDER:
 		var R = Race.RACES[rid]; var b = Race.best(rid); var open = Progress.is_open(rid)
-		var bt = _btn("", Vector2(40 + (k / 5) * 400, y + (k % 5) * 92), Vector2(385, 84), func(): if open and _owned(): emit_signal("race", rid)); bt.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		var bt = _btn("", Vector2(40 + (k / 6) * 400, y + (k % 6) * 80), Vector2(385, 74), func(): if open and _owned(): emit_signal("race", rid)); bt.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		var line2 = ("best %s · %s" % [Race.fmt(b[0]), ["1st", "2nd", "3rd", "4th"][b[1] - 1]]) if b[0] > 0 else "prize %s credits" % _n(Progress.purse(rid))
 		if R.has("mode") and b[0] > 0: line2 = "best %s · %s" % [_n(int(b[0])) if R.mode == "drift" else Race.fmt(b[0]), Race.MEDAL[b[1] - 1].to_lower()]
 		if not open: line2 = "podium in %s to open" % Race.RACES[R.get("after", Race.ORDER[k - 1])].name
-		bt.text = "  %s%s\n  %s" % [R.name, Race.tag(rid), line2]; bt.add_theme_font_size_override("font_size", 22)
+		bt.text = "  %s%s\n  %s" % [R.name, Race.tag(rid), line2]; bt.add_theme_font_size_override("font_size", 19)
 		if not open: bt.modulate = Color(1, 1, 1, 0.45)
 		race_ui.append(bt); k += 1
-	race_ui.append(_btn("BACK", Vector2(840, y + 3 * 92 + 6), Vector2(180, 64), func(): show_page("")))
+	race_ui.append(_btn("BACK", Vector2(1040, 40), Vector2(180, 64), func(): show_page("")))
 	for c in race_ui: c.visible = false
 
 func _build_garage():
@@ -127,6 +133,7 @@ func _build_garage():
 			u.paint = k; Progress.save(); emit_signal("changed"); _build_garage(); _show(garage_ui); _refresh())
 		root.add_child(b); garage_ui.append(b)
 	garage_ui.append(_btn("BACK", Vector2(40, y + 90), Vector2(180, 60), func(): show_page("")))
+	var sb = _btn("STYLE  ▸", Vector2(240, y + 90), Vector2(220, 60), func(): show_page("style")); garage_ui.append(sb)
 
 # control options: one row each, the button shows the setting and changes it
 func _build_controls():
@@ -148,6 +155,62 @@ func _build_controls():
 		b.add_theme_font_size_override("font_size", 20); ctl_ui.append(b)
 		y += 84
 	ctl_ui.append(_btn("BACK", Vector2(40, y + 6), Vector2(180, 60), func(): show_page("")))
+
+# styling: wheels, rim colour, wing, livery (bought once, yours to keep), ride height and camber (free)
+func _build_style():
+	for c in style_ui: c.queue_free()
+	style_ui = []
+	var id = ids[idx]; var u = Progress.U(id); if not u.has("parts"): u.parts = []
+	style_ui.append(_lbl("Style · %s" % Car.CARS[id].name, 30, Vector2(40, 130)))
+	var yy = [178]          # (lambdas copy plain locals: the row position lives in an array)
+	var row = func(title: String, value: String, prev: Callable, next: Callable, note: String):
+		var y: int = yy[0]
+		style_ui.append(_lbl(title, 22, Vector2(40, y + 12)))
+		var bp = _btn("◀", Vector2(250, y), Vector2(56, 56), prev); bp.add_theme_font_size_override("font_size", 20); style_ui.append(bp)
+		var lb = _lbl(value, 20, Vector2(316, y + 6)); lb.size = Vector2(210, 30); lb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; style_ui.append(lb)
+		var nl = _lbl(note, 14, Vector2(316, y + 34)); nl.size = Vector2(210, 20); nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; nl.modulate = Hud.ACCENT; style_ui.append(nl)
+		var bn = _btn("▶", Vector2(536, y), Vector2(56, 56), next); bn.add_theme_font_size_override("font_size", 20); style_ui.append(bn)
+		yy[0] = y + 66
+	var pick_part = func(key: String, n: int, d: int, tag: String, cost: int):          # step through, buy what is not yours yet
+		var v = (int(u.get(key, 0)) + d + n) % n
+		if key == "wing" and v != 2: cost = 0          # taking the wing off is free
+		if v > 0 and cost > 0 and not ("%s%d" % [tag, v] in u.parts):
+			u[key] = v; _style_apply(); _note("Try it on: press BUY to keep it (%s)" % _n(cost)); return
+		u[key] = v; _style_apply()
+	var owned = func(tag: String, v: int, cost: int) -> String: return "" if v == 0 or cost == 0 or ("%s%d" % [tag, v] in u.parts) else "BUY · %s" % _n(cost)
+	row.call("Wheels", CarStyle.RIMS[int(u.get("rim", 0))], func(): pick_part.call("rim", CarStyle.RIMS.size(), -1, "rim", CarStyle.RIM_COST), func(): pick_part.call("rim", CarStyle.RIMS.size(), 1, "rim", CarStyle.RIM_COST), owned.call("rim", int(u.get("rim", 0)), CarStyle.RIM_COST))
+	row.call("Rim colour", CarStyle.RIMCOL[int(u.get("rimcol", 0))][0], func(): pick_part.call("rimcol", CarStyle.RIMCOL.size(), -1, "", 0), func(): pick_part.call("rimcol", CarStyle.RIMCOL.size(), 1, "", 0), "")
+	row.call("Rear wing", CarStyle.WINGS[int(u.get("wing", 0))], func(): pick_part.call("wing", 3, -1, "wing", CarStyle.WING_COST if int(u.get("wing", 0)) != 0 else 0), func(): pick_part.call("wing", 3, 1, "wing", CarStyle.WING_COST), owned.call("wing", 2 if int(u.get("wing", 0)) == 2 else 0, CarStyle.WING_COST))
+	row.call("Livery", CarStyle.LIVERIES[int(u.get("livery", 0))], func(): pick_part.call("livery", CarStyle.LIVERIES.size(), -1, "liv", CarStyle.LIVERY_COST), func(): pick_part.call("livery", CarStyle.LIVERIES.size(), 1, "liv", CarStyle.LIVERY_COST), owned.call("liv", int(u.get("livery", 0)), CarStyle.LIVERY_COST))
+	row.call("Ride height", CarStyle.RIDE[int(u.get("ride", 0))][0], func(): pick_part.call("ride", 4, -1, "", 0), func(): pick_part.call("ride", 4, 1, "", 0), "")
+	row.call("Camber", CarStyle.CAMBER[int(u.get("camber", 0))][0], func(): pick_part.call("camber", 4, -1, "", 0), func(): pick_part.call("camber", 4, 1, "", 0), "")
+	var y: int = yy[0]
+	style_ui.append(_btn("BACK", Vector2(40, y + 10), Vector2(180, 60), func(): _style_keep(); show_page("garage")))
+	var buy = _btn("BUY", Vector2(240, y + 10), Vector2(220, 60), _style_buy); style_ui.append(buy)
+	_refresh()
+
+# anything on the car that is not paid for: buy it all, or (leaving) put the car back to what is owned
+func _style_unpaid() -> Array:
+	var u = Progress.U(ids[idx]); var out = []
+	for k in [["rim", "rim", CarStyle.RIM_COST], ["wing", "wing", CarStyle.WING_COST], ["livery", "liv", CarStyle.LIVERY_COST]]:
+		var v = int(u.get(k[0], 0))
+		if k[0] == "wing" and v != 2: continue
+		if v > 0 and not ("%s%d" % [k[1], v] in u.parts): out.append(["%s%d" % [k[1], v], k[2], k[0]])
+	return out
+func _style_buy():
+	var due = _style_unpaid(); var total = 0
+	for d in due: total += d[1]
+	if due.is_empty(): _note("Everything on the car is yours."); return
+	if not Progress.spend(total): _note("You need %s credits." % _n(total)); return
+	var u = Progress.U(ids[idx])
+	for d in due: u.parts.append(d[0])
+	Progress.save(); _note("Bought: %s credits" % _n(total)); _build_style(); _show(style_ui)
+func _style_keep():          # leaving the style page: take off what was only tried on
+	var u = Progress.U(ids[idx])
+	for d in _style_unpaid(): u[d[2]] = 0
+	Progress.save(); emit_signal("changed")
+func _style_apply():
+	Progress.save(); emit_signal("changed"); _build_style(); _show(style_ui)
 
 func _show(a: Array):
 	for c in a: c.visible = true

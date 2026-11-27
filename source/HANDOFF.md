@@ -471,3 +471,17 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
   night (Tod.EMIT), the rest plain materials. Curtain walls: dark fins (bay 3 m, 0.24 m deep) so the glass reads.
 - Checks: Street N0 day and night, Street E260; draws/prims about as before (the old towers had no detail of their own).
   C16DBG=1 prints the ranges and what occupies a few points along the avenue.
+
+## Godot: garage style, free-roam activities, five new events (27 Nov 2026, APK 42)
+- scripts/style.gd (CarStyle) + shaders/livery.gdshader: STYLE page in the garage (menu._build_style): wheels (5 built
+  rim designs over the factory tyre; factory rim surfaces "rim/rimlip/chrome" hidden by a discard material), rim colour,
+  rear wing (factory / none / GT wing; Spoiler and Spoiler_Mount are no longer merged into the body), livery (twin
+  stripes, side arrow, two-tone, race with a numbered door roundel; a next_pass over the paint in car space), ride
+  height (Car.ride_off, looks only) and camber (a Camber_<wheel> pivot above each wheel). Parts bought once
+  (U(id).parts: rimN, wing2, livN); BUY pays for what is tried on, BACK takes off anything unpaid.
+- scripts/freeroam.gd (FreeRoam): 8 speed traps and 6 drift zones (Label3D boards on poles, minimap dots), bests in
+  Progress.records, pay on new bests; a daily challenge from the date (trap speed, zone score or a race win, 3,000).
+  Test: FREETEST=1.
+- race.gd: five events (18 now): East Coast Highway (Ring 1000-1400), Skyline Ridge, East Avenue Sunset, West Avenue
+  Nights, Lake Trail Rally (dirt). South Road was dropped: the Farm Roundabout island stops cars on the straight line.
+  Races page: 3 columns of 6.

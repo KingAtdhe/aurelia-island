@@ -22,6 +22,7 @@ static var cars := ["vortex"]
 static var up := {}
 static var unlocked := {}
 static var found := {}
+static var records := {}          # free roam: best speed per trap, best score per drift zone, the daily challenge done
 static var _loaded := false
 
 static func load_save():
@@ -30,11 +31,11 @@ static func load_save():
 	var cf = ConfigFile.new(); cf.load(SAVE)
 	cr = cf.get_value("p", "cr", 5000)          # a new career starts with enough for a first upgrade
 	car = cf.get_value("p", "car", "vortex"); cars = cf.get_value("p", "cars", ["vortex"])
-	up = cf.get_value("p", "up", {}); unlocked = cf.get_value("p", "unlocked", {}); found = cf.get_value("p", "found", {})
+	up = cf.get_value("p", "up", {}); unlocked = cf.get_value("p", "unlocked", {}); found = cf.get_value("p", "found", {}); records = cf.get_value("p", "records", {})
 
 static func save():
 	var cf = ConfigFile.new(); cf.load(SAVE)
-	for k in ["cr", "car", "cars", "up", "unlocked", "found"]: cf.set_value("p", k, _v(k))
+	for k in ["cr", "car", "cars", "up", "unlocked", "found", "records"]: cf.set_value("p", k, _v(k))
 	cf.save(SAVE)
 static func _v(k: String):
 	match k:
@@ -44,6 +45,7 @@ static func _v(k: String):
 		"up": return up
 		"unlocked": return unlocked
 		"found": return found
+		"records": return records
 	return null
 
 static func U(id: String) -> Dictionary:

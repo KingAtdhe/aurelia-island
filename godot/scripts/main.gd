@@ -28,6 +28,7 @@ var lamps: Lamps
 var ambience: Ambience
 var weather: Weather
 var worst_ms := 0.0; var _last_us := 0          # test: longest frame since the last report
+var freeroam: FreeRoam          # speed traps, drift zones, the daily challenge
 var tyrefx: TyreFX          # tyre smoke and skid marks
 var carenv: CarEnv          # what the player's car reflects: sky above, ground and hills below the horizon
 var showroom: Showroom          # the studio with the turntable behind the start screen and garage
@@ -87,10 +88,11 @@ func _ready():
 	Gfx.apply(self)          # graphics level (start screen): render scale, shadows, draw distances, grass, mesh LOD
 	showroom = Showroom.new(self); add_child(showroom); showroom.build()
 	tyrefx = TyreFX.new(); add_child(tyrefx); tyrefx.build(); tyrefx.add_car(car)
+	freeroam = FreeRoam.new(self); add_child(freeroam); freeroam.build()
 	make_hud()
 	drift = DriftScore.new(); drift.car = car; hud.add_child(drift)
 	apply_controls()
-	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("TOUR") == "" and OS.get_environment("PROBE") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == "" and OS.get_environment("FUZZ") == "" and OS.get_environment("AMBTEST") == "" and OS.get_environment("JITTER") == "" and OS.get_environment("CTLTEST") == ""
+	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("TOUR") == "" and OS.get_environment("PROBE") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == "" and OS.get_environment("FUZZ") == "" and OS.get_environment("AMBTEST") == "" and OS.get_environment("JITTER") == "" and OS.get_environment("CTLTEST") == "" and OS.get_environment("FREETEST") == ""
 	if menu_on or OS.get_environment("SHOTS") == "menu": open_menu()
 	if not menu_on: audio.ignition()
 	if OS.get_environment("CAR") != "" and (OS.get_environment("DRIVETEST") != "" or OS.get_environment("PHYSTEST") != ""): car.setup(OS.get_environment("CAR"))
@@ -108,6 +110,7 @@ func _ready():
 	if OS.get_environment("TOUR") != "": add_child(load("res://scripts/_tour.gd").new())
 	if OS.get_environment("PROBE") != "": add_child(load("res://scripts/_probe.gd").new())
 	if OS.get_environment("AMBTEST") != "": add_child(load("res://scripts/_ambtest.gd").new())
+	if OS.get_environment("FREETEST") != "": add_child(load("res://scripts/_freetest.gd").new())
 	if OS.get_environment("CTLTEST") != "": add_child(load("res://scripts/_ctltest.gd").new())
 	if OS.get_environment("JITTER") != "": add_child(load("res://scripts/_jitter.gd").new())
 	if OS.get_environment("TIMING") != "": add_child(load("res://scripts/_timing.gd").new())
