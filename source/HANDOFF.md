@@ -522,7 +522,7 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
   grille blocks (SUV, pickup, van) and projector headlamps (all but the van); hatch/saloon lamp strips taller.
 - Bug found on the way: _dress read c.model before it was set (script error stopped the loop after the first mesh, so LOD ranges, rims and glass
   were left undressed and both LODs drew). c.model is now set before _dress. Check logs for SCRIPT ERROR after each SHOTS run.
-## Godot: third look pass toward CarX (27 Nov 2026, APK 46)
+## Godot: third look pass toward CarX (27 Nov 2026, APK 47)
 - Switch: Look.LOOK3 (global shader value look3); LOOK=2 env turns this pass off (LOOK=1 also turns off LOOK2) for A/B pictures.
 - Road (road.gdshader): asphalt cap 0.17 -> 0.13 plus mid-scale mottling; the round tar blobs (read as puddles) are gone.
   Road UV.x is the lateral position in 3.33 m units (0 = centre line), UV.y the distance along: lanes of 3.6 m get two
