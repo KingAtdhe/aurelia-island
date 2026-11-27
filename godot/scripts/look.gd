@@ -51,7 +51,7 @@ static func conv(m: Material, has_col: bool) -> Material:
 		elif nm in DECALS:
 			var dm := ShaderMaterial.new(); var blend = sm.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED
 			dm.shader = _decal_shader(blend); dm.set_shader_parameter("tex", sm.albedo_texture); dm.set_shader_parameter("has_tex", 1.0 if sm.albedo_texture else 0.0)
-			dm.set_shader_parameter("col", sm.albedo_color); dm.set_shader_parameter("rough", sm.roughness); dm.set_shader_parameter("bake", _bake()); dm.set_shader_parameter("bake_rect", BAKE_RECT)
+			dm.set_shader_parameter("col", sm.albedo_color); dm.set_shader_parameter("skid", 1.0 if nm == "Skids" else 0.0); dm.set_shader_parameter("rough", sm.roughness); dm.set_shader_parameter("bake", _bake()); dm.set_shader_parameter("bake_rect", BAKE_RECT)
 			if blend: dm.render_priority = 2
 			out = dm
 		elif props and nm in ["WindowGlass", "KitWindow"]:          # parked cars, boats, kiosks: plain dark glass, no rooms behind it

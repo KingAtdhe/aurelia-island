@@ -541,3 +541,12 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
   spot, ~700 s in the city.
 - Seen, not fixed: Dune Road 0.5 has a striped asphalt/dirt/grass patch at the crossing beside the speed-trap board;
   light skid arcs at Summit Pass and Dune Road; pale Tripo pine trunks in the Summit Pass forest.
+
+## Godot: crossing verges, matt seals and skids (27 Nov 2026)
+- source/godot_tools/fix_verges.py (run after export_chunks.py, edits b_* chunks in place): verge triangles whose middle
+  lies on another paved road (within its half width - 5 cm, within 1.2 m of its height; dirt trails skipped, they are
+  built like verges) are collapsed. 1,249 triangles in 16 chunks; fixes the asphalt/dirt/grass stripes at crossings
+  (Dune Road by the speed trap). Grass raycasts follow the map colliders, so no tufts on those spots now.
+- road.gdshader: the LOOK3 crack seals were glossier than the asphalt and caught the sky as pale arcs (APK 47): now matt.
+- decal.gdshader: Skids (new uniform skid) draw near-black rubber under LOOK3 (some carried pale vertex colours); dark
+  decals are matt (roughness 0.92, specular 0.12) when dry.

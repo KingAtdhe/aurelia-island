@@ -44,7 +44,7 @@ void fragment() {
 			float rpatch = step(0.9, ph) * step(0.08, pf.x) * step(pf.x, 0.92) * step(pl, pf.y) * step(pf.y, min(pr, 0.97));
 			c = mix(c, c * (ph > 0.95 ? 0.62 : 1.18), rpatch); r += rpatch * (ph > 0.95 ? -0.08 : 0.06);          // fresh dark tar or old pale patch
 			float seal = smoothstep(0.03, 0.0, abs(n2(vec2(q.x * 0.35, q.y * 0.35) + 31.0) - 0.5)) * smoothstep(0.5, 0.7, n2(q * 0.05 + 2.0));          // tar crack seals: thin dark lines
-			c = mix(c, vec3(0.035, 0.035, 0.04), seal * 0.8); r -= 0.25 * seal;
+			c = mix(c, vec3(0.035, 0.035, 0.04), seal * 0.8); r += 0.08 * seal;          // matt: glossy seals caught the sky and drew pale arcs
 		}
 		float crack = smoothstep(0.012, 0.0, abs(n2(q * 1.3) - 0.5)) * smoothstep(0.55, 0.75, mid);
 		c *= 1.0 - 0.5 * crack;
