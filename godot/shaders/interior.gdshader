@@ -3,6 +3,8 @@ render_mode cull_disabled;
 // shop and office windows: a furnished room is traced behind each pane per pixel, so glass reads as glass with rooms
 // behind it, not as a flat grey slab (same rooms as the browser game's interior())
 global uniform float tod_night;
+global uniform bool look3;
+global uniform float wx_wet;
 varying vec3 wp;
 void vertex() { wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
 float rh(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
@@ -45,5 +47,21 @@ void fragment() {
 	vec3 day = rc * 0.5, nt = rc * lt * vec3(1.25, 1.0, 0.72) * 1.35 + rc * 0.01;
 	ALBEDO = vec3(0.02, 0.025, 0.03);
 	EMISSION = mix(day, nt, tod_night) * (1.0 - fr);
+	if (look3) {          // Nov 27: a drawn reflection like glass16 (the sky picture is bright below the horizon): sky up high, the
+		// skyline opposite as a band of darker blocks near the horizon, the street below; each pane tilted a hair differently
+		vec3 T = normalize(cross(vec3(0.0, 1.0, 0.0), N + vec3(1e-4)));
+		vec3 pid = vec3(floor(dot(wp, T) / 1.85), floor(wp.y / 3.4), 0.0); float pr = rh(pid), pr2 = rh(pid + 9.1);
+		vec3 R = reflect(V, N); R.y += (pr - 0.5) * 0.05; R.x += (pr2 - 0.5) * 0.04;
+		float az = atan(R.z, R.x) * 9.0; float bi = floor(az);
+		float top = 0.04 + 0.32 * rh(vec3(bi, 1.0, 0.0)) * rh(vec3(bi, 2.0, 0.0) + 0.3);
+		vec3 sky = mix(vec3(0.34, 0.45, 0.58), vec3(0.58, 0.68, 0.8), smoothstep(0.3, 0.9, R.y));
+		vec3 bld = mix(vec3(0.12, 0.13, 0.14), vec3(0.24, 0.25, 0.26), rh(vec3(bi, 3.0, 0.0))) * (0.85 + 0.3 * step(0.5, fract(R.y * 40.0 + fract(az) * 3.0)));
+		vec3 refl = mix(bld, sky, smoothstep(top - 0.015, top + 0.015, R.y));
+		refl = mix(vec3(0.05, 0.05, 0.055), refl, smoothstep(-0.06, 0.0, R.y));
+		refl *= (0.85 + 0.3 * pr2) * (1.0 - 0.92 * tod_night) * mix(1.0, 0.75, wx_wet);
+		float fw = mix(0.22, 0.5, step(0.72, pr)) + 0.6 * pow(1.0 - cs, 4.0);          // some panes mirror more (tinted or blinds behind)
+		fw = clamp(fw, 0.0, 0.92);
+		EMISSION = mix(day, nt, tod_night) * (1.0 - fw) + refl * fw;
+	}
 	ROUGHNESS = 0.08; METALLIC = 0.0; SPECULAR = 0.32;
 }

@@ -97,6 +97,9 @@ static func conv(m: Material, has_col: bool) -> Material:
 			if nm in ["ContactAO", "RoadDecals", "Skids", "Puddles", "ShoreFoam", "Shallows", "Markings"]:
 				d.render_priority = 2
 			if Tod.EMIT.has(nm): Tod.emissive(d, nm)
+			if LOOK3 and nm in ["C16Alu", "C16Spandrel", "C16Frame", "C16FrameDark", "C16Canopy", "C16Plant"]:          # Nov 27: metal on the towers mirrored the
+				d.metallic = minf(d.metallic, 0.12); d.metallic_specular = 0.3; d.roughness = maxf(d.roughness, 0.5)          # sky picture's bright lower half: mullions read white
+				if nm == "C16Alu": d.albedo_color = Color(0.16, 0.165, 0.175)
 			if nm == "TreeCards": d = null
 			elif nm.begins_with("Leaves") or d.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR or nm.begins_with("T_tree"):
 				d.cull_mode = BaseMaterial3D.CULL_DISABLED

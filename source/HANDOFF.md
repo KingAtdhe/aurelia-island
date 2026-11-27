@@ -550,3 +550,16 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
 - road.gdshader: the LOOK3 crack seals were glossier than the asphalt and caught the sky as pale arcs (APK 47): now matt.
 - decal.gdshader: Skids (new uniform skid) draw near-black rubber under LOOK3 (some carried pale vertex colours); dark
   decals are matt (roughness 0.92, specular 0.12) when dry.
+
+## Godot: concept 16 towers were hidden by old blocks; city glass (27 Nov 2026)
+- At some city16 plots the old map also had a tall block in Structures (+ KitTrim piers), a little larger than the new
+  tower, so the old flat grid facade with white piers covered it (Street E260). source/godot_tools/fix_city16_overlap.py
+  (after export_chunks.py / export_city16.py; edits d_*/b_* in place) collapses old building-group triangles whose middle
+  is inside a city16_plots.json rectangle (+0.6 m) above y0 + 7 m: 70,782 KitTrim + 8,316 Structures triangles in 8
+  chunks. Towers is excluded (those boxes are the skyline past 1250 m, where city16 is not drawn). Podiums and shops stay.
+- glass16.gdshader (LOOK3): the skyline opposite drawn into the reflection as a band of darker blocks near the horizon,
+  base mirror 0.22 (was 0.12). interior.gdshader (LOOK3): the same drawn reflection over the traced rooms, each pane
+  tilted a little, about a quarter of panes mirror more.
+- look.gd (LOOK3): C16Alu/Spandrel/Frame/FrameDark/Canopy/Plant metallic <= 0.12, roughness >= 0.5 (metal mirrored the
+  sky picture's bright lower half); C16Alu graphite 0.16.
+- Checked: Street E260 (the tower now shows), Street N0. City spots take ~12-15 min each here.

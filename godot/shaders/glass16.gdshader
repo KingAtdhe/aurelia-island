@@ -1,6 +1,7 @@
 shader_type spatial;
 global uniform float tod_night;
 global uniform float wx_wet;
+global uniform bool look3;
 // Concept 16 curtain walls: dark tinted glass that mirrors the sky by day (stronger at grazing angles), and at night a
 // scatter of lit offices behind it, one cell per bay and floor, a few of them left on late.
 varying vec3 wp;
@@ -19,6 +20,13 @@ void fragment() {
 	vec3 V = normalize((INV_VIEW_MATRIX * vec4(VIEW, 0.0)).xyz); vec3 R = reflect(-V, wn);
 	float fres = 0.12 + 0.6 * pow(1.0 - clamp(dot(V, wn), 0.0, 1.0), 4.0);
 	vec3 refl = mix(vec3(0.045, 0.05, 0.055), mix(vec3(0.3, 0.42, 0.55), vec3(0.55, 0.66, 0.78), smoothstep(0.3, 0.9, R.y)), smoothstep(-0.02, 0.25, R.y));
+	if (look3) {          // Nov 27: the skyline opposite as a band of darker blocks near the horizon, and a stronger mirror
+		float az = atan(R.z, R.x) * 9.0, bi = floor(az);
+		float top = 0.05 + 0.34 * h(vec3(bi, 1.0, 0.0)) * h(vec3(bi, 2.0, 0.3));
+		vec3 bld = mix(vec3(0.1, 0.11, 0.12), vec3(0.22, 0.23, 0.24), h(vec3(bi, 3.0, 0.0))) * (0.85 + 0.3 * step(0.5, fract(R.y * 40.0 + fract(az) * 3.0)));
+		refl = mix(refl, bld, (1.0 - smoothstep(top - 0.015, top + 0.015, R.y)) * smoothstep(-0.02, 0.02, R.y));
+		fres = 0.22 + 0.6 * pow(1.0 - clamp(dot(V, wn), 0.0, 1.0), 4.0);
+	}
 	refl *= mix(0.85, 1.15, r2) * (1.0 - 0.9 * tod_night) * mix(1.0, 0.7, wx_wet);
 	METALLIC = 0.0; ROUGHNESS = 0.08; SPECULAR = 0.12;          // a little sun glint stays
 	float on = step(0.58, r) * tod_night;
