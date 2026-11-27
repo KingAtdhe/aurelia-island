@@ -497,3 +497,8 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
 - CI: a second APK, aurelia-godot-lite.apk, from a copy of the project with every picture over 512 px halved
   (.github/scripts/lite.py) and godot/lite.cfg (Gfx starts on LOW; exported via include_filter). Same package id: it
   installs over the full one.
+
+## 2026-11-27 · traffic 03–05 design sheet (awaiting approval)
+- art/traffic_03-05_design_sheet.jpg drawn by blender/traffic/sheet_family3.py (reuses sheet_mira/sheet_saloon helpers).
+- 03 Tera compact crossover 4480×1860×1680, WB 2700, 18" · 04 Porto delivery van 5120×2000×2150, WB 3350, 16" steel, Aurelia Parcel livery · 05 Vela taxi (Vela + roof sign, checker band, lettering as decals).
+- Build only after Saba approves.
