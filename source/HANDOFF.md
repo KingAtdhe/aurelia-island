@@ -485,3 +485,15 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
 - race.gd: five events (18 now): East Coast Highway (Ring 1000-1400), Skyline Ridge, East Avenue Sunset, West Avenue
   Nights, Lake Trail Rally (dirt). South Road was dropped: the Farm Roundabout island stops cars on the straight line.
   Races page: 3 columns of 6.
+
+## Godot: replays, photo mode, button options, lite download (27 Nov 2026, APK 43)
+- scripts/replay.gd (Replay): records the player and race rivals at 30 Hz (last 60 s: x y z heading pitch roll steer
+  wheel spins). REPLAY (HUD and race results) pauses the tree and plays it back with chase / TV (posts on open verge
+  ground ahead, zoomed by distance) / orbit cameras, SLOW, PHOTO, EXIT. PHOTO: drag to orbit, ZOOM, SAVE (Pictures/
+  AureliaIsland, else user://photos). Car.pose() is the drawing half of the physics step (replay sets the state and
+  calls it). Test: REPLAYTEST=1 (pictures /tmp/replay_0/1.png).
+- Controls: Buttons SMALL/MEDIUM/LARGE (0.85/1/1.2) and Layout PEDALS RIGHT/LEFT; main._touch_layout() rebuilds the
+  touch buttons and moves the rev counter beside the steering buttons.
+- CI: a second APK, aurelia-godot-lite.apk, from a copy of the project with every picture over 512 px halved
+  (.github/scripts/lite.py) and godot/lite.cfg (Gfx starts on LOW; exported via include_filter). Same package id: it
+  installs over the full one.

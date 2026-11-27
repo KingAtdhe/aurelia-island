@@ -18,6 +18,7 @@ static var level := -1
 static func get_level() -> int:
 	if level < 0:
 		var c = ConfigFile.new(); var d = 1 if OS.has_feature("mobile") else 2
+		if FileAccess.file_exists("res://lite.cfg"): d = 0          # the lite download starts on LOW
 		level = int(c.get_value("gfx", "level", d)) if c.load(CFG) == OK else d
 		if OS.get_environment("GFX") != "": level = NAMES.find(OS.get_environment("GFX"))
 		level = clampi(level, 0, 2)

@@ -141,20 +141,22 @@ func _build_controls():
 	ctl_ui = []
 	ctl_ui.append(_lbl("Controls", 30, Vector2(40, 130)))
 	var rows = [
-		["Steering", Controls.STEER[Controls.steer()], func(): Controls.set_steer(Controls.steer() + 1), "Tilt: turn the phone like a wheel. Level is how you hold it at the start."],
-		["Sensitivity", "%d %%" % int(Controls.sens() * 100), func(): Controls.set_sens((Controls.sens_i() + 1) % Controls.SENS.size()), "How fast and how far the front wheels turn."],
-		["Steering assist", "ON" if Controls.assist() else "OFF", func(): Controls.set_assist(not Controls.assist()), "Catches slides, holds drifts. Off: it is all you."],
-		["Traction control", "ON" if Controls.traction() else "OFF", func(): Controls.set_traction(not Controls.traction()), "Off: full throttle spins the rear wheels."],
-		["Gearbox", Controls.GEARBOX[1 if Controls.manual() else 0], func(): Controls.set_manual(not Controls.manual()), "Manual: + and − buttons above the throttle."]]
-	var y = 186
+		["Steering", Controls.STEER[Controls.steer()], func(): Controls.set_steer(Controls.steer() + 1), "Tilt: turn the phone like a wheel."],
+		["Sensitivity", "%d %%" % int(Controls.sens() * 100), func(): Controls.set_sens((Controls.sens_i() + 1) % Controls.SENS.size()), "How quickly the wheels turn."],
+		["Steering assist", "ON" if Controls.assist() else "OFF", func(): Controls.set_assist(not Controls.assist()), "Catches slides, holds drifts."],
+		["Traction control", "ON" if Controls.traction() else "OFF", func(): Controls.set_traction(not Controls.traction()), "Off: the rear wheels can spin."],
+		["Gearbox", Controls.GEARBOX[1 if Controls.manual() else 0], func(): Controls.set_manual(not Controls.manual()), "Manual: + and − above the throttle."],
+		["Buttons", Controls.BTN[Controls.btn_i()], func(): Controls.set_btn(Controls.btn_i() + 1), "Size of the driving buttons."],
+		["Layout", "PEDALS LEFT" if Controls.swap() else "PEDALS RIGHT", func(): Controls.set_swap(not Controls.swap()), "Throttle and brake side."]]
+	var y = 176
 	for r in rows:
 		ctl_ui.append(_lbl(r[0], 22, Vector2(40, y + 6)))
 		var h = Label.new(); h.autowrap_mode = TextServer.AUTOWRAP_WORD; h.size = Vector2(285, 44); h.text = r[3]; h.add_theme_font_size_override("font_size", 14)
 		h.position = Vector2(40, y + 34); h.modulate = Color(1, 1, 1, 0.55); root.add_child(h); ctl_ui.append(h)
 		var b = _btn(r[1], Vector2(340, y), Vector2(250, 56), func(): r[2].call(); emit_signal("ctl"); _build_controls(); _show(ctl_ui))
 		b.add_theme_font_size_override("font_size", 20); ctl_ui.append(b)
-		y += 84
-	ctl_ui.append(_btn("BACK", Vector2(40, y + 6), Vector2(180, 60), func(): show_page("")))
+		y += 66
+	ctl_ui.append(_btn("BACK", Vector2(340, 112), Vector2(180, 52), func(): show_page("")))
 
 # styling: wheels, rim colour, wing, livery (bought once, yours to keep), ride height and camber (free)
 func _build_style():

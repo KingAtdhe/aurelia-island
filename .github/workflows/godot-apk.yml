@@ -56,10 +56,25 @@ jobs:
           $BT/apksigner verify --verbose godot/build/aurelia-godot.apk | head -6
           $BT/zipalign -c -p 4 godot/build/aurelia-godot.apk && echo aligned
           ls -la godot/build
+      - name: Lite APK (halved textures, starts on LOW)
+        run: |
+          BT=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | sort -V | tail -1)
+          rm -rf /tmp/lite && mkdir -p /tmp/lite && cp -r godot /tmp/lite/godot && rm -rf /tmp/lite/godot/build /tmp/lite/godot/.godot
+          pip install --quiet pillow || true
+          python3 .github/scripts/lite.py /tmp/lite/godot
+          cd /tmp/lite/godot && mkdir -p build
+          $GITHUB_WORKSPACE/godot-bin --headless --import . || true
+          $GITHUB_WORKSPACE/godot-bin --headless --export-debug "Android" build/aurelia-godot-lite.apk
+          python3 $GITHUB_WORKSPACE/.github/scripts/repack_apk.py build/aurelia-godot-lite.apk /tmp/lite_repacked.apk
+          $BT/zipalign -p -f 4 /tmp/lite_repacked.apk /tmp/lite_aligned.apk
+          $BT/apksigner sign --ks $HOME/debug.keystore --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --out $GITHUB_WORKSPACE/godot/build/aurelia-godot-lite.apk /tmp/lite_aligned.apk
+          ls -la $GITHUB_WORKSPACE/godot/build
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: godot-apk-${{ github.run_number }}
           name: Aurelia Island (Godot) ${{ github.run_number }}
           make_latest: false
-          files: godot/build/aurelia-godot.apk
-          body: Godot version of Aurelia Island (work in progress). Installs next to the web-based app.
+          files: |
+            godot/build/aurelia-godot.apk
+            godot/build/aurelia-godot-lite.apk
+          body: Godot version of Aurelia Island (work in progress). Installs next to the web-based app. aurelia-godot-lite.apk is the smaller download for older phones (half-size textures, starts on LOW).

@@ -292,9 +292,13 @@ func _physics_process(dt):
 func _physics_process_body(dt):
 	acc = min(acc + dt, 0.1)
 	while acc >= 1.0 / 120.0: physics(1.0 / 120.0); acc -= 1.0 / 120.0
+	wheel_spin += vf * dt; rear_spin += (vf + (16 * thr if spin else 0.0) - (vf if in_hand and abs(vf) > 1 else 0.0)) * dt
+	pose()
+
+# put the drawn car where the state says (also used by the replay, which sets the state itself)
+func pose():
 	position = Vector3(px, py, pz); rotation = Vector3(0, hd, 0)
 	body.rotation = Vector3(-pitch, 0, roll); body.position.y = body_lift + ride_off
-	wheel_spin += vf * dt; rear_spin += (vf + (16 * thr if spin else 0.0) - (vf if in_hand and abs(vf) > 1 else 0.0)) * dt
 	for w in wheels:
 		var a = spin_sgn * (wheel_spin if w.front else rear_spin) / V.r
 		if spin_axis == "x": w.n.rotation.x = a

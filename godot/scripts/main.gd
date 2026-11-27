@@ -28,6 +28,7 @@ var lamps: Lamps
 var ambience: Ambience
 var weather: Weather
 var worst_ms := 0.0; var _last_us := 0          # test: longest frame since the last report
+var replay: Replay          # replays and photo mode
 var freeroam: FreeRoam          # speed traps, drift zones, the daily challenge
 var tyrefx: TyreFX          # tyre smoke and skid marks
 var carenv: CarEnv          # what the player's car reflects: sky above, ground and hills below the horizon
@@ -89,10 +90,11 @@ func _ready():
 	showroom = Showroom.new(self); add_child(showroom); showroom.build()
 	tyrefx = TyreFX.new(); add_child(tyrefx); tyrefx.build(); tyrefx.add_car(car)
 	freeroam = FreeRoam.new(self); add_child(freeroam); freeroam.build()
+	replay = Replay.new(self); add_child(replay)
 	make_hud()
 	drift = DriftScore.new(); drift.car = car; hud.add_child(drift)
 	apply_controls()
-	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("TOUR") == "" and OS.get_environment("PROBE") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == "" and OS.get_environment("FUZZ") == "" and OS.get_environment("AMBTEST") == "" and OS.get_environment("JITTER") == "" and OS.get_environment("CTLTEST") == "" and OS.get_environment("FREETEST") == ""
+	menu_on = OS.get_environment("SHOTS") == "" and OS.get_environment("TOUR") == "" and OS.get_environment("PROBE") == "" and OS.get_environment("DRIVETEST") == "" and OS.get_environment("PERF") == "" and OS.get_environment("RACETEST") == "" and OS.get_environment("PHYSTEST") == "" and OS.get_environment("FUZZ") == "" and OS.get_environment("AMBTEST") == "" and OS.get_environment("JITTER") == "" and OS.get_environment("CTLTEST") == "" and OS.get_environment("FREETEST") == "" and OS.get_environment("REPLAYTEST") == ""
 	if menu_on or OS.get_environment("SHOTS") == "menu": open_menu()
 	if not menu_on: audio.ignition()
 	if OS.get_environment("CAR") != "" and (OS.get_environment("DRIVETEST") != "" or OS.get_environment("PHYSTEST") != ""): car.setup(OS.get_environment("CAR"))
@@ -110,6 +112,7 @@ func _ready():
 	if OS.get_environment("TOUR") != "": add_child(load("res://scripts/_tour.gd").new())
 	if OS.get_environment("PROBE") != "": add_child(load("res://scripts/_probe.gd").new())
 	if OS.get_environment("AMBTEST") != "": add_child(load("res://scripts/_ambtest.gd").new())
+	if OS.get_environment("REPLAYTEST") != "": add_child(load("res://scripts/_replaytest.gd").new())
 	if OS.get_environment("FREETEST") != "": add_child(load("res://scripts/_freetest.gd").new())
 	if OS.get_environment("CTLTEST") != "": add_child(load("res://scripts/_ctltest.gd").new())
 	if OS.get_environment("JITTER") != "": add_child(load("res://scripts/_jitter.gd").new())
@@ -138,6 +141,7 @@ func start_race(rid: String):
 	if race: race.stop(); race = null
 	if menu: menu.queue_free(); menu = null
 	menu_on = false; hud.visible = true; touch = { left = false, right = false, gas = false, brake = false, hand = false }
+	if replay: replay.clear()
 	race = Race.new(); add_child(race); race.start(rid, self)
 	if warm: warm.run(false)          # the rivals, gates and any new lights: compiled during the countdown
 	if not audio.on: audio.ignition()
@@ -248,6 +252,7 @@ var EXPO_K = float(OS.get_environment("EXPOK")) if OS.get_environment("EXPOK") !
 var touch_btns = {}          # HUD touch buttons by name (left/right hide in tilt mode, shift buttons only with the manual gearbox)
 func apply_controls():          # control options changed (or the game starts): the car's driving aids, the buttons on screen
 	Controls.apply(car)
+	if hud: _touch_layout()
 	var tilt = Controls.steer() > 0
 	for k in ["left", "right"]: if touch_btns.has(k): touch_btns[k].visible = not tilt
 	for k in ["up", "down"]: if touch_btns.has(k): touch_btns[k].visible = Controls.manual()
@@ -344,10 +349,17 @@ func circle_tex(r: int, col: Color, label := "") -> Texture2D:          # touch 
 			c.a *= a; img.set_pixel(x, y, c)
 	return ImageTexture.create_from_image(img)
 
-func make_hud():
-	hud = CanvasLayer.new(); add_child(hud)
-	var vs = get_viewport().get_visible_rect().size
-	var mk = func(key: String, pos: Vector2, rad: int, txt: String):
+# the touch buttons, sized and sided from the control options (Controls.btn_scale, Controls.swap: steering on the right)
+var _touch_nodes = []
+var gauge: Control
+func _touch_layout():
+	for n in _touch_nodes: n.queue_free()
+	_touch_nodes = []; touch_btns = {}
+	var vs = get_viewport().get_visible_rect().size; var k = Controls.btn_scale(); var sw = Controls.swap()
+	var at = func(x: float, y: float) -> Vector2:          # x measured from the left edge (or the right one when swapped)
+		return Vector2(vs.x - x if sw else x, vs.y - y)
+	var mk = func(key: String, pos: Vector2, rad0: int, txt: String):
+		var rad = int(rad0 * k)
 		var b = TouchScreenButton.new(); b.texture_normal = circle_tex(rad, Color(0.08, 0.1, 0.13, 0.45)); b.texture_pressed = circle_tex(rad, Color(0.9, 0.9, 0.95, 0.35))
 		var sh = CircleShape2D.new(); sh.radius = rad; b.shape = sh; b.shape_centered = true; b.position = pos - Vector2(rad, rad)
 		if key == "up" or key == "down": b.pressed.connect(func(): car.shift(1 if key == "up" else -1))
@@ -355,19 +367,26 @@ func make_hud():
 		touch_btns[key] = b
 		var lb = Label.new(); lb.text = txt; lb.add_theme_font_size_override("font_size", int(rad * 0.5)); lb.size = Vector2(rad * 2, rad * 2)
 		lb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; lb.vertical_alignment = VERTICAL_ALIGNMENT_CENTER; lb.modulate = Color(1, 1, 1, 0.9); b.add_child(lb)
-		hud.add_child(b)
-	mk.call("left", Vector2(110, vs.y - 110), 62, "◀")
-	mk.call("right", Vector2(260, vs.y - 110), 62, "▶")
-	mk.call("gas", Vector2(vs.x - 110, vs.y - 130), 74, "▲")
-	mk.call("brake", Vector2(vs.x - 270, vs.y - 100), 58, "▼")
-	mk.call("hand", Vector2(vs.x - 390, vs.y - 90), 44, "D")
-	mk.call("up", Vector2(vs.x - 110, vs.y - 275), 46, "+")          # manual gearbox: shift up / down
-	mk.call("down", Vector2(vs.x - 215, vs.y - 228), 40, "−")
-	var gauge = Hud.Gauge.new(); gauge.car = car; gauge.size = Vector2(186, 186); gauge.position = Vector2(338, vs.y - 196); gauge.mouse_filter = Control.MOUSE_FILTER_IGNORE; hud.add_child(gauge)
+		hud.add_child(b); _touch_nodes.append(b)
+	var g = 1.0 if k <= 1.0 else k          # bigger buttons sit a little further apart
+	var gx = 260 * g + 62 * k + 14          # the rev counter sits just inside the steering buttons
+	if gauge: gauge.position = Vector2(vs.x - gx - 186 if sw else gx, vs.y - 196)
+	mk.call("left", at.call((260 if sw else 110) * g, 110 * g), 62, "◀")          # left stays left of right on either side
+	mk.call("right", at.call((110 if sw else 260) * g, 110 * g), 62, "▶")
+	mk.call("gas", at.call(vs.x - 110 * g, 130 * g), 74, "▲")
+	mk.call("brake", at.call(vs.x - 270 * g, 100 * g), 58, "▼")
+	mk.call("hand", at.call(vs.x - 390 * g, 90 * g), 44, "D")
+	mk.call("up", at.call(vs.x - 110 * g, 275 * g), 46, "+")          # manual gearbox: shift up / down
+	mk.call("down", at.call(vs.x - 215 * g, 228 * g), 40, "−")
+
+func make_hud():
+	hud = CanvasLayer.new(); add_child(hud)
+	var vs = get_viewport().get_visible_rect().size
+	gauge = Hud.Gauge.new(); gauge.car = car; gauge.size = Vector2(186, 186); gauge.mouse_filter = Control.MOUSE_FILTER_IGNORE; hud.add_child(gauge); _touch_layout()
 	minimap = Hud.MiniMap.new(self, 230.0); minimap.position = Vector2(vs.x - 250, 20); hud.add_child(minimap)
 	var x = 20.0
-	for bdef in [["CAM", func(): cam_mode = (cam_mode + 1) % CAMS.size()], ["RESET", reset_car], ["MENU", func(): end_race(); open_menu()]]:
-		var b = Button.new(); b.text = bdef[0]; b.position = Vector2(x, 20); b.custom_minimum_size = Vector2(96, 48); Hud.style_button(b); b.pressed.connect(bdef[1]); hud.add_child(b); x += 108.0
+	for bdef in [["CAM", func(): cam_mode = (cam_mode + 1) % CAMS.size()], ["RESET", reset_car], ["MENU", func(): end_race(); open_menu()], ["REPLAY", func(): replay.start_replay()], ["PHOTO", func(): replay.start_photo()]]:
+		var b = Button.new(); b.text = bdef[0]; b.position = Vector2(x, 20); b.custom_minimum_size = Vector2(104, 48); Hud.style_button(b); b.add_theme_font_size_override("font_size", 18); b.pressed.connect(bdef[1]); hud.add_child(b); x += 114.0
 
 func reset_car():
 	Controls.zero_tilt()

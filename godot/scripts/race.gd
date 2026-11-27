@@ -419,6 +419,7 @@ func _results():
 		if r.done and k > 0 and st[0].done: tm += "   +%.2f" % (r.time - st[0].time)
 		_l(panel, tm, 28, Vector2(330, y))
 	_b(panel, "RETRY", Vector2(32, 360), func(): main.start_race(id))
+	var rb = Button.new(); rb.text = "REPLAY"; rb.position = Vector2(panel.size.x - 170, 18); rb.size = Vector2(150, 52); Hud.style_button(rb); rb.pressed.connect(func(): main.replay.start_replay()); panel.add_child(rb)
 	var nx = ORDER[(ORDER.find(id) + 1) % ORDER.size()]
 	if Progress.is_open(nx): _b(panel, "NEXT RACE", Vector2(222, 360), func(): main.start_race(nx))
 	_b(panel, "FREE ROAM", Vector2(412, 360), func(): main.end_race())
@@ -447,6 +448,7 @@ func _challenge_results():          # drift score or lap time, a medal, and the 
 	_l(panel, md_s, 20, Vector2(36, 196)).modulate = Color(1, 1, 1, 0.6)
 	var pl = _l(panel, ("+%s credits" % Menu._n(prize[0])) + (("   ·   %s is open" % prize[1]) if prize[1] != "" else ""), 22, Vector2(36, 234)); pl.add_theme_color_override("font_color", Hud.ACCENT)
 	_b(panel, "RETRY", Vector2(32, 300), func(): main.start_race(id))
+	var rb = Button.new(); rb.text = "REPLAY"; rb.position = Vector2(panel.size.x - 170, 18); rb.size = Vector2(150, 52); Hud.style_button(rb); rb.pressed.connect(func(): main.replay.start_replay()); panel.add_child(rb)
 	_b(panel, "FREE ROAM", Vector2(412, 300), func(): main.end_race())
 	emit_signal("finished")
 

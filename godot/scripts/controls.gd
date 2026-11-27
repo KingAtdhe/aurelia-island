@@ -51,3 +51,11 @@ static func tilt_steer() -> float:          # -1 (left) .. 1 (right)
 # the player's car takes the driving options
 static func apply(car: Car):
 	car.assist = assist(); car.tc = traction(); car.sens = sens(); car.manual = manual()
+
+const BTN = ["SMALL", "MEDIUM", "LARGE"]
+const BTN_K = [0.85, 1.0, 1.2]
+static func btn_i() -> int: return clampi(int(_rd("btn", 1)), 0, 2)
+static func btn_scale() -> float: return BTN_K[btn_i()]
+static func set_btn(i: int): _wr("btn", i % 3)
+static func swap() -> bool: return bool(_rd("swap", false))          # steering buttons on the right, pedals on the left
+static func set_swap(v: bool): _wr("swap", v)
