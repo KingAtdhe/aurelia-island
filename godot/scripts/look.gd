@@ -70,6 +70,12 @@ static func conv(m: Material, has_col: bool) -> Material:
 			k.set_shader_parameter("detail_k", 0.0 if nm in ["KitPlastic", "KitPaint"] else (0.5 if nm in ["KitGalv", "KitIron", "KitFabric"] else 1.0))
 			k.set_shader_parameter("bake", _bake()); k.set_shader_parameter("bake_rect", BAKE_RECT)
 			out = k
+		elif LOOK2 and props and nm.begins_with("Leaves") and sm.albedo_texture:          # concept 15/04 trees: leaf cards with shade, sun-through and sway
+			var lt = sm.albedo_texture
+			if nm == "LeavesHQ" and ResourceLoader.exists("res://assets/island/tex/tex_leaf_atlas_hq.png"): lt = load("res://assets/island/tex/tex_leaf_atlas_hq.png")          # one atlas for both tree files (its import keeps the needles at a distance)
+			var lv := ShaderMaterial.new(); lv.shader = shader("leaves"); lv.set_shader_parameter("tex", lt)
+			lv.set_shader_parameter("lift", 1.55 if nm == "LeavesHQ" else 1.3)
+			out = lv
 		elif LOOK2 and props and nm.begins_with("T_tree") and sm.albedo_texture:          # Tripo trees: shade, colour, sway (shaders/tree.gdshader)
 			var tr := ShaderMaterial.new(); tr.shader = shader("tree")
 			tr.set_shader_parameter("tex", sm.albedo_texture); tr.set_shader_parameter("tex_n", sm.normal_texture); tr.set_shader_parameter("has_n", 1.0 if sm.normal_texture else 0.0)

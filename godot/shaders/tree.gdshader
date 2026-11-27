@@ -30,7 +30,7 @@ void fragment() {
 	float shade = mix(0.45, 1.0, smoothstep(0.0, 0.75, hk));         // trunk and lower crown in the tree's shade
 	ALBEDO = c * shade * mix(1.0, 0.8, wx_wet);
 	AO = mix(0.5, 1.0, smoothstep(0.05, 0.8, hk)); AO_LIGHT_AFFECT = 0.5;
-	ROUGHNESS = 0.85; SPECULAR = 0.25;
+	ROUGHNESS = 0.9; SPECULAR = 0.12;
 	BACKLIGHT = vec3(0.32, 0.38, 0.16) * leaf;
 	if (has_n > 0.5) { NORMAL_MAP = texture(tex_n, UV).rgb; NORMAL_MAP_DEPTH = 0.8; }
 }

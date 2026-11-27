@@ -444,3 +444,13 @@ roam pay 250. Menu: BUY on unowned cars, GARAGE page, locked races greyed with t
   towers), merged per material per quarter like merge_hd.py, concept 10 shopfronts kept, current LODs for the skyline.
 - No photo/*.raw in this workspace: isle_photo.raw() now falls back to godot/assets/island/tex/tex_photo_*.jpg.
 - bpy 5.3 via pip works here (Python 3.13). Cycles at 24 samples + denoise: ~1-2 min per 600 px tile on 2 cores.
+
+## Concept 15 built: roadside trees in Godot (27 Nov 2026, APK 40)
+- source/godot_tools/export_trees15.py (bpy 5.3): plane, plane_b, oak, oak_b, pine (Norway spruce), fruit (olive) and
+  cypress from isle_flora._build_hq (same seeds as the web map), LOD0 = lod 2, LOD1 = lod 1 ->
+  godot/assets/island/flora_trees15.glb (S_h_<species>_LOD0/1). Vertex colours are written linear (pow 2.2; the map
+  pipeline's convention), the atlas's see-through texels filled with the average leaf colour.
+- flora.gd loads flora_trees15 as a fourth library and points those species at h_<species> (LOOK=1 keeps Tripo trees).
+- shaders/leaves.gdshader for every Leaves* material (also the spruce/birch/palms already HQ): cut-out, tint, shade low in
+  the crown and on down-facing cards, backlight, a little emission, sway. No specular: with it the cards turned grey-white
+  against the sun. LeavesHQ always samples res://assets/island/tex/tex_leaf_atlas_hq.png (one atlas for both files).

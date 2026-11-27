@@ -28,7 +28,8 @@ static func kind_of(sp: String, info: Dictionary) -> String:
 func build(spawn: Vector3):
 	focus = spawn
 	var untinted := {}          # Saba's Tripo models are textured and shaded in Blender: no per-instance tint (as in the web game)
-	for f in ["flora_flora", "flora_kit", "flora_tprops"]:
+	for f in ["flora_flora", "flora_kit", "flora_tprops", "flora_trees15"]:
+		if not ResourceLoader.exists(DIR + f + ".glb"): continue
 		var sc = load(DIR + f + ".glb").instantiate(); add_child(sc); Look.props = true; Look.apply(sc); Look.props = false; sc.visible = false
 		for n in sc.get_children():
 			var m = String(n.name)
@@ -50,6 +51,7 @@ func build(spawn: Vector3):
 	data = FileAccess.get_file_as_bytes(DIR + "flora.bin").to_float32_array()
 	for sp in idx["species"]:
 		var model: String = idx["model"][sp]
+		if lib.has("h_" + sp) and Look.LOOK2: model = "h_" + sp          # concept 15: the concept 04 trees instead of the Tripo trees
 		if not lib.has(model) or sp in ["grass", "grass_tall"]: continue          # the old grass cards: the modelled grass (grass.gd) took over
 		var off = int(idx["species"][sp][0]); var cnt = int(idx["species"][sp][1])
 		species[sp] = { off = off, n = cnt, model = model, kind = kind_of(sp, idx["info"].get(sp, {})), tint = not untinted.has(model) }
