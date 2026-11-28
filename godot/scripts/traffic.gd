@@ -263,8 +263,9 @@ func _physics_process_body(dt):
 		var near_p = at.distance_squared_to(pp) < 110.0 * 110.0          # far cars ride on the lane line (rays only where they can be seen up close)
 		for q in [[c.wb.x, 1.0], [c.wb.x, -1.0], [-c.wb.y, 1.0], [-c.wb.y, -1.0]]:
 			var wp = at + t2 * q[0] + r2 * (q[1] * c.half.y * 0.85)
-			if not near_p: hs.append(at.y); continue
-			var hit = space.intersect_ray(PhysicsRayQueryParameters3D.create(wp + Vector3(0, 2.0, 0), wp - Vector3(0, 3.0, 0)))
+			if not near_p: hs.append(_at(l, clampf(c.d + q[0] * c.dir, 0.0, l.len))[0].y); continue          # far: the lane line's own height at this axle, so the body still tilts on slopes
+			var rq = PhysicsRayQueryParameters3D.create(wp + Vector3(0, 2.0, 0), wp - Vector3(0, 3.0, 0)); rq.collision_mask = 1          # the drive surface only (as the player's car): other layers sat the tyres on things above the asphalt
+			var hit = space.intersect_ray(rq)
 			if hit and abs(hit.position.y - at.y) < 0.8 and hit.collider.get_meta("surf", "") == "road": hs.append(hit.position.y); n_ok += 1
 			else: hs.append(at.y)
 		c.ground = n_ok > 0 or not near_p
@@ -274,7 +275,10 @@ func _physics_process_body(dt):
 		if up.y < 0: up = -up
 		if up.y < 0.8: up = Vector3.UP
 		at.y = (fy * c.wb.y + ry * c.wb.x) / (c.wb.x + c.wb.y) + 0.012     # height under the body centre, a hair above so the tread never clips
-		c.y = at.y if not c.has("y") else lerpf(c.y, at.y, clampf(dt * 8.0, 0.0, 1.0)); at.y = c.y           # no pops where the road mesh and the centre line disagree
+		# follow the road closely while all four tyres have ground under them (a slow follow left fast cars 10-20 cm under
+		# or over the road on every slope); smooth only real jumps, where the road mesh and the centre line disagree
+		var yk = 40.0 if (n_ok == 4 and c.has("y") and abs(at.y - c.y) < 0.35) else 8.0
+		c.y = at.y if not c.has("y") else lerpf(c.y, at.y, clampf(dt * yk, 0.0, 1.0)); at.y = c.y
 		c.up = c.get("up", up).lerp(up, clampf(dt * 6.0, 0.0, 1.0)).normalized(); up = c.up
 		var fw = (t - up * t.dot(up)).normalized()
 		if c.has("fw") and c.has("blend"): fw = c.fw.slerp(fw, clampf(dt * 5.0, 0.0, 1.0)).normalized()          # turning into the next road: heading swings over

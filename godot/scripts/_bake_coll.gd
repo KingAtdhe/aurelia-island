@@ -13,8 +13,12 @@ func _init():
 		for mi in root.find_children("*", "MeshInstance3D", true, false):
 			var surf = Island.surf_of(String(mi.name))
 			if surf == "": continue
-			var sb = StaticBody3D.new(); sb.name = String(mi.name); sb.set_meta("surf", surf); sb.transform = _xf(mi, root)
-			var cs = CollisionShape3D.new(); cs.shape = mi.mesh.create_trimesh_shape(); sb.add_child(cs); out.add_child(sb)
+			# the scale goes into the triangles (map pieces carry a node scale of ~400; a scaled trimesh misses short rays)
+			var xf = _xf(mi, root); var faces: PackedVector3Array = mi.mesh.get_faces()
+			for i in faces.size(): faces[i] = xf.basis * faces[i]
+			var shp := ConcavePolygonShape3D.new(); shp.set_faces(faces)
+			var sb = StaticBody3D.new(); sb.name = String(mi.name); sb.set_meta("surf", surf); sb.transform = Transform3D(Basis(), xf.origin)
+			var cs = CollisionShape3D.new(); cs.shape = shp; sb.add_child(cs); out.add_child(sb)
 			cs.owner = out; sb.owner = out; n_all += 1
 		var ps = PackedScene.new(); ps.pack(out)
 		ResourceSaver.save(ps, "res://assets/island/coll/%s.scn" % nm, ResourceSaver.FLAG_COMPRESS)

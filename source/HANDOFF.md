@@ -595,3 +595,11 @@ no script errors), CTLTEST, FREETEST, DRIVETEST (+crash, AUDIODBG), a 12-spot re
   greyed the quad). On the body (tilts with it), layer 1; traffic cars get one too (rotated: their frame runs along x).
 - Calder wheels never turned or steered: its model names them Wheel_Front_Left etc. and setup() looked only for
   Front_Left; they were merged into the body. setup() now also tries "Wheel_" + name. Axle = local z, matching axis "z".
+- Traffic floating/sinking (28 Nov): the map colliders were trimesh shapes under the chunks' node scale (~400), and the
+  physics missed short rays (and gave start-height-dependent hits on long ones). Traffic's 2 m-up/3 m-down rays found
+  nothing, so every car near the player was drawn level at the lane-line height: up to 25 cm floating or sunk on slopes
+  (one van 80 cm in). Island.colliders() and _bake_coll.gd now bake the scale into the triangles (body cancels the node
+  scale / carries only the origin); coll/*.scn re-baked. Traffic rays use mask 1; near cars follow the road height fast
+  (lerp 40/s while all four rays hit, 8/s only for jumps); far cars take the lane line's height at each axle so they tilt.
+  Measured over ~10k tyre samples (hub - radius vs ground): near median +1.1 cm, p95 +2.4 cm; far median +0.8 cm.
+  (A wheel's rotated AABB reads up to 14 cm low: measure from the hub, not the box.)

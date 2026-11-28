@@ -196,5 +196,11 @@ static func colliders(root: Node):
 	for n in root.find_children("*", "MeshInstance3D", true, false):
 		var surf = surf_of(String(n.name))
 		if surf == "": continue
-		var sb = StaticBody3D.new(); sb.set_meta("surf", surf); var cs = CollisionShape3D.new(); cs.shape = n.mesh.create_trimesh_shape()
-		sb.add_child(cs); n.add_child(sb)
+		# the map pieces are stored at a large node scale (positions quantised, scale ~400): a trimesh collider under that
+		# scale made the physics miss short rays (traffic stood on no ground and was drawn level at the lane-line height,
+		# floating or sunk on every slope). Bake the scale into the triangles; the body cancels the node's scale.
+		var sb = StaticBody3D.new(); sb.set_meta("surf", surf); var cs = CollisionShape3D.new()
+		var xf: Transform3D = n.transform; var b := xf.basis; var faces: PackedVector3Array = n.mesh.get_faces()
+		for i in faces.size(): faces[i] = b * faces[i]
+		var shp := ConcavePolygonShape3D.new(); shp.set_faces(faces); cs.shape = shp
+		sb.add_child(cs); sb.transform = Transform3D(b.inverse(), Vector3.ZERO); n.add_child(sb)          # stays under the mesh (grass reads its name), the inverse undoes the scale
